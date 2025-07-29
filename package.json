@@ -1,6 +1,6 @@
 {
   "name": "webgpu-pipeline-kit",
-  "description": "Provides a type-safe declarative way of creating WebGPU pipelines",
+  "description": "A type-safe declarative way of creating WebGPU pipelines",
   "version": "1.0.0",
   "author": {
     "name": "Nathan Adams",
@@ -13,6 +13,11 @@
   "keywords": [
     "WebGPU",
     "Pipeline"
+  ],
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
