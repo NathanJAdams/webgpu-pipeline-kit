@@ -1,0 +1,46 @@
+{
+  "name": "webgpu-pipeline-kit",
+  "description": "Provides a type-safe declarative way of creating WebGPU pipelines",
+  "version": "1.0.0",
+  "author": {
+    "name": "Nathan Adams",
+    "url": "https://github.com/NathanJAdams"
+  },
+  "homepage": "https://github.com/NathanJAdams/webgpu-pipeline-kit",
+  "repository": {
+    "url": "https://github.com/NathanJAdams/webgpu-pipeline-kit"
+  },
+  "keywords": [
+    "WebGPU",
+    "Pipeline"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "yarn lint && yarn tsc",
+    "lint": "eslint . --fix",
+    "test": "jest --silent=false",
+    "tsc": "rimraf ./dist && tsc"
+  },
+  "dependencies": {
+    "@thi.ng/random": "4.1.5"
+  },
+  "devDependencies": {
+    "@types/jest": "29.2.4",
+    "@types/node": "18.11.17",
+    "@types/rimraf": "3.0.2",
+    "@typescript-eslint/eslint-plugin": "5.46.1",
+    "@typescript-eslint/parser": "5.46.1",
+    "@webgpu/types": "0.1.60",
+    "eslint": "8.30.0",
+    "eslint-plugin-react": "7.31.11",
+    "jest": "29.3.1",
+    "rimraf": "6.0.1",
+    "ts-jest": "29.0.3",
+    "ts-node": "10.9.1",
+    "typescript": "5.7.2",
+    "uuid": "11.0.3"
+  },
+  "packageManager": "yarn@4.5.3"
+}
