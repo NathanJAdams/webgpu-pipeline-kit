@@ -20,7 +20,6 @@ type _TupleOfWithRest<T, N extends number, R extends unknown[] = []> = R['length
   ? R
   : _TupleOfWithRest<T, N, [...R, T]>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyFn = (...args: any[]) => any;
 export type FunctionKeys<T> = {
   [K in keyof T]: T[K] extends AnyFn

@@ -7,7 +7,6 @@ export type PipelineRunner = {
 };
 
 export const PipelineRunners = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   of: async (canvas: HTMLCanvasElement, ...pipelines: NonEmptyArray<Pipeline<any, any, boolean, boolean, boolean>>): Promise<PipelineRunner> => {
     const context = PipelineUtils.getContext(canvas);
     const device = await PipelineUtils.getDevice();

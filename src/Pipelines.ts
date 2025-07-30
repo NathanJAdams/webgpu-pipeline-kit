@@ -78,7 +78,6 @@ export const PipelineFuncs = {
       bufferFormats,
       bufferResources,
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pipeline: Pipeline<any, any, false, false, false> = {
       pipelineDetail(device, queue, encoder, options) {
         const { isAntiAliased, textureFormat } = options;
@@ -88,22 +87,17 @@ export const PipelineFuncs = {
       },
     };
     if (isMutableUniform) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (pipeline as Pipeline<TUniformFormat, any, true, any, any>).mutateUniform = (bufferResources as WGBKBufferResources<TUniformFormat, any, any, true, any, any>).mutateUniform;
     }
     if (isMutableInstances) {
       if (isResizeableInstances) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (pipeline as Pipeline<any, TEntityFormat, any, true, true>).mutateInstanceById = (bufferResources as WGBKBufferResources<any, TEntityFormat, any, any, true, true>).mutateInstanceById;
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (pipeline as Pipeline<any, TEntityFormat, any, true, false>).mutateInstanceByIndex = (bufferResources as WGBKBufferResources<any, TEntityFormat, any, any, true, false>).mutateInstanceByIndex;
       }
     }
     if (isResizeableInstances) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const resizeablePipeline = pipeline as Pipeline<any, TEntityFormat, any, any, true>;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const resizeableInstanceBufferResources = bufferResources as WGBKBufferResources<any, TEntityFormat, any, any, any, true>;
       resizeablePipeline.add = resizeableInstanceBufferResources.add;
       resizeablePipeline.remove = resizeableInstanceBufferResources.remove;
@@ -112,7 +106,6 @@ export const PipelineFuncs = {
   }),
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toComputeShaderModuleDetail = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   computeShader: ComputeShader<TBufferFormats>,
 ): ShaderModuleDetail => {
@@ -123,7 +116,6 @@ const toComputeShaderModuleDetail = <TBufferFormats extends WGBKBufferFormats<an
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toRenderShaderModuleDetail = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   renderShader: RenderShader<TBufferFormats>,
 ): ShaderModuleDetail => {
@@ -134,7 +126,6 @@ const toRenderShaderModuleDetail = <TBufferFormats extends WGBKBufferFormats<any
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toBufferUsages = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   shader: Shader<TBufferFormats>,
   bufferFormats: TBufferFormats,
@@ -163,12 +154,10 @@ const toBufferUsages = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   }) as Record<WGBKBufferFormatKey<TBufferFormats>, GPUBufferUsageFlags>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toMaxBindGroup = <TBufferFormats extends WGBKBufferFormats<any, any>>(bufferBindings: BufferBinding<TBufferFormats>[]): number => {
   return bufferBindings.reduce((max, bufferBinding) => Math.max(max, bufferBinding.group), -1);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toBindGroupLayoutEntries = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   visibility: GPUShaderStageFlags,
   bufferBindings: BufferBinding<TBufferFormats>[],
@@ -191,7 +180,6 @@ const toBindGroupLayoutEntries = <TBufferFormats extends WGBKBufferFormats<any, 
     });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toBindGroupLayoutsResource = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   name: string,
   visibility: GPUShaderStageFlags,
@@ -209,7 +197,6 @@ const toBindGroupLayoutsResource = <TBufferFormats extends WGBKBufferFormats<any
   return Resources.ofArray(bindGroupLayoutResources);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toBindGroupEntriesResources = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   bufferBindings: BufferBinding<TBufferFormats>[],
   bufferResources: Record<WGBKBufferFormatKey<TBufferFormats>, WGBKResource<WGBKTrackedBuffer>>,
@@ -224,7 +211,6 @@ const toBindGroupEntriesResources = <TBufferFormats extends WGBKBufferFormats<an
     });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toBindGroupsDetailResource = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   name: string,
   visibility: GPUShaderStageFlags,
@@ -247,7 +233,6 @@ const toBindGroupsDetailResource = <TBufferFormats extends WGBKBufferFormats<any
   return Resources.ofArray(bindGroupDetailResources);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toComputePipelineDetailsResource = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   name: string,
   computeShader: ComputeShader<TBufferFormats>,
@@ -273,7 +258,6 @@ const toComputePipelineDetailsResource = <TBufferFormats extends WGBKBufferForma
   return Resources.ofArray(computePipelineDetailResources);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toRenderPipelineDetailsResource = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   name: string,
   renderShader: RenderShader<TBufferFormats>,
@@ -302,7 +286,6 @@ const toRenderPipelineDetailsResource = <TBufferFormats extends WGBKBufferFormat
       return meshBufferResource.indices.get(device, queue, encoder).buffer;
     },
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const instanceBufferFormats = RecordFuncs.filter(bufferFormats, (bufferFormat) => bufferFormat.bufferType === 'entity') as WGBKEntityBufferFormats<any>;
   const instanceBuffers = RecordFuncs.filter(bufferResources, (_, key) => instanceBufferFormats[key as string] !== undefined);
   const renderPipelineDetailResources: WGBKResource<RenderPipelineDetail>[] = [];
@@ -327,14 +310,12 @@ const toRenderPipelineDetailsResource = <TBufferFormats extends WGBKBufferFormat
   return Resources.ofArray(renderPipelineDetailResources);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toPipelineDetailResource = <TBufferFormats extends WGBKBufferFormats<any, any>>(
   name: string,
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
   shader: Shader<TBufferFormats>,
   bufferFormats: TBufferFormats,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   wgbkBufferResources: WGBKBufferResources<any, any, TBufferFormats, boolean, boolean, boolean>,
 ): WGBKResource<PipelineDetail> => {
   const buffersResources = wgbkBufferResources.buffers;

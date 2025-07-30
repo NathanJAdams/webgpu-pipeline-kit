@@ -2,28 +2,24 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
-    "declaration": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "noEmit": false,
-    "outDir": "./dist",
+    "moduleResolution": "node",
     "paths": {
       "@/*": [
         "src/*"
       ]
     },
-    "preserveConstEnums": true,
     "removeComments": true,
+    "rootDir": "src",
     "skipLibCheck": true,
     "strict": true,
-    "target": "ESNext",
+    "target": "ES2020",
     "types": [
       "@webgpu/types",
     ],
   },
   "include": [
-    "src/**/*.ts",
-  ],
+    "src"
+  ]
 }

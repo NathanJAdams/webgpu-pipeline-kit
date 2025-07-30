@@ -6,5 +6,5 @@ type SafeCaller<T, K extends FunctionKeys<T>> = T[K] extends AnyFn
 
 export const callCreatorOf = <T>() =>
     <K extends FunctionKeys<T>>(methodName: K): SafeCaller<T, K> =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ((target: T, ...args: any[]) => (target[methodName] as AnyFn)(...args)) as SafeCaller<T, K>;
+        ((target: T, ...args: any[]) =>
+            (target[methodName] as AnyFn)(...args)) as SafeCaller<T, K>;

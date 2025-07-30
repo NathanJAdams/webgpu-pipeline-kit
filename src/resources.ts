@@ -20,7 +20,6 @@ export const Resources = {
       },
     };
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ofCachedFromDependencies: <DependencyResources extends readonly WGBKResource<any>[], T>(
     dependencyResources: DependencyResources,
     createWithValues: (
@@ -31,13 +30,11 @@ export const Resources = {
     ) => T
   ): WGBKResource<T> => {
     let cachedValue: T | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let lastDependencies: any[] = [];
     return {
       get(device, queue, encoder) {
         const currentDependencies = dependencyResources.map((dependencyResource) => dependencyResource.get(device, queue, encoder));
         if (!ArrayFuncs.equals(lastDependencies, currentDependencies) || cachedValue === undefined) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           cachedValue = createWithValues(device, queue, encoder, currentDependencies as any);
           lastDependencies = currentDependencies;
         }

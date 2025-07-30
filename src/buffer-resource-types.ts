@@ -101,7 +101,6 @@ export type WGBKUniformBufferFormat<TFormat extends WGBKInstanceFormat> = HasBuf
 export type WGBKEntityBufferFormat<TFormat extends WGBKInstanceFormat> = HasBufferType<'entity'> & (LayoutBufferDetail | MarshalledBufferDetail<TFormat>);
 export type WGBKEntityBufferFormats<TEntityFormat extends WGBKInstanceFormat> = Record<string, WGBKEntityBufferFormat<TEntityFormat>>;
 export type WGBKBufferFormats<TUniformFormat extends WGBKInstanceFormat, TEntityFormat extends WGBKInstanceFormat> = Record<string, WGBKUniformBufferFormat<TUniformFormat> | WGBKEntityBufferFormat<TEntityFormat>>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WGBKBufferFormatKey<TBufferFormats extends WGBKBufferFormats<any, any>> = string & (keyof TBufferFormats);
 
 export type WGBKTrackedBuffer = {
@@ -156,7 +155,6 @@ type WGBKHasBufferRef<K> = {
   buffer: K & string;
 };
 type WGBKBufferRefOf<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TBufferFormats extends WGBKBufferFormats<any, any>,
   TBufferType extends WGBKBufferType,
   TContentType extends BufferContentType,
@@ -167,11 +165,8 @@ type WGBKBufferRefOf<
   : never
   : never
 }[keyof TBufferFormats];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WGBKUniformBufferKeys<TBufferFormats extends WGBKBufferFormats<any, any>> = WGBKBufferRefOf<TBufferFormats, 'uniform', any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WGBKInstanceLayoutBufferKeys<TBufferFormats extends WGBKBufferFormats<any, any>> = WGBKBufferRefOf<TBufferFormats, 'entity', 'layout'>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WGBKInstanceMarshalledBufferKeys<TBufferFormats extends WGBKBufferFormats<any, any>> = WGBKBufferRefOf<TBufferFormats, 'entity', 'marshalled'>;
 
 export type WGBKMeshBufferResource = {

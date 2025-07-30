@@ -154,7 +154,6 @@ export const PipelineResources = {
     }];
     return PipelineResources.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ofBindingVertexBufferDetail: <TBufferFormats extends WGBKEntityBufferFormats<any>>(
     bindingBufferLocation: NonMeshBufferLocation<TBufferFormats>,
     bufferFormats: TBufferFormats,
