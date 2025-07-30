@@ -1,5 +1,5 @@
 import { WPKPipeline, WPKPipelineDetailOptions, WPKPipelineOptions } from './pipeline';
-import { pipelineUtils } from './pipeline-utils';
+import { pipelineFuncs } from './pipeline-utils';
 import { NonEmptyArray } from './utils';
 import { viewsFuncFactory } from './views';
 
@@ -9,9 +9,9 @@ export type WPKPipelineRunner = {
 
 export const pipelineRunnerFactory = {
   of: async (canvas: HTMLCanvasElement, ...pipelines: NonEmptyArray<WPKPipeline<any, any, boolean, boolean, boolean>>): Promise<WPKPipelineRunner> => {
-    const context = pipelineUtils.getContext(canvas);
-    const device = await pipelineUtils.getDevice();
-    const format = pipelineUtils.getFormat();
+    const context = pipelineFuncs.getContext(canvas);
+    const device = await pipelineFuncs.getDevice();
+    const format = pipelineFuncs.getFormat();
     const alphaMode = 'opaque';
     context.configure({
       alphaMode,

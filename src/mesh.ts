@@ -49,6 +49,9 @@ export const meshFuncs = {
     const verticesArray = new Float32Array(flatVertices);
     return verticesArray.buffer;
   },
+};
+
+export const meshFactory = {
   of: (type: GPUPrimitiveTopology, vertices: WPKVertices, indices: WPKIndices, winding: GPUFrontFace): WPKMesh => {
     return {
       topology: type,

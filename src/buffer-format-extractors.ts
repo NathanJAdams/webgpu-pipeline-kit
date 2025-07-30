@@ -3,7 +3,7 @@ import { formatReferenceFuncs } from './format-references';
 import { formatValuesFuncs } from './format-values';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
 import { strideFuncs } from './strides';
-import { callCreatorOf, float32ToFloat16 } from './utils';
+import { callCreatorOf, floatFuncs } from './utils';
 
 type WPKExtractor<TFormat extends WPKInstanceFormat> = (offset: number, instance: WPKInstanceOf<TFormat>, dataView: DataView) => void;
 export type WPKBufferFormatExtractor<TFormat extends WPKInstanceFormat> = {
@@ -32,7 +32,7 @@ const createDatumSetters = (): Map<WPKSimpleVertexFormat, WPKDatumSetter> => {
   map.set('unorm16', setUint16);
   map.set('sint32', setInt32);
   map.set('uint32', setUint32);
-  map.set('float16', (target: DataView, offset: number, value: number, littleEndian: boolean) => setUint16(target, offset, float32ToFloat16(value), littleEndian));
+  map.set('float16', (target: DataView, offset: number, value: number, littleEndian: boolean) => setUint16(target, offset, floatFuncs.float32ToFloat16(value), littleEndian));
   map.set('float32', setFloat32);
   return map;
 };

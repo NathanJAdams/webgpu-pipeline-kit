@@ -1,7 +1,7 @@
 import { WPKBufferFormatKey, WPKEntityBufferFormats, WPKMeshBufferResource, WPKResource, WPKTrackedBuffer } from './buffer-types';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKMesh, meshFuncs } from './mesh';
-import { pipelineUtils, WorkGroupSize } from './pipeline-utils';
+import { pipelineFuncs, WorkGroupSize } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { WPKUserDefinedBufferLocation, WPKMeshBufferLocation } from './shaders';
 import { strideFuncs } from './strides';
@@ -147,7 +147,7 @@ export const pipelineResourceFactory = {
     meshBufferResource: WPKMeshBufferResource
   ): WPKResource<WPKVertexBufferDetail> => {
     const { format, location, step } = meshBufferLocation;
-    const arrayStride = pipelineUtils.toByteLength(format);
+    const arrayStride = pipelineFuncs.toByteLength(format);
     const attributes: GPUVertexAttribute[] = [{
       format,
       offset: 0,
@@ -248,7 +248,7 @@ export const pipelineResourceFactory = {
           }],
         },
         multisample: {
-          count: pipelineUtils.toSampleCount(values[3]),
+          count: pipelineFuncs.toSampleCount(values[3]),
         },
         primitive: {
           topology,

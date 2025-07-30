@@ -1,4 +1,4 @@
-import { pipelineUtils } from './pipeline-utils';
+import { pipelineFuncs } from './pipeline-utils';
 
 export type WPKViews = {
     view: GPUTextureView;
@@ -21,7 +21,7 @@ const getOrCreateAntiAliasingTexture = (
     previousAntiAliasingTexture.destroy();
     previousAntiAliasingTexture = undefined;
   }
-  const sampleCount = pipelineUtils.toSampleCount(true);
+  const sampleCount = pipelineFuncs.toSampleCount(true);
   const size = [width, height];
   const usage = GPUTextureUsage.RENDER_ATTACHMENT;
   const descriptor: GPUTextureDescriptor = {

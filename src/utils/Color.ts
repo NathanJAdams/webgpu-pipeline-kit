@@ -5,7 +5,7 @@ export type Color = {
     a?: number;
 };
 
-export const colorFuncs = {
+export const colorFactory = {
   BLACK: { r: 0, g: 0, b: 0, a: 1 } as Color,
   RED: { r: 1, g: 0, b: 0, a: 1 } as Color,
   GREEN: { r: 0, g: 1, b: 0, a: 1 } as Color,
@@ -20,6 +20,9 @@ export const colorFuncs = {
       a,
     };
   },
+};
+
+export const colorFuncs = {
   equals(a: Color, b: Color, epsilon = 1e-6): boolean {
     return (
       Math.abs(a.r - b.r) < epsilon &&

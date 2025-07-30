@@ -4,7 +4,7 @@ import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKD
 import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
 import { meshFuncs } from './mesh';
 import { pipelineResourceFactory } from './pipeline-resources';
-import { pipelineUtils } from './pipeline-utils';
+import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { WPKBufferBinding, WPKComputeShader, shaderFuncs, WPKRenderShader, WPKShader } from './shaders';
 import { arrayFuncs, changeDetectorFactory, Color, recordFuncs } from './utils';
@@ -261,7 +261,7 @@ const toComputePipelineDetailsResource = <TBufferFormats extends WPKBufferFormat
   for (const [index, computePass] of passes.entries()) {
     const { entryPoint, workGroupSize } = computePass;
     const computePipelineResource = pipelineResourceFactory.ofComputePipeline(name, index, pipelineLayoutResource, computeShaderModuleResource, entryPoint);
-    const workGroupSizeFunc = () => pipelineUtils.toWorkGroupSize(workGroupSize, instanceCountFunc());
+    const workGroupSizeFunc = () => pipelineFuncs.toWorkGroupSize(workGroupSize, instanceCountFunc());
     const computeDetailResource = pipelineResourceFactory.ofComputeDetail(bindGroupsDetailResource, computePipelineResource, workGroupSizeFunc);
     computePipelineDetailResources.push(computeDetailResource);
   }

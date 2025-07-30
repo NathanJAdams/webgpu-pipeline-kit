@@ -4,7 +4,7 @@ export type WorkGroupSize = {
     z?: number;
 };
 
-export const pipelineUtils = {
+export const pipelineFuncs = {
   toByteLength: (format: GPUVertexFormat): number => {
     switch (format) {
     case 'float16': return 2 * 1;
@@ -50,7 +50,7 @@ export const pipelineUtils = {
     case 'unorm8x4-bgra': return 1 * 4;
     }
   },
-  toByteLengthTotal: (formats: GPUVertexFormat[]): number => formats.reduce((currentByteLength, format) => currentByteLength + pipelineUtils.toByteLength(format), 0),
+  toByteLengthTotal: (formats: GPUVertexFormat[]): number => formats.reduce((currentByteLength, format) => currentByteLength + pipelineFuncs.toByteLength(format), 0),
   toSampleCount: (isAntiAliased: boolean): number => isAntiAliased ? 4 : 1,
   toWorkGroupSize: (size: WorkGroupSize, instanceCount: number): WorkGroupSize => {
     const totalThreads = size.x * (size.y || 1) * (size.z || 1);
@@ -76,11 +76,11 @@ export const pipelineUtils = {
     return gpu;
   },
   getFormat: (): GPUTextureFormat => {
-    const gpu = pipelineUtils.getGpu();
+    const gpu = pipelineFuncs.getGpu();
     return gpu.getPreferredCanvasFormat();
   },
   getDevice: async (): Promise<GPUDevice> => {
-    const gpu = pipelineUtils.getGpu();
+    const gpu = pipelineFuncs.getGpu();
     const adapter = await gpu.requestAdapter();
     if (adapter === null) {
       throw Error('Failed to request GPU adapter');

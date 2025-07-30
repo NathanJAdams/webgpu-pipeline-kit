@@ -1,10 +1,12 @@
+import { Equality } from './compare';
+
 export type ChangeDetector<T> = {
     get: () => T;
     compareAndUpdate: (next: T) => boolean;
 };
 
 export const changeDetectorFactory = {
-  of: <T>(first: T, equals: (a: T, b: T) => boolean): ChangeDetector<T> => {
+  of: <T>(first: T, equals: Equality<T>): ChangeDetector<T> => {
     let current: T = first;
     return {
       get() {

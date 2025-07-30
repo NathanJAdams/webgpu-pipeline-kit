@@ -1,9 +1,5 @@
-export * from './utils/Color';
-
-export { WPKBufferFormats } from './buffer-types';
-export * from './detail-types';
+export type { WPKBufferFormats } from './buffer-types';
+export * from './factories';
 export * from './instance-types';
-export * from './mesh';
-export * from './pipeline-runner';
-export * from './pipeline';
-export * from './shaders';
+export type { WPKPipelineOptions } from './pipeline';
+export type { WPKShader } from './shaders';
