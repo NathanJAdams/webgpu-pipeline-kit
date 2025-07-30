@@ -39,7 +39,7 @@
     "build:types": "tsc --project tsconfig.types.json",
     "clean": "rimraf ./dist/",
     "lint": "eslint --debug . --fix",
-    "test": "jest --silent=false"
+    "test": "jest --silent=false --passWithNoTests"
   },
   "dependencies": {
     "@thi.ng/random": "^4.1.23"
