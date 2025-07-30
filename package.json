@@ -21,6 +21,7 @@
     "LICENSE",
     "README.md"
   ],
+  "type": "module",
   "browser": "./dist/esm/index.js",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -39,7 +40,7 @@
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:types": "tsc --project tsconfig.types.json",
     "clean": "rimraf ./dist/",
-    "lint": "eslint --debug . --fix",
+    "lint": "eslint ./src --fix",
     "test": "jest --silent=false --passWithNoTests"
   },
   "dependencies": {

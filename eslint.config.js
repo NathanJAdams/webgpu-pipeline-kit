@@ -5,13 +5,6 @@ import eslintPluginImport from 'eslint-plugin-import';
 export default [
   {
     files: ['src/**/*.ts'],
-    ignores: [
-      'dist/**',
-      'node_modules/**',
-      '**/*.log',
-      '.idea/**',
-      '.vscode/**',
-    ],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
