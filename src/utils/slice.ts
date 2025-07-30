@@ -10,13 +10,13 @@ export type ValueSlices<T> = {
     copySlices: CopySlice[];
 };
 
-export const Slices = {
+export const sliceFuncs = {
   ofInts: (nums: number[]): Slice[] => {
     const slices: Slice[] = [];
     if (nums.length === 0) {
       return slices;
     }
-    const sorted = nums.toSorted((a, b) => a - b);
+    const sorted = nums.sort((a, b) => a - b);
     let min = sorted[0];
     let max = min;
     for (let i = 1; i < sorted.length; i++) {
@@ -35,10 +35,10 @@ export const Slices = {
     return slices;
   },
   ofMap: <V>(map: Map<number, V>): ValueSlices<V[]> => {
-    const sortedEntries = map.entries().toArray().sort(([indexA], [indexB]) => indexA - indexB);
+    const sortedEntries = Array.from(map.entries()).sort(([indexA], [indexB]) => indexA - indexB);
     const values = sortedEntries.map(([, value]) => value);
     const indexes = sortedEntries.map(([index]) => index);
-    const slices = Slices.ofInts(indexes);
+    const slices = sliceFuncs.ofInts(indexes);
     const copySlices = Array.from<CopySlice>({ length: slices.length });
     let fromIndex = 0;
     for (const [sliceIndex, slice] of slices.entries()) {

@@ -1,10 +1,10 @@
-import { WGBKElementLayout, WGBKMarshalledFormat, WGBKMarshalledFormatElement, WGBKMarshalledFormatElementBase, WGBKHasScalarXorVec, WGBKSimpleVertexFormat } from './buffer-resource-types';
-import { WGBKElementFormat, WGBKElementFormats } from './element-formats';
-import { WGBKInstanceFormat } from './instance';
+import { WPKElementLayout, WPKMarshalledFormat, WPKMarshalledFormatElement, WPKMarshalledFormatElementBase, WPKHasScalarXorVec, WPKSimpleVertexFormat } from './buffer-types';
+import { WPKElementFormat, elementFormatFuncs } from './element-formats';
+import { WPKInstanceFormat } from './instance-types';
 import { NonEmptyArray } from './utils';
 
-export const WGBKStrides = {
-  ofVertexFormat: (format: WGBKSimpleVertexFormat): number => {
+export const strideFuncs = {
+  ofVertexFormat: (format: WPKSimpleVertexFormat): number => {
     switch (format) {
     case 'float16': return 2;
     case 'float32': return 4;
@@ -28,28 +28,28 @@ export const WGBKStrides = {
     case 'vec4': return 4;
     }
   },
-  ofElementFormat: (format: WGBKElementFormat): number => {
-    return WGBKElementFormats.isScalar(format)
+  ofElementFormat: (format: WPKElementFormat): number => {
+    return elementFormatFuncs.isScalar(format)
       ? 1
-      : WGBKElementFormats.isTuple(format)
+      : elementFormatFuncs.isTuple(format)
         ? format as number
         : format.length;
   },
-  ofElementLayout: (elementLayout: WGBKElementLayout): number => {
+  ofElementLayout: (elementLayout: WPKElementLayout): number => {
     const { datumType, dimension } = elementLayout;
-    return WGBKStrides.ofVertexFormat(datumType) * WGBKStrides.dimensionMultiple(dimension);
+    return strideFuncs.ofVertexFormat(datumType) * strideFuncs.dimensionMultiple(dimension);
   },
-  ofLayout: (layout: NonEmptyArray<WGBKElementLayout>): number => {
-    return layout.reduce((acc, element) => acc + WGBKStrides.ofElementLayout(element), 0);
+  ofLayout: (layout: NonEmptyArray<WPKElementLayout>): number => {
+    return layout.reduce((acc, element) => acc + strideFuncs.ofElementLayout(element), 0);
   },
-  ofMarshalledFormatElement: <TFormat extends WGBKInstanceFormat>(element: WGBKMarshalledFormatElement<TFormat>): number => {
-    const { datumType, vec } = element as WGBKMarshalledFormatElementBase<WGBKSimpleVertexFormat> & WGBKHasScalarXorVec<TFormat, 2 | 3 | 4>;
+  ofMarshalledFormatElement: <TFormat extends WPKInstanceFormat>(element: WPKMarshalledFormatElement<TFormat>): number => {
+    const { datumType, vec } = element as WPKMarshalledFormatElementBase<WPKSimpleVertexFormat> & WPKHasScalarXorVec<TFormat, 2 | 3 | 4>;
     const multiple = (vec !== undefined)
       ? vec.length
       : 1;
-    return WGBKStrides.ofVertexFormat(datumType) * multiple;
+    return strideFuncs.ofVertexFormat(datumType) * multiple;
   },
-  ofMarshalledFormat: <TFormat extends WGBKInstanceFormat>(format: WGBKMarshalledFormat<TFormat>): number => {
-    return format.reduce((acc, element) => acc + WGBKStrides.ofMarshalledFormatElement(element), 0);
+  ofMarshalledFormat: <TFormat extends WPKInstanceFormat>(format: WPKMarshalledFormat<TFormat>): number => {
+    return format.reduce((acc, element) => acc + strideFuncs.ofMarshalledFormatElement(element), 0);
   },
 };

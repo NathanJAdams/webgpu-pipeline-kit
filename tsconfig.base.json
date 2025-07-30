@@ -4,6 +4,11 @@
     "baseUrl": ".",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "moduleResolution": "node",
     "paths": {
       "@/*": [
@@ -16,10 +21,13 @@
     "strict": true,
     "target": "ES2020",
     "types": [
-      "@webgpu/types",
-    ],
+      "@webgpu/types"
+    ]
   },
+  "exclude": [
+    "dist"
+  ],
   "include": [
     "src"
-  ]
+  ],
 }

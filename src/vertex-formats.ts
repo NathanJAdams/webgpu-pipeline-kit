@@ -1,8 +1,8 @@
-import { WGBKElementLayout, WGBKMarshalledFormatElement } from './buffer-resource-types';
-import { WGBKInstanceFormat } from './instance';
+import { WPKElementLayout, WPKMarshalledFormatElement } from './buffer-types';
+import { WPKInstanceFormat } from './instance-types';
 
-export const VertexFormats = {
-  ofElementLayout: (elementLayout: WGBKElementLayout): GPUVertexFormat => {
+export const vertexFormatsFactory = {
+  ofElementLayout: (elementLayout: WPKElementLayout): GPUVertexFormat => {
     const { datumType, dimension } = elementLayout;
     switch (dimension) {
     case 'scalar': return datumType;
@@ -11,7 +11,7 @@ export const VertexFormats = {
     case 'vec4': return `${datumType}x4`;
     }
   },
-  ofFormatElement: <TFormat extends WGBKInstanceFormat>(formatElement: WGBKMarshalledFormatElement<TFormat>): GPUVertexFormat => {
+  ofFormatElement: <TFormat extends WPKInstanceFormat>(formatElement: WPKMarshalledFormatElement<TFormat>): GPUVertexFormat => {
     const { datumType, scalar, vec } = formatElement;
     if (scalar !== undefined) {
       return datumType;

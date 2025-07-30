@@ -1,4 +1,4 @@
-export const MathFuncs = {
+export const mathFuncs = {
   HALF_PI: 0.5 * Math.PI,
   TWO_PI: 2 * Math.PI,
 

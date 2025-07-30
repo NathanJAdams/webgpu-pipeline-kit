@@ -1,15 +1,15 @@
-import { WGBKInstanceFormat, WGBKInstanceOf } from './instance';
-import { WGBKInstanceCommand } from './InstanceCache';
-import { BidiMap, CopySlice, Slice, Slices, ValueSlices } from './utils';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
+import { WPKInstanceCommand } from './InstanceCache';
+import { BidiMap, CopySlice, Slice, sliceFuncs, ValueSlices } from './utils';
 
-export const WGBKUpdatedInstances = {
-  byIndex: <TFormat extends WGBKInstanceFormat>(
-    indexedInstances: Map<number, WGBKInstanceOf<TFormat>>
-  ): ValueSlices<WGBKInstanceOf<TFormat>[]> => Slices.ofMap(indexedInstances),
-  byIdIndex: <TFormat extends WGBKInstanceFormat>(
+export const updatedInstancesFuncs = {
+  byIndex: <TFormat extends WPKInstanceFormat>(
+    indexedInstances: Map<number, WPKInstanceOf<TFormat>>
+  ): ValueSlices<WPKInstanceOf<TFormat>[]> => sliceFuncs.ofMap(indexedInstances),
+  byIdIndex: <TFormat extends WPKInstanceFormat>(
     idIndexes: BidiMap<string, number>,
-    command: WGBKInstanceCommand<WGBKInstanceOf<TFormat>>
-  ): ValueSlices<WGBKInstanceOf<TFormat>[]> => {
+    command: WPKInstanceCommand<WPKInstanceOf<TFormat>>
+  ): ValueSlices<WPKInstanceOf<TFormat>[]> => {
     const { added, mutated, removed } = command;
     const stagingIdInstances = [
       ...added,
@@ -30,7 +30,7 @@ export const WGBKUpdatedInstances = {
     const oldIndexes = oldIds.map((id) => idIndexes.get(id)).filter((index) => index !== undefined);
     oldIndexes.forEach((oldIndex) => idIndexes.deleteValue(oldIndex));
     const overwrittenIndexes = oldIndexes.filter((index) => index < newUsed);
-    const overwrittenSlices = Slices.ofInts(overwrittenIndexes);
+    const overwrittenSlices = sliceFuncs.ofInts(overwrittenIndexes);
     let stagingIndexOffset = 0;
     for (const overwrittenSlice of overwrittenSlices) {
       const { min, length } = overwrittenSlice;

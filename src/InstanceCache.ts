@@ -1,14 +1,14 @@
 import { v4 as uuid } from 'uuid';
 
-export type WGBKInstanceCommand<T> = {
+export type WPKInstanceCommand<T> = {
     added: Map<string, T>;
     mutated: Map<string, T>;
     removed: Set<string>;
 };
 
-export class WGBKInstanceCache<T> {
+export class WPKInstanceCache<T> {
   private readonly backing = new Map<string, T>();
-  private readonly currentCommand: WGBKInstanceCommand<T> = {
+  private readonly currentCommand: WPKInstanceCommand<T> = {
     added: new Map(),
     mutated: new Map(),
     removed: new Set(),
@@ -42,12 +42,12 @@ export class WGBKInstanceCache<T> {
       this.currentCommand.removed.add(id);
     }
   }
-  command(): WGBKInstanceCommand<T> {
+  command(): WPKInstanceCommand<T> {
     const { added, mutated, removed } = this.currentCommand;
     added.forEach((instance, id) => this.backing.set(id, instance));
     mutated.forEach((instance, id) => this.backing.set(id, instance));
     removed.forEach((id) => this.backing.delete(id));
-    const command: WGBKInstanceCommand<T> = {
+    const command: WPKInstanceCommand<T> = {
       added: new Map(added),
       mutated: new Map(mutated),
       removed: new Set(removed),

@@ -1,20 +1,21 @@
-import { WGBKBufferFormatKey, WGBKEntityBufferFormats, WGBKMeshBufferResource, WGBKResource, WGBKTrackedBuffer } from './buffer-resource-types';
-import { Resources } from './resources';
-import { NonMeshBufferLocation, MeshBufferLocation } from './Shaders';
-import { WGBKStrides } from './strides';
-import { BindGroupDetail, BindGroupsDetail, ComputePipelineDetail, DrawCounts, RenderPipelineDetail, ShaderModuleDetail, VertexBufferDetail } from './types';
-import { PipelineUtils, WGBKMesh, WGBKMeshes, WorkGroupSize } from './utils';
-import { VertexAttributes } from './vertex-attributes';
-import { VertexFormats } from './vertex-formats';
+import { WPKBufferFormatKey, WPKEntityBufferFormats, WPKMeshBufferResource, WPKResource, WPKTrackedBuffer } from './buffer-types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
+import { WPKMesh, meshFuncs } from './mesh';
+import { pipelineUtils, WorkGroupSize } from './pipeline-utils';
+import { resourceFactory } from './resources';
+import { WPKUserDefinedBufferLocation, WPKMeshBufferLocation } from './shaders';
+import { strideFuncs } from './strides';
+import { vertexAttributesFactory } from './vertex-attributes';
+import { vertexFormatsFactory } from './vertex-formats';
 
-export const PipelineResources = {
+export const pipelineResourceFactory = {
   // layouts
   ofBindGroupLayout: (
     name: string,
     entries: GPUBindGroupLayoutEntry[]
-  ): WGBKResource<GPUBindGroupLayout> => {
+  ): WPKResource<GPUBindGroupLayout> => {
     const label = `${name}-bind-group-layout`;
-    return Resources.ofCached({
+    return resourceFactory.ofCached({
       get(device, _queue, _encoder) {
         return device.createBindGroupLayout({
           label,
@@ -25,10 +26,10 @@ export const PipelineResources = {
   },
   ofPipelineLayout: (
     name: string,
-    bindGroupLayoutsResource: WGBKResource<GPUBindGroupLayout[]>
-  ): WGBKResource<GPUPipelineLayout> => {
+    bindGroupLayoutsResource: WPKResource<GPUBindGroupLayout[]>
+  ): WPKResource<GPUPipelineLayout> => {
     const label = `${name}-pipeline-layout`;
-    return Resources.ofCached({
+    return resourceFactory.ofCached({
       get(device, queue, encoder) {
         const bindGroupLayouts = bindGroupLayoutsResource.get(device, queue, encoder);
         return device.createPipelineLayout({
@@ -42,12 +43,12 @@ export const PipelineResources = {
   // shader
   ofShaderModule: (
     name: string,
-    shaderModule: ShaderModuleDetail,
-    pipelineLayoutResource: WGBKResource<GPUPipelineLayout>
-  ): WGBKResource<GPUShaderModule> => {
+    shaderModule: WPKShaderModuleDetail,
+    pipelineLayoutResource: WPKResource<GPUPipelineLayout>
+  ): WPKResource<GPUShaderModule> => {
     const label = `${name}-shader`;
     const { code, entryPoints } = shaderModule;
-    return Resources.ofCachedFromDependencies(
+    return resourceFactory.ofCachedFromDependencies(
       [pipelineLayoutResource],
       (device, queue, encoder, values) => device.createShaderModule({
         label,
@@ -63,9 +64,9 @@ export const PipelineResources = {
   // bind groups
   ofBindGroupEntry: (
     binding: number,
-    bufferResource: WGBKResource<WGBKTrackedBuffer>
-  ): WGBKResource<GPUBindGroupEntry> => {
-    return Resources.ofCachedFromDependencies(
+    bufferResource: WPKResource<WPKTrackedBuffer>
+  ): WPKResource<GPUBindGroupEntry> => {
+    return resourceFactory.ofCachedFromDependencies(
       [bufferResource] as const,
       (device, queue, encoder, values) => ({
         binding,
@@ -78,11 +79,11 @@ export const PipelineResources = {
   ofBindGroup: (
     name: string,
     group: number,
-    bindGroupLayoutResource: WGBKResource<GPUBindGroupLayout>,
-    bindGroupEntriesResource: WGBKResource<GPUBindGroupEntry[]>
-  ): WGBKResource<GPUBindGroup> => {
+    bindGroupLayoutResource: WPKResource<GPUBindGroupLayout>,
+    bindGroupEntriesResource: WPKResource<GPUBindGroupEntry[]>
+  ): WPKResource<GPUBindGroup> => {
     const label = `${name}-bind-group-${group}`;
-    return Resources.ofCachedFromDependencies(
+    return resourceFactory.ofCachedFromDependencies(
       [bindGroupLayoutResource, bindGroupEntriesResource] as const,
       (device, queue, encoder, values) => device.createBindGroup({
         label,
@@ -93,9 +94,9 @@ export const PipelineResources = {
   },
   ofBindGroupDetail: (
     index: number,
-    bindGroupResource: WGBKResource<GPUBindGroup>,
-  ): WGBKResource<BindGroupDetail> => {
-    return Resources.ofCachedFromDependencies(
+    bindGroupResource: WPKResource<GPUBindGroup>,
+  ): WPKResource<WPKBindGroupDetail> => {
+    return resourceFactory.ofCachedFromDependencies(
       [bindGroupResource],
       (device, queue, encoder, values) => ({
         group: values[0],
@@ -108,12 +109,12 @@ export const PipelineResources = {
   ofComputePipeline: (
     name: string,
     index: number,
-    pipelineLayoutResource: WGBKResource<GPUPipelineLayout>,
-    shaderResource: WGBKResource<GPUShaderModule>,
+    pipelineLayoutResource: WPKResource<GPUPipelineLayout>,
+    shaderResource: WPKResource<GPUShaderModule>,
     entryPoint: string
-  ): WGBKResource<GPUComputePipeline> => {
+  ): WPKResource<GPUComputePipeline> => {
     const label = `${name}-compute-pipeline-${index}`;
-    return Resources.ofCachedFromDependencies(
+    return resourceFactory.ofCachedFromDependencies(
       [pipelineLayoutResource, shaderResource] as const,
       (device, queue, encoder, values) => device.createComputePipeline({
         label,
@@ -126,11 +127,11 @@ export const PipelineResources = {
     );
   },
   ofComputeDetail: (
-    bindGroupsResource: WGBKResource<BindGroupsDetail>,
-    computePipelineResource: WGBKResource<GPUComputePipeline>,
+    bindGroupsResource: WPKResource<WPKBindGroupsDetail>,
+    computePipelineResource: WPKResource<GPUComputePipeline>,
     workGroupSizeFunc: () => WorkGroupSize
-  ): WGBKResource<ComputePipelineDetail> => {
-    return Resources.ofCachedFromDependencies(
+  ): WPKResource<WPKComputePipelineDetail> => {
+    return resourceFactory.ofCachedFromDependencies(
       [bindGroupsResource, computePipelineResource] as const,
       (device, queue, encoder, values) => ({
         bindGroups: values[0],
@@ -142,43 +143,43 @@ export const PipelineResources = {
 
   // render
   ofMeshVertexBufferDetail: (
-    meshBufferLocation: MeshBufferLocation,
-    meshBufferResource: WGBKMeshBufferResource
-  ): WGBKResource<VertexBufferDetail> => {
+    meshBufferLocation: WPKMeshBufferLocation,
+    meshBufferResource: WPKMeshBufferResource
+  ): WPKResource<WPKVertexBufferDetail> => {
     const { format, location, step } = meshBufferLocation;
-    const arrayStride = PipelineUtils.toByteLength(format);
+    const arrayStride = pipelineUtils.toByteLength(format);
     const attributes: GPUVertexAttribute[] = [{
       format,
       offset: 0,
       shaderLocation: location,
     }];
-    return PipelineResources.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
+    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
   },
-  ofBindingVertexBufferDetail: <TBufferFormats extends WGBKEntityBufferFormats<any>>(
-    bindingBufferLocation: NonMeshBufferLocation<TBufferFormats>,
+  ofBindingVertexBufferDetail: <TBufferFormats extends WPKEntityBufferFormats<any>>(
+    bindingBufferLocation: WPKUserDefinedBufferLocation<TBufferFormats>,
     bufferFormats: TBufferFormats,
-    buffersResources: Record<WGBKBufferFormatKey<TBufferFormats>, WGBKResource<WGBKTrackedBuffer>>,
-  ): WGBKResource<VertexBufferDetail> => {
+    buffersResources: Record<WPKBufferFormatKey<TBufferFormats>, WPKResource<WPKTrackedBuffer>>,
+  ): WPKResource<WPKVertexBufferDetail> => {
     const { buffer, location, step } = bindingBufferLocation;
     const bufferFormat = bufferFormats[buffer];
     const bufferResource = buffersResources[buffer];
     const { contentType } = bufferFormat;
     const arrayStride = (contentType === 'layout')
-      ? WGBKStrides.ofLayout(bufferFormat.layout)
-      : WGBKStrides.ofMarshalledFormat(bufferFormat.marshall);
+      ? strideFuncs.ofLayout(bufferFormat.layout)
+      : strideFuncs.ofMarshalledFormat(bufferFormat.marshall);
     const attributes = (contentType === 'layout')
-      ? VertexAttributes.of(location, bufferFormat.layout, VertexFormats.ofElementLayout, WGBKStrides.ofElementLayout)
-      : VertexAttributes.of(location, bufferFormat.marshall, VertexFormats.ofFormatElement, WGBKStrides.ofMarshalledFormatElement);
-    return PipelineResources.ofVertexBufferDetail(arrayStride, attributes, location, step, bufferResource);
+      ? vertexAttributesFactory.of(location, bufferFormat.layout, vertexFormatsFactory.ofElementLayout, strideFuncs.ofElementLayout)
+      : vertexAttributesFactory.of(location, bufferFormat.marshall, vertexFormatsFactory.ofFormatElement, strideFuncs.ofMarshalledFormatElement);
+    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, bufferResource);
   },
   ofVertexBufferDetail: (
     arrayStride: number,
     attributes: GPUVertexAttribute[],
     location: number,
     step: GPUVertexStepMode,
-    bufferResource: WGBKResource<WGBKTrackedBuffer>
-  ): WGBKResource<VertexBufferDetail> => {
-    return Resources.ofCachedFromDependencies(
+    bufferResource: WPKResource<WPKTrackedBuffer>
+  ): WPKResource<WPKVertexBufferDetail> => {
+    return resourceFactory.ofCachedFromDependencies(
       [bufferResource] as const,
       (_device, _queue, _encoder, values) => ({
         buffer: values[0].buffer,
@@ -192,17 +193,17 @@ export const PipelineResources = {
     );
   },
   ofVertexBuffers: (
-    vertexBufferDetailResources: WGBKResource<VertexBufferDetail>[]
-  ): WGBKResource<GPUBuffer[]> => {
-    return Resources.ofCachedFromDependencies(
+    vertexBufferDetailResources: WPKResource<WPKVertexBufferDetail>[]
+  ): WPKResource<GPUBuffer[]> => {
+    return resourceFactory.ofCachedFromDependencies(
       vertexBufferDetailResources,
       (device, queue, encoder, values) => values.map((data) => data.buffer)
     );
   },
   ofVertexBufferLayouts: (
-    vertexBufferDetailsResource: WGBKResource<VertexBufferDetail[]>
-  ): WGBKResource<GPUVertexBufferLayout[]> => {
-    return Resources.ofCachedFromDependencies(
+    vertexBufferDetailsResource: WPKResource<WPKVertexBufferDetail[]>
+  ): WPKResource<GPUVertexBufferLayout[]> => {
+    return resourceFactory.ofCachedFromDependencies(
       [vertexBufferDetailsResource] as const,
       (_device, _queue, _encoder, values) => values[0].map((data) => data.layout)
     );
@@ -210,26 +211,26 @@ export const PipelineResources = {
   ofRenderPipeline: (
     name: string,
     index: number,
-    mesh: WGBKMesh,
-    shaderModuleResource: WGBKResource<GPUShaderModule>,
+    mesh: WPKMesh,
+    shaderModuleResource: WPKResource<GPUShaderModule>,
     vertexShaderEntryPoint: string,
     fragmentShaderEntryPoint: string,
-    vertexBufferLayoutsResource: WGBKResource<GPUVertexBufferLayout[]>,
-    renderPipelineLayoutResource: WGBKResource<GPUPipelineLayout>,
+    vertexBufferLayoutsResource: WPKResource<GPUVertexBufferLayout[]>,
+    renderPipelineLayoutResource: WPKResource<GPUPipelineLayout>,
     isAntiAliasedFunc: () => boolean,
     textureFormatFunc: () => GPUTextureFormat,
-  ): WGBKResource<GPURenderPipeline> => {
+  ): WPKResource<GPURenderPipeline> => {
     const label = `${name}-render-pipeline-${index}`;
     const topology = mesh.topology;
     const frontFace = mesh.winding;
-    const cullMode = WGBKMeshes.cullMode(mesh);
-    const isAntiAliasedResource: WGBKResource<boolean> = {
+    const cullMode = meshFuncs.cullMode(mesh);
+    const isAntiAliasedResource: WPKResource<boolean> = {
       get: (_device, _queue, _encoder) => isAntiAliasedFunc(),
     };
-    const textureFormatResource: WGBKResource<GPUTextureFormat> = {
+    const textureFormatResource: WPKResource<GPUTextureFormat> = {
       get: (_device, _queue, _encoder) => textureFormatFunc(),
     };
-    return Resources.ofCachedFromDependencies(
+    return resourceFactory.ofCachedFromDependencies(
       [renderPipelineLayoutResource, shaderModuleResource, vertexBufferLayoutsResource, isAntiAliasedResource, textureFormatResource] as const,
       (device, queue, encoder, values) => device.createRenderPipeline({
         label,
@@ -247,7 +248,7 @@ export const PipelineResources = {
           }],
         },
         multisample: {
-          count: PipelineUtils.toSampleCount(values[3]),
+          count: pipelineUtils.toSampleCount(values[3]),
         },
         primitive: {
           topology,
@@ -259,13 +260,13 @@ export const PipelineResources = {
   },
   ofRenderPipelineDetail: (
     indicesType: GPUIndexFormat,
-    bindGroupsDetailResource: WGBKResource<BindGroupsDetail>,
-    indicesBufferResource: WGBKResource<GPUBuffer>,
-    vertexBuffersResource: WGBKResource<GPUBuffer[]>,
-    renderPipelineResource: WGBKResource<GPURenderPipeline>,
-    drawCountsFunc: () => DrawCounts,
-  ): WGBKResource<RenderPipelineDetail> => {
-    return Resources.ofCachedFromDependencies(
+    bindGroupsDetailResource: WPKResource<WPKBindGroupsDetail>,
+    indicesBufferResource: WPKResource<GPUBuffer>,
+    vertexBuffersResource: WPKResource<GPUBuffer[]>,
+    renderPipelineResource: WPKResource<GPURenderPipeline>,
+    drawCountsFunc: () => WPKDrawCounts,
+  ): WPKResource<WPKRenderPipelineDetail> => {
+    return resourceFactory.ofCachedFromDependencies(
       [bindGroupsDetailResource, indicesBufferResource, vertexBuffersResource, renderPipelineResource] as const,
       (device, queue, encoder, values) => {
         return ({

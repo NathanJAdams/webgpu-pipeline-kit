@@ -1,26 +1,34 @@
-import { MathFuncs } from './math';
-import { WGBKIndices, WGBKMesh, WGBKVertices } from './mesh';
-import { Vec3 } from './Vec3';
+import { mathFuncs, Vec3, vec3Funcs } from './utils';
 
-export const WGBKMeshes = {
+export type WPKVertices = Vec3[];
+export type WPKIndices = Vec3[];
+
+export type WPKMesh = {
+    vertices: WPKVertices;
+    indices: WPKIndices;
+    topology: GPUPrimitiveTopology;
+    winding: GPUFrontFace;
+};
+
+export const meshFuncs = {
   UINT32_INDEX_COUNT: 1 << 16,
   VERTICES_PER_TRIANGLE: 3,
 
-  cullMode: (mesh: WGBKMesh): GPUCullMode => (mesh.winding === 'cw')
+  cullMode: (mesh: WPKMesh): GPUCullMode => (mesh.winding === 'cw')
     ? 'front'
     : 'back',
-  indicesType: (mesh: WGBKMesh): GPUIndexFormat => (mesh.indices.length < WGBKMeshes.UINT32_INDEX_COUNT)
+  indicesType: (mesh: WPKMesh): GPUIndexFormat => (mesh.indices.length < meshFuncs.UINT32_INDEX_COUNT)
     ? 'uint16'
     : 'uint32',
-  indicesCount: (mesh: WGBKMesh): number => mesh.indices.length * 3,
-  indicesBytesLength: (mesh: WGBKMesh): number => {
-    const indicesCount = WGBKMeshes.indicesCount(mesh);
-    return (indicesCount < WGBKMeshes.UINT32_INDEX_COUNT)
+  indicesCount: (mesh: WPKMesh): number => mesh.indices.length * 3,
+  indicesBytesLength: (mesh: WPKMesh): number => {
+    const indicesCount = meshFuncs.indicesCount(mesh);
+    return (indicesCount < meshFuncs.UINT32_INDEX_COUNT)
       ? indicesCount * 2
       : indicesCount * 4;
   },
-  toIndicesData: (mesh: WGBKMesh): ArrayBuffer => {
-    const indicesType = WGBKMeshes.indicesType(mesh);
+  toIndicesData: (mesh: WPKMesh): ArrayBuffer => {
+    const indicesType = meshFuncs.indicesType(mesh);
     const flatIndices = mesh.indices.flat();
     const TypedArrayConstructor = (indicesType === 'uint16')
       ? Uint16Array
@@ -30,18 +38,18 @@ export const WGBKMeshes = {
     if (byteLength % 4 === 0) {
       return typedArray.buffer;
     }
-    const paddedByteLength = MathFuncs.nextMultipleOf(byteLength, 4);
+    const paddedByteLength = mathFuncs.nextMultipleOf(byteLength, 4);
     const buffer = new ArrayBuffer(paddedByteLength);
     const targetView = new TypedArrayConstructor(buffer);
     targetView.set(typedArray);
     return buffer;
   },
-  toVerticesData: (mesh: WGBKMesh): ArrayBuffer => {
+  toVerticesData: (mesh: WPKMesh): ArrayBuffer => {
     const flatVertices = mesh.vertices.flat();
     const verticesArray = new Float32Array(flatVertices);
     return verticesArray.buffer;
   },
-  of: (type: GPUPrimitiveTopology, vertices: WGBKVertices, indices: WGBKIndices, winding: GPUFrontFace): WGBKMesh => {
+  of: (type: GPUPrimitiveTopology, vertices: WPKVertices, indices: WPKIndices, winding: GPUFrontFace): WPKMesh => {
     return {
       topology: type,
       vertices,
@@ -49,13 +57,13 @@ export const WGBKMeshes = {
       winding,
     };
   },
-  triangle: (topProportion: number, axis: Vec3 = Vec3.Z): WGBKMesh => {
-    const axisNormalized = Vec3.normalize(axis);
+  triangle: (topProportion: number, axis: Vec3 = vec3Funcs.Z): WPKMesh => {
+    const axisNormalized = vec3Funcs.normalize(axis);
 
     // Pick a non-parallel reference vector for tangent
     const up: Vec3 = Math.abs(axisNormalized[1]) < 0.99 ? [0, 1, 0] : [1, 0, 0];
-    const tangent = Vec3.normalize(Vec3.cross(up, axisNormalized));
-    const bitangent = Vec3.cross(axisNormalized, tangent); // already normalized due to orthogonality
+    const tangent = vec3Funcs.normalize(vec3Funcs.cross(up, axisNormalized));
+    const bitangent = vec3Funcs.cross(axisNormalized, tangent); // already normalized due to orthogonality
 
     // Define triangle in 2D: base at y = -1, top at y = 1
     const baseY = -1;
@@ -71,7 +79,7 @@ export const WGBKMeshes = {
     ];
 
     // Project into 3D using tangent/bitangent vectors
-    const vertices: WGBKVertices = [];
+    const vertices: WPKVertices = [];
     for (const [x, y] of localPoints) {
       const vx = tangent[0] * x + bitangent[0] * y;
       const vy = tangent[1] * x + bitangent[1] * y;
@@ -79,7 +87,7 @@ export const WGBKMeshes = {
       vertices.push([vx, vy, vz]);
     }
 
-    const indices: WGBKIndices = [[0, 1, 2]];
+    const indices: WPKIndices = [[0, 1, 2]];
     return {
       topology: 'triangle-list',
       vertices,
@@ -87,7 +95,7 @@ export const WGBKMeshes = {
       winding: 'cw',
     };
   },
-  cube: (): WGBKMesh => {
+  cube: (): WPKMesh => {
     const vertices: Vec3[] = [
       // Front face
       [-1, -1, 1], // front bottom left
@@ -127,7 +135,7 @@ export const WGBKMeshes = {
       winding: 'cw',
     };
   },
-  sphere(subdivisions: number): WGBKMesh {
+  sphere(subdivisions: number): WPKMesh {
     const phi = (1 + Math.sqrt(5)) / 2;
     const unnormalizedVertices: Vec3[] = [
       [-1, phi, 0],
@@ -143,7 +151,7 @@ export const WGBKMeshes = {
       [-phi, 0, -1],
       [-phi, 0, 1],
     ];
-    const vertices = unnormalizedVertices.map(Vec3.normalize);
+    const vertices = unnormalizedVertices.map(vec3Funcs.normalize);
     const baseIndices: Vec3[] = [
       [0, 11, 5],
       [0, 5, 1],
@@ -174,7 +182,7 @@ export const WGBKMeshes = {
       if (cache.has(key)) {
         return cache.get(key) as number;
       }
-      const midpoint = Vec3.midpoint(vertices[a], vertices[b]);
+      const midpoint = vec3Funcs.midpoint(vertices[a], vertices[b]);
       const index = vertices.length;
       vertices.push(midpoint);
       cache.set(key, index);

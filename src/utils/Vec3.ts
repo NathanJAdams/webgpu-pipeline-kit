@@ -1,6 +1,6 @@
 export type Vec3 = readonly [number, number, number];
 
-export const Vec3 = {
+export const vec3Funcs = {
   ZERO: [0, 0, 0] as Vec3,
   ONE: [1, 1, 1] as Vec3,
   X: [1, 0, 0] as Vec3,
@@ -34,10 +34,10 @@ export const Vec3 = {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   },
   distance(a: Vec3, b: Vec3): number {
-    return Vec3.length(Vec3.subtract(a, b));
+    return vec3Funcs.length(vec3Funcs.subtract(a, b));
   },
   distanceSquared(a: Vec3, b: Vec3): number {
-    return Vec3.lengthSquared(Vec3.subtract(a, b));
+    return vec3Funcs.lengthSquared(vec3Funcs.subtract(a, b));
   },
   length(v: Vec3): number {
     return Math.hypot(v[0], v[1], v[2]);
@@ -56,7 +56,7 @@ export const Vec3 = {
     ];
   },
   midpoint(a: Vec3, b: Vec3): Vec3 {
-    return Vec3.normalize([
+    return vec3Funcs.normalize([
       (a[0] + b[0]) / 2,
       (a[1] + b[1]) / 2,
       (a[2] + b[2]) / 2
@@ -66,8 +66,8 @@ export const Vec3 = {
     return [-v[0], -v[1], -v[2]];
   },
   normalize(v: Vec3): Vec3 {
-    const len = Vec3.length(v);
-    return len === 0 ? [0, 0, 0] : Vec3.scale(v, 1 / len);
+    const len = vec3Funcs.length(v);
+    return len === 0 ? [0, 0, 0] : vec3Funcs.scale(v, 1 / len);
   },
   scale(v: Vec3, scalar: number): Vec3 {
     return [v[0] * scalar, v[1] * scalar, v[2] * scalar];

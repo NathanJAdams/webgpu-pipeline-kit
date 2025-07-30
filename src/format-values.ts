@@ -1,17 +1,17 @@
-import { WGBKFormatRef, WGBKFormatReference } from './buffer-resource-types';
-import { WGBKInstanceFormat, WGBKInstanceOf } from './instance';
+import { WPKFormatRef, WPKFormatReference } from './buffer-types';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
 
-export const WGBKFormatValues = {
-  ofScalar: <TFormat extends WGBKInstanceFormat>(formatReference: WGBKFormatReference<TFormat>, instance: WGBKInstanceOf<TFormat>): number => {
-    const { ref_0 } = formatReference as WGBKFormatRef<keyof TFormat>;
+export const formatValuesFuncs = {
+  ofScalar: <TFormat extends WPKInstanceFormat>(formatReference: WPKFormatReference<TFormat>, instance: WPKInstanceOf<TFormat>): number => {
+    const { ref_0 } = formatReference as WPKFormatRef<keyof TFormat>;
     return (instance as Record<keyof TFormat, number>)[ref_0];
   },
-  ofTuple: <TFormat extends WGBKInstanceFormat>(formatReference: WGBKFormatReference<TFormat>, instance: WGBKInstanceOf<TFormat>): number => {
-    const { ref_0, ref_1 } = formatReference as unknown as WGBKFormatRef<keyof TFormat, number>;
+  ofTuple: <TFormat extends WPKInstanceFormat>(formatReference: WPKFormatReference<TFormat>, instance: WPKInstanceOf<TFormat>): number => {
+    const { ref_0, ref_1 } = formatReference as unknown as WPKFormatRef<keyof TFormat, number>;
     return (instance as Record<keyof TFormat, number[]>)[ref_0][ref_1];
   },
-  ofNamed: <TFormat extends WGBKInstanceFormat>(formatReference: WGBKFormatReference<TFormat>, instance: WGBKInstanceOf<TFormat>): number => {
-    const { ref_0, ref_1 } = formatReference as WGBKFormatRef<keyof TFormat, string>;
+  ofNamed: <TFormat extends WPKInstanceFormat>(formatReference: WPKFormatReference<TFormat>, instance: WPKInstanceOf<TFormat>): number => {
+    const { ref_0, ref_1 } = formatReference as WPKFormatRef<keyof TFormat, string>;
     return (instance as Record<keyof TFormat, Record<string, number>>)[ref_0][ref_1];
   },
 };

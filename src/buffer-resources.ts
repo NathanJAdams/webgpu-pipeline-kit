@@ -1,66 +1,61 @@
-import { WGBKBufferResourceHelpers } from './buffer-resource-helpers';
-import { WGBKBufferFormats, WGBKResource, WGBKBufferType, WGBKBufferResources, WGBKMeshBufferResource, WGBKTrackedBuffer, WGBKMutableOptions, BufferContentType, WGBKBufferFormat, WGBKBufferFormatKey } from './buffer-resource-types';
-import { WGBKExtractors } from './extractors';
-import { WGBKInstanceFormat, WGBKInstanceOf } from './instance';
-import { WGBKInstanceCache } from './InstanceCache';
-import { WGBKStrides } from './strides';
-import { WGBKUpdatedInstances } from './updated-instances';
-import { BidiMap, ChangeDetectors, CopySlice, WGBKMesh, WGBKMeshes, ValueSlices } from './utils';
+import { bufferFactory } from './buffer-factory';
+import { bufferFormatExtractorFactory } from './buffer-format-extractors';
+import { WPKBufferFormats, WPKResource, WPKBufferResources, WPKMeshBufferResource, WPKTrackedBuffer, WPKMutableOptions, WPKBufferFormatKey } from './buffer-types';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
+import { WPKInstanceCache } from './InstanceCache';
+import { WPKMesh, meshFuncs } from './mesh';
+import { strideFuncs } from './strides';
+import { updatedInstancesFuncs } from './updated-instances';
+import { BidiMap, changeDetectorFactory, CopySlice, ValueSlices } from './utils';
 
-type WGBKMutator<T> = {
+type WPKMutator<T> = {
     mutate: (input: T) => void;
 };
 
-export const BufferResources = {
-  toBufferBindingType: <TBufferType extends WGBKBufferType, TBufferContentType extends BufferContentType>(visibility: GPUShaderStageFlags, bufferFormat: WGBKBufferFormat<TBufferType, TBufferContentType>): GPUBufferBindingType =>
-    bufferFormat.bufferType === 'uniform'
-      ? 'uniform'
-      : (visibility === GPUShaderStage.COMPUTE) && (bufferFormat.contentType === 'layout')
-        ? 'storage'
-        : 'read-only-storage',
-  ofMesh: (name: string, mesh: WGBKMesh): WGBKMeshBufferResource => {
-    const indices = WGBKBufferResourceHelpers.ofData(WGBKMeshes.toIndicesData(mesh), `${name}-indices`, GPUBufferUsage.INDEX);
-    const vertices = WGBKBufferResourceHelpers.ofData(WGBKMeshes.toVerticesData(mesh), `${name}-vertices`, GPUBufferUsage.VERTEX);
+export const bufferResourcesFactory = {
+  ofMesh: (name: string, mesh: WPKMesh): WPKMeshBufferResource => {
+    const indices = bufferFactory.ofData(meshFuncs.toIndicesData(mesh), `${name}-indices`, GPUBufferUsage.INDEX);
+    const vertices = bufferFactory.ofData(meshFuncs.toVerticesData(mesh), `${name}-vertices`, GPUBufferUsage.VERTEX);
     return {
       indices,
       vertices,
     };
   },
   ofUniformAndInstances: <
-        TUniformFormat extends WGBKInstanceFormat,
-        TEntityFormat extends WGBKInstanceFormat,
-        TBufferFormats extends WGBKBufferFormats<TUniformFormat, TEntityFormat>,
+        TUniformFormat extends WPKInstanceFormat,
+        TEntityFormat extends WPKInstanceFormat,
+        TBufferFormats extends WPKBufferFormats<TUniformFormat, TEntityFormat>,
         TMutableUniform extends boolean,
         TMutableInstances extends boolean,
         TResizeableInstances extends boolean,
     >(
     name: string,
-    initialUniform: WGBKInstanceOf<TUniformFormat>,
-    initialInstances: WGBKInstanceOf<TEntityFormat>[],
+    initialUniform: WPKInstanceOf<TUniformFormat>,
+    initialInstances: WPKInstanceOf<TEntityFormat>[],
     bufferFormats: TBufferFormats,
-    bufferUsages: Record<WGBKBufferFormatKey<TBufferFormats>, GPUBufferUsageFlags>,
-    mutableOptions: WGBKMutableOptions<TMutableUniform, TMutableInstances, TResizeableInstances>,
-  ): WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, TResizeableInstances> => {
+    bufferUsages: Record<WPKBufferFormatKey<TBufferFormats>, GPUBufferUsageFlags>,
+    mutableOptions: WPKMutableOptions<TMutableUniform, TMutableInstances, TResizeableInstances>,
+  ): WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, TResizeableInstances> => {
     const { isMutableUniform, isMutableInstances, isResizeableInstances } = mutableOptions;
     let nextUniform = initialUniform;
-    const uniformChangeDetector = ChangeDetectors.ofTripleEquals(initialUniform);
-    const uniformMutators: WGBKMutator<WGBKInstanceOf<TUniformFormat>>[] = [];
-    const mutatedInstancesByIndex = new Map<number, WGBKInstanceOf<TEntityFormat>>;
+    const uniformChangeDetector = changeDetectorFactory.ofTripleEquals(initialUniform);
+    const uniformMutators: WPKMutator<WPKInstanceOf<TUniformFormat>>[] = [];
+    const mutatedInstancesByIndex = new Map<number, WPKInstanceOf<TEntityFormat>>;
     const instanceIdIndexes = new BidiMap<string, number>();
-    const instanceMutators: WGBKMutator<ValueSlices<WGBKInstanceOf<TEntityFormat>[]>>[] = [];
-    const instanceCache = new WGBKInstanceCache<WGBKInstanceOf<TEntityFormat>>();
-    const buffers: Record<string, WGBKResource<WGBKTrackedBuffer>> = {};
+    const instanceMutators: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>>[] = [];
+    const instanceCache = new WPKInstanceCache<WPKInstanceOf<TEntityFormat>>();
+    const buffers: Record<string, WPKResource<WPKTrackedBuffer>> = {};
     initialInstances.forEach((initialInstance) => instanceCache.add(initialInstance));
     for (const [key, bufferFormat] of Object.entries(bufferFormats)) {
       const { bufferType, contentType } = bufferFormat;
       const usage = bufferUsages[key];
       const label = `${name}-buffer-${key}`;
       if (bufferType === 'uniform') {
-        const extractor = WGBKExtractors.of(bufferFormat.marshall);
+        const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
         if (isMutableUniform) {
-          const stride = WGBKStrides.ofMarshalledFormat(bufferFormat.marshall);
-          const buffer = WGBKBufferResourceHelpers.ofMutable(stride, label, usage);
-          const uniformMutator: WGBKMutator<WGBKInstanceOf<TUniformFormat>> = {
+          const stride = strideFuncs.ofMarshalledFormat(bufferFormat.marshall);
+          const buffer = bufferFactory.ofMutable(stride, label, usage);
+          const uniformMutator: WPKMutator<WPKInstanceOf<TUniformFormat>> = {
             mutate(input) {
               const data = extractor.extract([input]);
               buffer.mutate(data, 0);
@@ -70,17 +65,17 @@ export const BufferResources = {
           uniformMutators.push(uniformMutator);
         } else {
           const data = extractor.extract([initialUniform]);
-          const buffer = WGBKBufferResourceHelpers.ofData(data, label, usage);
+          const buffer = bufferFactory.ofData(data, label, usage);
           buffers[key] = buffer;
         }
       } else if (bufferType === 'entity') {
         if (contentType === 'layout') {
           if (isResizeableInstances) {
-            const stride = WGBKStrides.ofLayout(bufferFormat.layout);
-            const buffer = WGBKBufferResourceHelpers.ofResizeable(false, label, usage);
+            const stride = strideFuncs.ofLayout(bufferFormat.layout);
+            const buffer = bufferFactory.ofResizeable(false, label, usage);
             buffers[key] = buffer;
             let maxInstanceCount = 0;
-            const mutator: WGBKMutator<ValueSlices<WGBKInstanceOf<TEntityFormat>[]>> = {
+            const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
               mutate(input) {
                 const { copySlices } = input;
                 const maxCopySliceIndex = copySlices.reduce((max, copySlice) => Math.max(max, copySlice.toIndex + copySlice.length), 0);
@@ -91,17 +86,17 @@ export const BufferResources = {
             };
             instanceMutators.push(mutator);
           } else {
-            const stride = WGBKStrides.ofLayout(bufferFormat.layout);
-            buffers[key] = WGBKBufferResourceHelpers.ofSize(initialInstances.length * stride, label, usage);
+            const stride = strideFuncs.ofLayout(bufferFormat.layout);
+            buffers[key] = bufferFactory.ofSize(initialInstances.length * stride, label, usage);
           }
         } else if (contentType === 'marshalled') {
           if (isResizeableInstances) {
-            const buffer = WGBKBufferResourceHelpers.ofStaged(label, usage);
+            const buffer = bufferFactory.ofStaged(label, usage);
             buffers[key] = buffer;
             if (isMutableInstances) {
-              const stride = WGBKStrides.ofMarshalledFormat(bufferFormat.marshall);
-              const extractor = WGBKExtractors.of(bufferFormat.marshall);
-              const mutator: WGBKMutator<ValueSlices<WGBKInstanceOf<TEntityFormat>[]>> = {
+              const stride = strideFuncs.ofMarshalledFormat(bufferFormat.marshall);
+              const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
+              const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
                 mutate(input) {
                   const { copySlices, values } = input;
                   const data = extractor.extract(values);
@@ -119,10 +114,10 @@ export const BufferResources = {
             }
           } else {
             if (isMutableInstances) {
-              const buffer = WGBKBufferResourceHelpers.ofStaged(label, usage);
+              const buffer = bufferFactory.ofStaged(label, usage);
               buffers[key] = buffer;
-              const extractor = WGBKExtractors.of(bufferFormat.marshall);
-              const mutator: WGBKMutator<ValueSlices<WGBKInstanceOf<TEntityFormat>[]>> = {
+              const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
+              const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
                 mutate(input) {
                   const { copySlices, values } = input;
                   const data = extractor.extract(values);
@@ -131,9 +126,9 @@ export const BufferResources = {
               };
               instanceMutators.push(mutator);
             } else {
-              const extractor = WGBKExtractors.of(bufferFormat.marshall);
+              const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
               const data = extractor.extract(initialInstances);
-              buffers[key] = WGBKBufferResourceHelpers.ofData(data, label, usage);
+              buffers[key] = bufferFactory.ofData(data, label, usage);
             }
           }
         } else {
@@ -143,7 +138,7 @@ export const BufferResources = {
         throw Error(`Cannot create buffer for unknown buffer type ${bufferType}`);
       }
     }
-    const bufferResources: WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, boolean, boolean, boolean> = {
+    const bufferResources: WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, boolean, boolean, boolean> = {
       buffers,
       instanceCount: () => isResizeableInstances
         ? instanceCache.count()
@@ -156,13 +151,13 @@ export const BufferResources = {
           if (instanceCache.isDirty()) {
             const command = instanceCache.command();
             if (command.added.size > 0 || command.mutated.size > 0 || command.removed.size > 0) {
-              const mutatedSlices = WGBKUpdatedInstances.byIdIndex(instanceIdIndexes, command);
+              const mutatedSlices = updatedInstancesFuncs.byIdIndex(instanceIdIndexes, command);
               instanceMutators.forEach((instanceMutator) => instanceMutator.mutate(mutatedSlices));
             }
           }
         } else if (isMutableInstances) {
           if (mutatedInstancesByIndex.size > 0) {
-            const mutatedSlices = WGBKUpdatedInstances.byIndex(mutatedInstancesByIndex);
+            const mutatedSlices = updatedInstancesFuncs.byIndex(mutatedInstancesByIndex);
             instanceMutators.forEach((instanceMutator) => instanceMutator.mutate(mutatedSlices));
             mutatedInstancesByIndex.clear();
           }
@@ -170,23 +165,23 @@ export const BufferResources = {
       },
     };
     if (isMutableUniform) {
-      const mutableUniformBufferResources = bufferResources as WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, true, false, false>;
+      const mutableUniformBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, true, false, false>;
       mutableUniformBufferResources.mutateUniform = (uniform) => nextUniform = uniform;
     }
     if (isMutableInstances) {
       if (isResizeableInstances) {
-        const mutableInstancesBufferResources = bufferResources as WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, true, true>;
+        const mutableInstancesBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, true, true>;
         mutableInstancesBufferResources.mutateInstanceById = (id, instance) => instanceCache.mutate(id, instance);
       } else {
-        const mutableInstancesBufferResources = bufferResources as WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, true, false>;
+        const mutableInstancesBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, true, false>;
         mutableInstancesBufferResources.mutateInstanceByIndex = mutatedInstancesByIndex.set;
       }
     }
     if (isResizeableInstances) {
-      const resizeableInstancesBufferResources = bufferResources as WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, true>;
+      const resizeableInstancesBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, true>;
       resizeableInstancesBufferResources.add = (instance) => instanceCache.add(instance);
       resizeableInstancesBufferResources.remove = (instanceId) => instanceCache.remove(instanceId);
     }
-    return bufferResources as WGBKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, TResizeableInstances>;
+    return bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, TResizeableInstances>;
   },
 };

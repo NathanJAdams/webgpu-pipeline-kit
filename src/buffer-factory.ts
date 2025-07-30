@@ -1,40 +1,40 @@
-import { WGBKResource, WGBKTrackedBuffer } from './buffer-resource-types';
-import { Capacity, CopySlice, MathFuncs, ValueSlices } from './utils';
+import { WPKResource, WPKTrackedBuffer } from './buffer-types';
+import { Capacity, CopySlice, mathFuncs, ValueSlices } from './utils';
 
-enum WGBKManagedBufferState {
+enum WPKManagedBufferState {
     Initialized,
     New,
     Reused,
     Destroyed,
 }
 
-type WGBKMutatedData = {
+type WPKMutatedData = {
     data: ArrayBuffer;
     index: number;
 };
 
-const VALID_BYTES_MULTIPLE = 4;
 const MINIMUM_BYTES_LENGTH = 16;
+const VALID_BYTES_MULTIPLE = 4;
 
-const checkNotDestroyed = (state: WGBKManagedBufferState): void => {
-  if (state === WGBKManagedBufferState.Destroyed) {
+const checkNotDestroyed = (state: WPKManagedBufferState): void => {
+  if (state === WPKManagedBufferState.Destroyed) {
     throw Error('Cannot use managed buffer after being destroyed');
   }
 };
 const toValidSize = (label: string, bytesLength: number): number => {
   const clampedBytesLength = Math.max(MINIMUM_BYTES_LENGTH, bytesLength);
-  return MathFuncs.nextMultipleOf(clampedBytesLength, VALID_BYTES_MULTIPLE);
+  return mathFuncs.nextMultipleOf(clampedBytesLength, VALID_BYTES_MULTIPLE);
 };
 
-export type WGBKMutable<T> = {
+export type WPKMutable<T> = {
     mutate: (data: ArrayBuffer, target: T) => void;
 };
-export type WGBKResizeable = {
+export type WPKResizeable = {
     resize: (bytesLength: number) => void;
 };
 
-export const WGBKBufferResourceHelpers = {
-  ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags): WGBKResource<WGBKTrackedBuffer> => {
+export const bufferFactory = {
+  ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
     const size = toValidSize(label, data.byteLength);
     if (size > data.byteLength) {
       const alignedBuffer = new ArrayBuffer(size);
@@ -42,8 +42,8 @@ export const WGBKBufferResourceHelpers = {
       data = alignedBuffer;
     }
     usage |= GPUBufferUsage.COPY_DST;
-    let state = WGBKManagedBufferState.Initialized;
-    let trackedBuffer: WGBKTrackedBuffer | undefined;
+    let state = WPKManagedBufferState.Initialized;
+    let trackedBuffer: WPKTrackedBuffer | undefined;
     return {
       get(device, queue, _encoder) {
         checkNotDestroyed(state);
@@ -54,18 +54,18 @@ export const WGBKBufferResourceHelpers = {
             usage,
           });
           queue.writeBuffer(buffer, 0, data);
-          state = WGBKManagedBufferState.New;
+          state = WPKManagedBufferState.New;
           trackedBuffer = {
             isNew: true,
             buffer,
             destroy() {
-              state = WGBKManagedBufferState.Destroyed;
+              state = WPKManagedBufferState.Destroyed;
               buffer.destroy();
             },
           };
         } else {
-          if (state === WGBKManagedBufferState.New) {
-            state = WGBKManagedBufferState.Reused;
+          if (state === WPKManagedBufferState.New) {
+            state = WPKManagedBufferState.Reused;
             trackedBuffer = {
               ...trackedBuffer,
               isNew: false,
@@ -76,10 +76,10 @@ export const WGBKBufferResourceHelpers = {
       },
     };
   },
-  ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WGBKResource<WGBKTrackedBuffer> => {
+  ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
     const size = toValidSize(label, bytesLength);
-    let state = WGBKManagedBufferState.Initialized;
-    let trackedBuffer: WGBKTrackedBuffer | undefined;
+    let state = WPKManagedBufferState.Initialized;
+    let trackedBuffer: WPKTrackedBuffer | undefined;
     return {
       get(device, _queue, _encoder) {
         checkNotDestroyed(state);
@@ -89,18 +89,18 @@ export const WGBKBufferResourceHelpers = {
             size,
             usage,
           });
-          state = WGBKManagedBufferState.New;
+          state = WPKManagedBufferState.New;
           trackedBuffer = {
             buffer,
             isNew: true,
             destroy() {
-              state = WGBKManagedBufferState.Destroyed;
+              state = WPKManagedBufferState.Destroyed;
               buffer.destroy();
             },
           };
         } else {
-          if (state === WGBKManagedBufferState.New) {
-            state = WGBKManagedBufferState.Reused;
+          if (state === WPKManagedBufferState.New) {
+            state = WPKManagedBufferState.Reused;
             trackedBuffer = {
               ...trackedBuffer,
               isNew: false,
@@ -111,14 +111,14 @@ export const WGBKBufferResourceHelpers = {
       },
     };
   },
-  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags): WGBKResizeable & WGBKResource<WGBKTrackedBuffer> => {
+  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags): WPKResizeable & WPKResource<WPKTrackedBuffer> => {
     let previousBuffer: GPUBuffer | undefined;
     let currentBuffer: GPUBuffer | undefined;
     const capacity = new Capacity(MINIMUM_BYTES_LENGTH, 1.2, 1.5);
     let previousBytesLength = capacity.capacity;
     let desiredBytesLength = 0;
-    let state = WGBKManagedBufferState.Initialized;
-    let trackedBuffer: WGBKTrackedBuffer | undefined;
+    let state = WPKManagedBufferState.Initialized;
+    let trackedBuffer: WPKTrackedBuffer | undefined;
     if (copyDataOnResize) {
       usage |= GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
     }
@@ -142,12 +142,12 @@ export const WGBKBufferResourceHelpers = {
             size: capacity.capacity,
             usage,
           });
-          state = WGBKManagedBufferState.New;
+          state = WPKManagedBufferState.New;
           trackedBuffer = {
             buffer: currentBuffer,
             isNew: true,
             destroy() {
-              state = WGBKManagedBufferState.Destroyed;
+              state = WPKManagedBufferState.Destroyed;
               newBuffer.destroy();
             },
           };
@@ -157,8 +157,8 @@ export const WGBKBufferResourceHelpers = {
               encoder.copyBufferToBuffer(previousBuffer, currentBuffer, copySize);
             }
           }
-        } else if (trackedBuffer !== undefined && state === WGBKManagedBufferState.New) {
-          state = WGBKManagedBufferState.Reused;
+        } else if (trackedBuffer !== undefined && state === WPKManagedBufferState.New) {
+          state = WPKManagedBufferState.Reused;
           trackedBuffer = {
             ...trackedBuffer,
             isNew: false,
@@ -168,11 +168,11 @@ export const WGBKBufferResourceHelpers = {
       },
     };
   },
-  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WGBKMutable<number> & WGBKResource<WGBKTrackedBuffer> => {
+  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKMutable<number> & WPKResource<WPKTrackedBuffer> => {
     const size = toValidSize(label, bytesLength);
-    let state = WGBKManagedBufferState.Initialized;
-    let trackedBuffer: WGBKTrackedBuffer | undefined;
-    const mutatedDataArray: WGBKMutatedData[] = [];
+    let state = WPKManagedBufferState.Initialized;
+    let trackedBuffer: WPKTrackedBuffer | undefined;
+    const mutatedDataArray: WPKMutatedData[] = [];
     return {
       mutate(data, index) {
         mutatedDataArray.push({ data, index });
@@ -185,18 +185,18 @@ export const WGBKBufferResourceHelpers = {
             size,
             usage,
           });
-          state = WGBKManagedBufferState.New;
+          state = WPKManagedBufferState.New;
           trackedBuffer = {
             buffer,
             isNew: true,
             destroy() {
-              state = WGBKManagedBufferState.Destroyed;
+              state = WPKManagedBufferState.Destroyed;
               buffer.destroy();
             },
           };
         } else {
-          if (state === WGBKManagedBufferState.New) {
-            state = WGBKManagedBufferState.Reused;
+          if (state === WPKManagedBufferState.New) {
+            state = WPKManagedBufferState.Reused;
             trackedBuffer = {
               ...trackedBuffer,
               isNew: false,
@@ -212,9 +212,9 @@ export const WGBKBufferResourceHelpers = {
       },
     };
   },
-  ofStaged: (label: string, usage: GPUBufferUsageFlags): WGBKMutable<CopySlice[]> & WGBKResource<WGBKTrackedBuffer> => {
-    const staging = WGBKBufferResourceHelpers.ofResizeable(false, `${label}-staging`, GPUBufferUsage.COPY_SRC);
-    const backing = WGBKBufferResourceHelpers.ofResizeable(true, `${label}-staging`, usage | GPUBufferUsage.COPY_DST);
+  ofStaged: (label: string, usage: GPUBufferUsageFlags): WPKMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
+    const staging = bufferFactory.ofResizeable(false, `${label}-staging`, GPUBufferUsage.COPY_SRC);
+    const backing = bufferFactory.ofResizeable(true, `${label}-staging`, usage | GPUBufferUsage.COPY_DST);
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
       mutate(data, target) {

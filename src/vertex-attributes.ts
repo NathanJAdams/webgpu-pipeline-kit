@@ -1,6 +1,6 @@
 import { NonEmptyArray } from './utils';
 
-export const VertexAttributes = {
+export const vertexAttributesFactory = {
   of: <T>(shaderLocation: number, array: NonEmptyArray<T>, toFormat: (element: T) => GPUVertexFormat, toStride: (element: T) => number): GPUVertexAttribute[] => {
     let offset = 0;
     return array.map((element): GPUVertexAttribute => {

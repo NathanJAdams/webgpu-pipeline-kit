@@ -1,11 +1,11 @@
-import { PipelineUtils } from './utils';
+import { pipelineUtils } from './pipeline-utils';
 
-export type Views = {
+export type WPKViews = {
     view: GPUTextureView;
     resolveTarget?: GPUTextureView;
 };
 
-export type ViewsGetter = (isAntiAliased: boolean) => Views;
+export type WPKViewsFunc = (isAntiAliased: boolean) => WPKViews;
 
 const getOrCreateAntiAliasingTexture = (
   canvas: HTMLCanvasElement,
@@ -21,7 +21,7 @@ const getOrCreateAntiAliasingTexture = (
     previousAntiAliasingTexture.destroy();
     previousAntiAliasingTexture = undefined;
   }
-  const sampleCount = PipelineUtils.toSampleCount(true);
+  const sampleCount = pipelineUtils.toSampleCount(true);
   const size = [width, height];
   const usage = GPUTextureUsage.RENDER_ATTACHMENT;
   const descriptor: GPUTextureDescriptor = {
@@ -33,15 +33,15 @@ const getOrCreateAntiAliasingTexture = (
   return device.createTexture(descriptor);
 };
 
-export const ViewsGetter = {
+export const viewsFuncFactory = {
   of: (
     canvas: HTMLCanvasElement,
     context: GPUCanvasContext,
     device: GPUDevice,
     format: GPUTextureFormat,
-  ): ViewsGetter => {
+  ): WPKViewsFunc => {
     let antiAliasingTexture: GPUTexture | undefined;
-    return (isAntiAliased: boolean): Views => {
+    return (isAntiAliased: boolean): WPKViews => {
       const contextView = context.getCurrentTexture().createView();
       if (isAntiAliased) {
         antiAliasingTexture = getOrCreateAntiAliasingTexture(canvas, device, format, antiAliasingTexture);

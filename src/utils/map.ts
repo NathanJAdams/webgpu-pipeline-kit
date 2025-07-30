@@ -1,4 +1,4 @@
-export const MapFuncs = {
+export const mapFuncs = {
   filter: <K, V>(map: Map<K, V>, predicate: (key: K, value: V) => boolean): Map<K, V> => {
     const filtered = new Map<K, V>();
     for (const [key, value] of map) {

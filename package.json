@@ -38,7 +38,7 @@
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:types": "tsc --project tsconfig.types.json",
     "clean": "rimraf ./dist/",
-    "lint": "eslint . --fix",
+    "lint": "eslint --debug . --fix",
     "test": "jest --silent=false"
   },
   "dependencies": {
@@ -52,6 +52,7 @@
     "@typescript-eslint/parser": "^8.38.0",
     "@webgpu/types": "^0.1.64",
     "eslint": "^9.32.0",
+    "eslint-plugin-import": "^2.32.0",
     "jest": "^30.0.5",
     "rimraf": "^6.0.1",
     "ts-jest": "^29.4.0",

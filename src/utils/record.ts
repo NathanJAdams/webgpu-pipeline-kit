@@ -1,4 +1,4 @@
-export const RecordFuncs = {
+export const recordFuncs = {
   filter: <K extends string | number | symbol, V>(record: Record<K, V>, predicate: (value: V, key: K) => boolean): Record<K, V> => {
     return Object.fromEntries(
       Object.entries(record).filter(([key, value]) =>

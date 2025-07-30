@@ -1,8 +1,8 @@
-import { Comparators, Equality } from './compare';
+import { equalityFactory, Equality } from './compare';
 import { Random } from './random';
 
-export const ArrayFuncs = {
-  equals: <T>(a: T[], b: T[], equality: Equality<T> = Comparators.ofTripleEquals()) => {
+export const arrayFuncs = {
+  equals: <T>(a: T[], b: T[], equality: Equality<T> = equalityFactory.ofTripleEquals()) => {
     if (a.length !== b.length) {
       return false;
     }

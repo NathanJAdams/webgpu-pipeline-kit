@@ -1,23 +1,24 @@
-import { Pipeline, PipelineDetailOptions, PipelineOptions } from './Pipelines';
-import { NonEmptyArray, PipelineUtils } from './utils';
-import { ViewsGetter } from './views';
+import { WPKPipeline, WPKPipelineDetailOptions, WPKPipelineOptions } from './pipeline';
+import { pipelineUtils } from './pipeline-utils';
+import { NonEmptyArray } from './utils';
+import { viewsFuncFactory } from './views';
 
-export type PipelineRunner = {
-    invoke: (options: PipelineOptions) => Promise<void>;
+export type WPKPipelineRunner = {
+    invoke: (options: WPKPipelineOptions) => Promise<void>;
 };
 
-export const PipelineRunners = {
-  of: async (canvas: HTMLCanvasElement, ...pipelines: NonEmptyArray<Pipeline<any, any, boolean, boolean, boolean>>): Promise<PipelineRunner> => {
-    const context = PipelineUtils.getContext(canvas);
-    const device = await PipelineUtils.getDevice();
-    const format = PipelineUtils.getFormat();
+export const pipelineRunnerFactory = {
+  of: async (canvas: HTMLCanvasElement, ...pipelines: NonEmptyArray<WPKPipeline<any, any, boolean, boolean, boolean>>): Promise<WPKPipelineRunner> => {
+    const context = pipelineUtils.getContext(canvas);
+    const device = await pipelineUtils.getDevice();
+    const format = pipelineUtils.getFormat();
     const alphaMode = 'opaque';
     context.configure({
       alphaMode,
       device,
       format,
     });
-    const getViews = ViewsGetter.of(canvas, context, device, format);
+    const getViews = viewsFuncFactory.of(canvas, context, device, format);
     return {
       // async not strictly needed, but useful to prevent changing signature in case future changes need it
       async invoke(options) {
@@ -25,7 +26,7 @@ export const PipelineRunners = {
           label: 'command-encoder',
         });
         const { queue } = device;
-        const detailOptions: PipelineDetailOptions = {
+        const detailOptions: WPKPipelineDetailOptions = {
           isAntiAliased: options.isAntiAliased,
           textureFormat: format,
         };

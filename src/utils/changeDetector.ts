@@ -3,7 +3,7 @@ export type ChangeDetector<T> = {
     compareAndUpdate: (next: T) => boolean;
 };
 
-export const ChangeDetectors = {
+export const changeDetectorFactory = {
   of: <T>(first: T, equals: (a: T, b: T) => boolean): ChangeDetector<T> => {
     let current: T = first;
     return {
@@ -18,9 +18,9 @@ export const ChangeDetectors = {
     };
   },
   ofDoubleEquals: <T>(first: T): ChangeDetector<T> => {
-    return ChangeDetectors.of<T>(first, (a, b) => a == b);
+    return changeDetectorFactory.of<T>(first, (a, b) => a == b);
   },
   ofTripleEquals: <T>(first: T): ChangeDetector<T> => {
-    return ChangeDetectors.of<T>(first, (a, b) => a === b);
+    return changeDetectorFactory.of<T>(first, (a, b) => a === b);
   },
 };

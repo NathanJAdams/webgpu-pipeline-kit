@@ -1,10 +1,10 @@
-export type WGBKScalarFormat = 'scalar';
-export type WGBKTupleFormat = 2 | 3 | 4;
-export type WGBKNamedFormat = string[] & { length: WGBKTupleFormat; };
-export type WGBKElementFormat = WGBKScalarFormat | WGBKTupleFormat | WGBKNamedFormat;
+export type WPKScalarFormat = 'scalar';
+export type WPKTupleFormat = 2 | 3 | 4;
+export type WPKNamedFormat = string[] & { length: WPKTupleFormat; };
+export type WPKElementFormat = WPKScalarFormat | WPKTupleFormat | WPKNamedFormat;
 
-export const WGBKElementFormats = {
-  isScalar: (format: WGBKElementFormat): format is WGBKScalarFormat => format === 'scalar',
-  isTuple: (format: WGBKElementFormat): format is WGBKTupleFormat => ((format === 2) || (format === 3) || (format === 4)),
-  isNamed: (format: WGBKElementFormat): format is WGBKNamedFormat => Array.isArray(format) && WGBKElementFormats.isTuple(format.length as WGBKElementFormat) && format.every(element => typeof element === 'string'),
+export const elementFormatFuncs = {
+  isScalar: (format: WPKElementFormat): format is WPKScalarFormat => format === 'scalar',
+  isTuple: (format: WPKElementFormat): format is WPKTupleFormat => ((format === 2) || (format === 3) || (format === 4)),
+  isNamed: (format: WPKElementFormat): format is WPKNamedFormat => Array.isArray(format) && elementFormatFuncs.isTuple(format.length as WPKElementFormat) && format.every(element => typeof element === 'string'),
 };

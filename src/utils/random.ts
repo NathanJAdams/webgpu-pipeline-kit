@@ -1,4 +1,5 @@
 import { SFC32 } from '@thi.ng/random';
+
 import { Range } from './range';
 
 export type Seed = {
@@ -28,12 +29,12 @@ export type Random = {
   wordMinMax(min: number, max: number): string;
 };
 
-export const Random = {
-  createRandomFromSeed: (seed: Seed): Random => {
+export const randomFactory = {
+  ofSeed: (seed: Seed): Random => {
     const sfc32 = new SFC32([seed.a, seed.b, seed.c, seed.d]);
     return createRandomFromSfc32(sfc32);
   },
-  createRandomFromString: (str: string): Random => {
+  ofString: (str: string): Random => {
     const seed = createSeedFromString(str);
     const sfc32 = new SFC32([seed.a, seed.b, seed.c, seed.d]);
     return createRandomFromSfc32(sfc32);
