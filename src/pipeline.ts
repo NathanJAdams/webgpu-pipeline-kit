@@ -6,9 +6,8 @@ import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { meshFuncs } from './mesh';
 import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
-import { resourceFactory } from './resources';
+import { resourceFactory, WPKResource } from './resources';
 import { WPKBufferBinding, WPKComputeShader, shaderFuncs, WPKRenderShader, WPKShader } from './shaders';
-import { WPKResource } from './types';
 import { arrayFuncs, changeDetectorFactory, Color, recordFuncs } from './utils';
 
 type WPKPipelineBase = {

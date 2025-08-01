@@ -1,27 +1,18 @@
-export type WPKTupleIndexes<T extends readonly unknown[]> =
+type WPKTupleIndexes<T extends readonly unknown[]> =
   Extract<keyof T, `${number}`> extends `${infer N extends number}`
   ? N
   : never;
-
-export type WPKIsExact<A, B> =
+type WPKIsExact<A, B> =
   (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
   ? (<T>() => T extends B ? 1 : 2) extends (<T>() => T extends A ? 1 : 2)
   ? true
   : false
   : false;
-
-export type WPKIsTuple<T> = T extends readonly unknown[]
+type WPKIsTuple<T> = T extends readonly unknown[]
   ? number extends T['length']
   ? false
   : true
   : false;
-
-export type WPKResource<T> = {
-  get: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => T;
-};
-
-export type WPKMatchingPath<TType, TMatchingType> = _WPKMatchingPath<TType, TMatchingType, '', 6>;
-
 type Decrement = [never, 0, 1, 2, 3, 4, 5];
 type _WPKMatchingPath<TType, TMatchingType, TPrefix extends string, Depth extends number> =
   Depth extends never
@@ -43,3 +34,5 @@ type _WPKMatchingPath<TType, TMatchingType, TPrefix extends string, Depth extend
     : _WPKMatchingPath<TType[K], TMatchingType, `${TPrefix}${K}.`, Decrement[Depth]>
   }[keyof TType & string]
   : never;
+
+export type WPKMatchingPath<TType, TMatchingType> = _WPKMatchingPath<TType, TMatchingType, '', 6>;

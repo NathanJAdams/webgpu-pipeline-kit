@@ -1,5 +1,8 @@
-import { WPKResource } from './types';
 import { arrayFuncs } from './utils';
+
+export type WPKResource<T> = {
+  get: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => T;
+};
 
 export const resourceFactory = {
   ofCached: <T>(resource: WPKResource<T>): WPKResource<T> => {

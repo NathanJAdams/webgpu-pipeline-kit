@@ -5,8 +5,8 @@ import { dataExtractorFactory } from './data-extractor';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { WPKInstanceCache } from './InstanceCache';
 import { WPKMesh, meshFuncs } from './mesh';
+import { WPKResource } from './resources';
 import { strideFuncs } from './strides';
-import { WPKResource } from './types';
 import { updatedInstancesFuncs } from './updated-instances';
 import { BidiMap, changeDetectorFactory, CopySlice, ValueSlices } from './utils';
 

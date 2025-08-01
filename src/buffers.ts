@@ -1,6 +1,6 @@
 import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-format';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
-import { WPKResource } from './types';
+import { WPKResource } from './resources';
 
 export type WPKTrackedBuffer = {
   isNew: boolean;

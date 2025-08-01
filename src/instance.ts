@@ -1,5 +1,3 @@
-import { WPKIsTuple, WPKTupleIndexes } from './types';
-
 export type WPKPrimitiveMap = {
   boolean: boolean;
   string: string;
@@ -14,10 +12,10 @@ export type WPKInstanceFormat =
 export type WPKInstanceOf<TInstanceFormat> =
   TInstanceFormat extends keyof WPKPrimitiveMap
   ? WPKPrimitiveMap[TInstanceFormat]
-  : TInstanceFormat extends readonly unknown[]
-  ? WPKIsTuple<TInstanceFormat> extends true
-  ? { [I in WPKTupleIndexes<TInstanceFormat>]: WPKInstanceOf<TInstanceFormat[I]> }
-  : never
+  : TInstanceFormat extends []
+  ? []
+  : TInstanceFormat extends readonly [infer H, ...infer R]
+  ? [WPKInstanceOf<H>, ...WPKInstanceOf<R>]
   : TInstanceFormat extends object
   ? { [K in keyof TInstanceFormat]: WPKInstanceOf<TInstanceFormat[K]> }
   : never;

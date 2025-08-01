@@ -1,5 +1,5 @@
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
-import { WPKMatchingPath } from './types';
+import { WPKMatchingPath } from './matching-path';
 import { NonEmptyArray, stringFuncs } from './utils';
 
 type WPKPrimitive8 = 'sint8' | 'snorm8' | 'uint8' | 'unorm8';
@@ -7,10 +7,10 @@ type WPKPrimitive16 = 'sint16' | 'snorm16' | 'uint16' | 'unorm16' | 'float16';
 type WPKPrimitive32 = 'sint32' | 'uint32' | 'float32';
 export type WPKPrimitive = WPKPrimitive8 | WPKPrimitive16 | WPKPrimitive32;
 
-type WPKMatchingPathScalar<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<TInstanceFormat, number>;
-type WPKMatchingPathVec2<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<TInstanceFormat, [number, number]>;
-type WPKMatchingPathVec3<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<TInstanceFormat, [number, number, number]>;
-type WPKMatchingPathVec4<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<TInstanceFormat, [number, number, number, number]>;
+type WPKMatchingPathScalar<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TInstanceFormat>, number>;
+type WPKMatchingPathVec2<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TInstanceFormat>, [number, number]>;
+type WPKMatchingPathVec3<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TInstanceFormat>, [number, number, number]>;
+type WPKMatchingPathVec4<TInstanceFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TInstanceFormat>, [number, number, number, number]>;
 
 type WPKDatumType<TDatumType = WPKPrimitive> = {
   datumType: TDatumType;

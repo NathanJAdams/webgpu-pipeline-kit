@@ -3,10 +3,9 @@ import { WPKMeshBufferResource, WPKTrackedBuffer } from './buffers';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKMesh, meshFuncs } from './mesh';
 import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
-import { resourceFactory } from './resources';
+import { resourceFactory, WPKResource } from './resources';
 import { WPKUserDefinedBufferLocation, WPKMeshBufferLocation } from './shaders';
 import { strideFuncs } from './strides';
-import { WPKResource } from './types';
 import { vertexAttributesFactory } from './vertex-attributes';
 import { vertexFormatsFactory } from './vertex-formats';
 
