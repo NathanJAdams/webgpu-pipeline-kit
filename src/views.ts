@@ -1,11 +1,11 @@
 import { pipelineFuncs } from './pipeline-utils';
 
-export type WPKViews = {
+type WPKViews = {
     view: GPUTextureView;
     resolveTarget?: GPUTextureView;
 };
 
-export type WPKViewsFunc = (isAntiAliased: boolean) => WPKViews;
+type WPKViewsFunc = (isAntiAliased: boolean) => WPKViews;
 
 const getOrCreateAntiAliasingTexture = (
   canvas: HTMLCanvasElement,

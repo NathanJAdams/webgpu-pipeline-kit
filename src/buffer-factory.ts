@@ -1,4 +1,5 @@
-import { WPKResource, WPKTrackedBuffer } from './buffer-types';
+import { WPKTrackedBuffer } from './buffers';
+import { WPKResource } from './types';
 import { Capacity, CopySlice, mathFuncs, ValueSlices } from './utils';
 
 enum WPKManagedBufferState {

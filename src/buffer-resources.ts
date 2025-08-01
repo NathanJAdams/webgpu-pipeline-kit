@@ -1,10 +1,12 @@
 import { bufferFactory } from './buffer-factory';
-import { bufferFormatExtractorFactory } from './buffer-format-extractors';
-import { WPKBufferFormats, WPKResource, WPKBufferResources, WPKMeshBufferResource, WPKTrackedBuffer, WPKMutableOptions, WPKBufferFormatKey } from './buffer-types';
-import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
+import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-format';
+import { WPKBufferResources, WPKMeshBufferResource, WPKMutableOptions, WPKTrackedBuffer } from './buffers';
+import { dataExtractorFactory } from './data-extractor';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { WPKInstanceCache } from './InstanceCache';
 import { WPKMesh, meshFuncs } from './mesh';
 import { strideFuncs } from './strides';
+import { WPKResource } from './types';
 import { updatedInstancesFuncs } from './updated-instances';
 import { BidiMap, changeDetectorFactory, CopySlice, ValueSlices } from './utils';
 
@@ -24,7 +26,7 @@ export const bufferResourcesFactory = {
   ofUniformAndInstances: <
         TUniformFormat extends WPKInstanceFormat,
         TEntityFormat extends WPKInstanceFormat,
-        TBufferFormats extends WPKBufferFormats<TUniformFormat, TEntityFormat>,
+        TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>,
         TMutableUniform extends boolean,
         TMutableInstances extends boolean,
         TResizeableInstances extends boolean,
@@ -51,9 +53,9 @@ export const bufferResourcesFactory = {
       const usage = bufferUsages[key];
       const label = `${name}-buffer-${key}`;
       if (bufferType === 'uniform') {
-        const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
+        const extractor = dataExtractorFactory.of(bufferFormat.marshall);
         if (isMutableUniform) {
-          const stride = strideFuncs.ofMarshalledFormat(bufferFormat.marshall);
+          const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
           const buffer = bufferFactory.ofMutable(stride, label, usage);
           const uniformMutator: WPKMutator<WPKInstanceOf<TUniformFormat>> = {
             mutate(input) {
@@ -71,7 +73,7 @@ export const bufferResourcesFactory = {
       } else if (bufferType === 'entity') {
         if (contentType === 'layout') {
           if (isResizeableInstances) {
-            const stride = strideFuncs.ofLayout(bufferFormat.layout);
+            const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
             const buffer = bufferFactory.ofResizeable(false, label, usage);
             buffers[key] = buffer;
             let maxInstanceCount = 0;
@@ -86,7 +88,7 @@ export const bufferResourcesFactory = {
             };
             instanceMutators.push(mutator);
           } else {
-            const stride = strideFuncs.ofLayout(bufferFormat.layout);
+            const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
             buffers[key] = bufferFactory.ofSize(initialInstances.length * stride, label, usage);
           }
         } else if (contentType === 'marshalled') {
@@ -94,8 +96,8 @@ export const bufferResourcesFactory = {
             const buffer = bufferFactory.ofStaged(label, usage);
             buffers[key] = buffer;
             if (isMutableInstances) {
-              const stride = strideFuncs.ofMarshalledFormat(bufferFormat.marshall);
-              const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
+              const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
+              const extractor = dataExtractorFactory.of(bufferFormat.marshall);
               const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
                 mutate(input) {
                   const { copySlices, values } = input;
@@ -116,7 +118,7 @@ export const bufferResourcesFactory = {
             if (isMutableInstances) {
               const buffer = bufferFactory.ofStaged(label, usage);
               buffers[key] = buffer;
-              const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
+              const extractor = dataExtractorFactory.of(bufferFormat.marshall);
               const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
                 mutate(input) {
                   const { copySlices, values } = input;
@@ -126,7 +128,7 @@ export const bufferResourcesFactory = {
               };
               instanceMutators.push(mutator);
             } else {
-              const extractor = bufferFormatExtractorFactory.of(bufferFormat.marshall);
+              const extractor = dataExtractorFactory.of(bufferFormat.marshall);
               const data = extractor.extract(initialInstances);
               buffers[key] = bufferFactory.ofData(data, label, usage);
             }

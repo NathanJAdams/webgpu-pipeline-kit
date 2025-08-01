@@ -4,10 +4,10 @@ export type WPKVertices = Vec3[];
 export type WPKIndices = Vec3[];
 
 export type WPKMesh = {
-    vertices: WPKVertices;
-    indices: WPKIndices;
-    topology: GPUPrimitiveTopology;
-    winding: GPUFrontFace;
+  vertices: WPKVertices;
+  indices: WPKIndices;
+  topology: GPUPrimitiveTopology;
+  winding: GPUFrontFace;
 };
 
 export const meshFuncs = {

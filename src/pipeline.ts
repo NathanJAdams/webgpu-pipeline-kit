@@ -1,12 +1,14 @@
+import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatMapEntity, WPKBufferType, WPKBufferTypes, WPKContentType } from './buffer-format';
 import { bufferResourcesFactory } from './buffer-resources';
-import { WPKBufferContentType, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormats, WPKBufferResources, WPKBufferType, WPKEntityBufferFormats, WPKMutableOptions, WPKMutateById, WPKMutateByIndex, WPKMutateUniform, WPKResizeInstances, WPKResource, WPKTrackedBuffer } from './buffer-types';
+import { WPKBufferResources, WPKMutableOptions, WPKMutateById, WPKMutateByIndex, WPKMutateUniform, WPKResizeInstances, WPKTrackedBuffer } from './buffers';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKPipelineDetail, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
-import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { meshFuncs } from './mesh';
 import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { WPKBufferBinding, WPKComputeShader, shaderFuncs, WPKRenderShader, WPKShader } from './shaders';
+import { WPKResource } from './types';
 import { arrayFuncs, changeDetectorFactory, Color, recordFuncs } from './utils';
 
 type WPKPipelineBase = {
@@ -47,7 +49,7 @@ export const pipelineFactory = {
   of: (<
     TUniformFormat extends WPKInstanceFormat,
     TEntityFormat extends WPKInstanceFormat,
-    TBufferFormats extends WPKBufferFormats<TUniformFormat, TEntityFormat>,
+    TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>,
     TMutableUniform extends boolean,
     TMutableInstances extends boolean,
     TResizeableInstances extends boolean,
@@ -108,7 +110,7 @@ export const pipelineFactory = {
   }),
 };
 
-const toComputeShaderModuleDetail = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toComputeShaderModuleDetail = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   computeShader: WPKComputeShader<TBufferFormats>,
 ): WPKShaderModuleDetail => {
   const { compute: { passes, shader } } = computeShader;
@@ -118,7 +120,7 @@ const toComputeShaderModuleDetail = <TBufferFormats extends WPKBufferFormats<any
   };
 };
 
-const toRenderShaderModuleDetail = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toRenderShaderModuleDetail = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   renderShader: WPKRenderShader<TBufferFormats>,
 ): WPKShaderModuleDetail => {
   const { render: { passes, shader } } = renderShader;
@@ -128,7 +130,7 @@ const toRenderShaderModuleDetail = <TBufferFormats extends WPKBufferFormats<any,
   };
 };
 
-const toBufferUsages = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toBufferUsages = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   shader: WPKShader<TBufferFormats>,
   bufferFormats: TBufferFormats,
 ): Record<WPKBufferFormatKey<TBufferFormats>, GPUBufferUsageFlags> => {
@@ -156,11 +158,11 @@ const toBufferUsages = <TBufferFormats extends WPKBufferFormats<any, any>>(
   }) as Record<WPKBufferFormatKey<TBufferFormats>, GPUBufferUsageFlags>;
 };
 
-const toMaxBindGroup = <TBufferFormats extends WPKBufferFormats<any, any>>(bufferBindings: WPKBufferBinding<TBufferFormats>[]): number => {
+const toMaxBindGroup = <TBufferFormats extends WPKBufferFormatMap<any, any>>(bufferBindings: WPKBufferBinding<TBufferFormats>[]): number => {
   return bufferBindings.reduce((max, bufferBinding) => Math.max(max, bufferBinding.group), -1);
 };
 
-const toBufferBindingType = <TBufferType extends WPKBufferType, TBufferContentType extends WPKBufferContentType>(visibility: GPUShaderStageFlags, bufferFormat: WPKBufferFormat<TBufferType, TBufferContentType>): GPUBufferBindingType => {
+const toBufferBindingType = <TBufferType extends WPKBufferType, TContentType extends WPKContentType>(visibility: GPUShaderStageFlags, bufferFormat: WPKBufferTypes<TBufferType, TContentType>): GPUBufferBindingType => {
   return bufferFormat.bufferType === 'uniform'
     ? 'uniform'
     : (visibility === GPUShaderStage.COMPUTE) && (bufferFormat.contentType === 'layout')
@@ -168,7 +170,7 @@ const toBufferBindingType = <TBufferType extends WPKBufferType, TBufferContentTy
       : 'read-only-storage';
 };
 
-const toBindGroupLayoutEntries = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toBindGroupLayoutEntries = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   visibility: GPUShaderStageFlags,
   bufferBindings: WPKBufferBinding<TBufferFormats>[],
   bufferFormats: TBufferFormats,
@@ -190,7 +192,7 @@ const toBindGroupLayoutEntries = <TBufferFormats extends WPKBufferFormats<any, a
     });
 };
 
-const toBindGroupLayoutsResource = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toBindGroupLayoutsResource = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   name: string,
   visibility: GPUShaderStageFlags,
   bufferBindings: WPKBufferBinding<TBufferFormats>[],
@@ -207,7 +209,7 @@ const toBindGroupLayoutsResource = <TBufferFormats extends WPKBufferFormats<any,
   return resourceFactory.ofArray(bindGroupLayoutResources);
 };
 
-const toBindGroupEntriesResources = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toBindGroupEntriesResources = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   bufferBindings: WPKBufferBinding<TBufferFormats>[],
   bufferResources: Record<WPKBufferFormatKey<TBufferFormats>, WPKResource<WPKTrackedBuffer>>,
   group: number
@@ -221,7 +223,7 @@ const toBindGroupEntriesResources = <TBufferFormats extends WPKBufferFormats<any
     });
 };
 
-const toBindGroupsDetailResource = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toBindGroupsDetailResource = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   name: string,
   visibility: GPUShaderStageFlags,
   bufferBindings: WPKBufferBinding<TBufferFormats>[],
@@ -243,7 +245,7 @@ const toBindGroupsDetailResource = <TBufferFormats extends WPKBufferFormats<any,
   return resourceFactory.ofArray(bindGroupDetailResources);
 };
 
-const toComputePipelineDetailsResource = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toComputePipelineDetailsResource = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   name: string,
   computeShader: WPKComputeShader<TBufferFormats>,
   instanceCountFunc: () => number,
@@ -268,7 +270,7 @@ const toComputePipelineDetailsResource = <TBufferFormats extends WPKBufferFormat
   return resourceFactory.ofArray(computePipelineDetailResources);
 };
 
-const toRenderPipelineDetailsResource = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toRenderPipelineDetailsResource = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   name: string,
   renderShader: WPKRenderShader<TBufferFormats>,
   instanceCountFunc: () => number,
@@ -296,7 +298,7 @@ const toRenderPipelineDetailsResource = <TBufferFormats extends WPKBufferFormats
       return meshBufferResource.indices.get(device, queue, encoder).buffer;
     },
   };
-  const instanceBufferFormats = recordFuncs.filter(bufferFormats, (bufferFormat) => bufferFormat.bufferType === 'entity') as WPKEntityBufferFormats<any>;
+  const instanceBufferFormats = recordFuncs.filter(bufferFormats, (bufferFormat) => bufferFormat.bufferType === 'entity') as WPKBufferFormatMapEntity<any>;
   const instanceBuffers = recordFuncs.filter(bufferResources, (_, key) => instanceBufferFormats[key as string] !== undefined);
   const renderPipelineDetailResources: WPKResource<WPKRenderPipelineDetail>[] = [];
   for (const [index, renderPass] of passes.entries()) {
@@ -320,7 +322,7 @@ const toRenderPipelineDetailsResource = <TBufferFormats extends WPKBufferFormats
   return resourceFactory.ofArray(renderPipelineDetailResources);
 };
 
-const toPipelineDetailResource = <TBufferFormats extends WPKBufferFormats<any, any>>(
+const toPipelineDetailResource = <TBufferFormats extends WPKBufferFormatMap<any, any>>(
   name: string,
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,

@@ -1,10 +1,12 @@
-import { WPKBufferFormatKey, WPKEntityBufferFormats, WPKMeshBufferResource, WPKResource, WPKTrackedBuffer } from './buffer-types';
+import { WPKBufferFormatKey, WPKBufferFormatMapEntity } from './buffer-format';
+import { WPKMeshBufferResource, WPKTrackedBuffer } from './buffers';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKMesh, meshFuncs } from './mesh';
 import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { WPKUserDefinedBufferLocation, WPKMeshBufferLocation } from './shaders';
 import { strideFuncs } from './strides';
+import { WPKResource } from './types';
 import { vertexAttributesFactory } from './vertex-attributes';
 import { vertexFormatsFactory } from './vertex-formats';
 
@@ -155,7 +157,7 @@ export const pipelineResourceFactory = {
     }];
     return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
   },
-  ofBindingVertexBufferDetail: <TBufferFormats extends WPKEntityBufferFormats<any>>(
+  ofBindingVertexBufferDetail: <TBufferFormats extends WPKBufferFormatMapEntity<any>>(
     bindingBufferLocation: WPKUserDefinedBufferLocation<TBufferFormats>,
     bufferFormats: TBufferFormats,
     buffersResources: Record<WPKBufferFormatKey<TBufferFormats>, WPKResource<WPKTrackedBuffer>>,
@@ -165,11 +167,11 @@ export const pipelineResourceFactory = {
     const bufferResource = buffersResources[buffer];
     const { contentType } = bufferFormat;
     const arrayStride = (contentType === 'layout')
-      ? strideFuncs.ofLayout(bufferFormat.layout)
-      : strideFuncs.ofMarshalledFormat(bufferFormat.marshall);
+      ? strideFuncs.ofFormatLayout(bufferFormat.layout)
+      : strideFuncs.ofFormatMarshall(bufferFormat.marshall);
     const attributes = (contentType === 'layout')
-      ? vertexAttributesFactory.of(location, bufferFormat.layout, vertexFormatsFactory.ofElementLayout, strideFuncs.ofElementLayout)
-      : vertexAttributesFactory.of(location, bufferFormat.marshall, vertexFormatsFactory.ofFormatElement, strideFuncs.ofMarshalledFormatElement);
+      ? vertexAttributesFactory.of(location, bufferFormat.layout, vertexFormatsFactory.ofLayout, strideFuncs.ofLayout)
+      : vertexAttributesFactory.of(location, bufferFormat.marshall, vertexFormatsFactory.ofUserFormat, strideFuncs.ofUserFormat);
     return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, bufferResource);
   },
   ofVertexBufferDetail: (

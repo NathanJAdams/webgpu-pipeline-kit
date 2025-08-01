@@ -1,56 +1,56 @@
-import { WPKBufferFormatKey, WPKBufferFormats } from './buffer-types';
+import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-format';
 import { WPKMesh } from './mesh';
 import { WPKWorkGroupSize } from './pipeline-utils';
 import { OneOrBoth } from './utils';
 
 type WPKHasEntryPoint = {
-    entryPoint: string;
+  entryPoint: string;
 };
 
-export type WPKBufferLocation<TType, TStep> = {
-    type: TType;
-    location: number;
-    step: TStep;
+type WPKBufferLocation<TType, TStep> = {
+  type: TType;
+  location: number;
+  step: TStep;
 };
 export type WPKMeshBufferLocation = WPKBufferLocation<'mesh', 'vertex'> & {
-    format: 'float32x3';
+  format: 'float32x3';
 };
-export type WPKUserDefinedBufferLocation<TBufferFormats extends WPKBufferFormats<any, any>> = WPKBufferLocation<'user-defined', 'instance'> & {
-    buffer: WPKBufferFormatKey<TBufferFormats>;
+export type WPKUserDefinedBufferLocation<TBufferFormats extends WPKBufferFormatMap<any, any>> = WPKBufferLocation<'user-defined', 'instance'> & {
+  buffer: WPKBufferFormatKey<TBufferFormats>;
 };
 
 type WPKComputePass = WPKHasEntryPoint & {
-    workGroupSize: WPKWorkGroupSize;
+  workGroupSize: WPKWorkGroupSize;
 };
-type WPKRenderPass<TBufferFormats extends WPKBufferFormats<any, any>> = {
-    vertex: WPKHasEntryPoint & {
-        bufferLocations: Array<WPKMeshBufferLocation | WPKUserDefinedBufferLocation<TBufferFormats>>;
-    };
-    fragment: WPKHasEntryPoint;
+type WPKRenderPass<TBufferFormats extends WPKBufferFormatMap<any, any>> = {
+  vertex: WPKHasEntryPoint & {
+    bufferLocations: Array<WPKMeshBufferLocation | WPKUserDefinedBufferLocation<TBufferFormats>>;
+  };
+  fragment: WPKHasEntryPoint;
 };
-export type WPKBufferBinding<TBufferFormats extends WPKBufferFormats<any, any>> = {
-    group: number;
-    binding: number;
-    buffer: WPKBufferFormatKey<TBufferFormats>;
+export type WPKBufferBinding<TBufferFormats extends WPKBufferFormatMap<any, any>> = {
+  group: number;
+  binding: number;
+  buffer: WPKBufferFormatKey<TBufferFormats>;
 };
-export type WPKComputeShader<TBufferFormats extends WPKBufferFormats<any, any>> = {
-    compute: {
-        shader: string;
-        bufferBindings: Array<WPKBufferBinding<TBufferFormats>>;
-        passes: Array<WPKComputePass>;
-    }
+export type WPKComputeShader<TBufferFormats extends WPKBufferFormatMap<any, any>> = {
+  compute: {
+    shader: string;
+    bufferBindings: Array<WPKBufferBinding<TBufferFormats>>;
+    passes: Array<WPKComputePass>;
+  }
 };
-export type WPKRenderShader<TBufferFormats extends WPKBufferFormats<any, any>> = {
-    render: {
-        shader: string;
-        bufferBindings: Array<WPKBufferBinding<TBufferFormats>>;
-        passes: Array<WPKRenderPass<TBufferFormats>>;
-        mesh: WPKMesh;
-    };
+export type WPKRenderShader<TBufferFormats extends WPKBufferFormatMap<any, any>> = {
+  render: {
+    shader: string;
+    bufferBindings: Array<WPKBufferBinding<TBufferFormats>>;
+    passes: Array<WPKRenderPass<TBufferFormats>>;
+    mesh: WPKMesh;
+  };
 };
-export type WPKShader<TBufferFormats extends WPKBufferFormats<any, any>> = OneOrBoth<WPKComputeShader<TBufferFormats>, WPKRenderShader<TBufferFormats>>;
+export type WPKShader<TBufferFormats extends WPKBufferFormatMap<any, any>> = OneOrBoth<WPKComputeShader<TBufferFormats>, WPKRenderShader<TBufferFormats>>;
 
 export const shaderFuncs = {
-  isComputeShader: <TBufferFormats extends WPKBufferFormats<any, any>>(shader: WPKShader<TBufferFormats>): shader is WPKComputeShader<TBufferFormats> => (shader as WPKComputeShader<TBufferFormats>).compute !== undefined,
-  isRenderShader: <TBufferFormats extends WPKBufferFormats<any, any>>(shader: WPKShader<TBufferFormats>): shader is WPKRenderShader<TBufferFormats> => (shader as WPKRenderShader<TBufferFormats>).render !== undefined,
+  isComputeShader: <TBufferFormats extends WPKBufferFormatMap<any, any>>(shader: WPKShader<TBufferFormats>): shader is WPKComputeShader<TBufferFormats> => (shader as WPKComputeShader<TBufferFormats>).compute !== undefined,
+  isRenderShader: <TBufferFormats extends WPKBufferFormatMap<any, any>>(shader: WPKShader<TBufferFormats>): shader is WPKRenderShader<TBufferFormats> => (shader as WPKRenderShader<TBufferFormats>).render !== undefined,
 };

@@ -1,4 +1,4 @@
-import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { WPKInstanceCommand } from './InstanceCache';
 import { BidiMap, CopySlice, Slice, sliceFuncs, ValueSlices } from './utils';
 

@@ -8,8 +8,7 @@
       "DOM",
       "ES2020"
     ],
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "paths": {
       "@/*": [
         "src/*"

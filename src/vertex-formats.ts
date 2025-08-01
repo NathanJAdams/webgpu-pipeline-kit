@@ -1,24 +1,22 @@
-import { WPKElementLayout, WPKMarshalledFormatElement } from './buffer-types';
-import { WPKInstanceFormat } from './instance-types';
+import { WPKLayout, WPKUserFormat } from './buffer-format';
+import { WPKInstanceFormat } from './instance';
+import { strideFuncs } from './strides';
 
 export const vertexFormatsFactory = {
-  ofElementLayout: (elementLayout: WPKElementLayout): GPUVertexFormat => {
-    const { datumType, dimension } = elementLayout;
+  ofLayout: (layout: WPKLayout): GPUVertexFormat => {
+    const { datumType, dimension } = layout;
     switch (dimension) {
-    case 'scalar': return datumType;
-    case 'vec2': return `${datumType}x2`;
-    case 'vec3': return `${datumType}x3`;
-    case 'vec4': return `${datumType}x4`;
+      case 'scalar': return datumType;
+      case 'vec2': return `${datumType}x2`;
+      case 'vec3': return `${datumType}x3`;
+      case 'vec4': return `${datumType}x4`;
     }
   },
-  ofFormatElement: <TFormat extends WPKInstanceFormat>(formatElement: WPKMarshalledFormatElement<TFormat>): GPUVertexFormat => {
-    const { datumType, scalar, vec } = formatElement;
-    if (scalar !== undefined) {
-      return datumType;
-    }
-    if (vec !== undefined) {
-      return `${datumType}x${vec.length}` as GPUVertexFormat;
-    }
-    throw Error('Format Element requires exactly one of the fields [\'scalar\', \'vec\']');
+  ofUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat>): GPUVertexFormat => {
+    const { datumType } = userFormat;
+    const dimensionMultiple = strideFuncs.dimensionMultipleOfUserFormat(userFormat);
+    return (dimensionMultiple === 1)
+      ? datumType
+      : `${datumType}x${dimensionMultiple}` as GPUVertexFormat;
   },
 };

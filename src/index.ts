@@ -1,5 +1,5 @@
-export type { WPKBufferFormats } from './buffer-types';
+export type { WPKBufferFormatMap } from './buffer-format';
 export * from './factories';
-export * from './instance-types';
+export * from './instance';
 export type { WPKPipelineOptions } from './pipeline';
 export type { WPKShader } from './shaders';

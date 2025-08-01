@@ -10,5 +10,6 @@ export * from './math';
 export * from './OneOrBoth';
 export * from './record';
 export * from './slice';
+export * from './string';
 export * from './types';
 export * from './Vec3';

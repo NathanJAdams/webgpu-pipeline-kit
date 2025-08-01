@@ -1,4 +1,4 @@
-import { WPKResource } from './buffer-types';
+import { WPKResource } from './types';
 import { arrayFuncs } from './utils';
 
 export const resourceFactory = {
