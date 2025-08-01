@@ -6,12 +6,15 @@ export type WPKPrimitiveMap = {
   number: number;
 };
 
-export type WPKInstanceFormat =
-  | keyof WPKPrimitiveMap
-  | WPKInstanceFormat[]
-  | { [key: string]: WPKInstanceFormat };
+export type WPKInstanceFormat = _WPKInstanceFormat<6>;
+export type WPKInstanceOf<TInstanceFormat> = _WPKInstanceOf<TInstanceFormat, 6>;
 
-export type WPKInstanceOf<TInstanceFormat> = _WPKInstanceOf<TInstanceFormat, 4>;
+type _WPKInstanceFormat<Depth extends number> =
+  Depth extends never
+  ? never
+  : keyof WPKPrimitiveMap
+  | _WPKInstanceFormat<Decrement[Depth]>[]
+  | { [key: string]: _WPKInstanceFormat<Decrement[Depth]> };
 
 type _WPKInstanceOf<TInstanceFormat, TDepth extends number> =
   TInstanceFormat extends keyof WPKPrimitiveMap
