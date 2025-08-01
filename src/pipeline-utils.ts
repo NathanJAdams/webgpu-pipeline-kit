@@ -1,4 +1,4 @@
-export type WorkGroupSize = {
+export type WPKWorkGroupSize = {
     x: number;
     y?: number;
     z?: number;
@@ -52,7 +52,7 @@ export const pipelineFuncs = {
   },
   toByteLengthTotal: (formats: GPUVertexFormat[]): number => formats.reduce((currentByteLength, format) => currentByteLength + pipelineFuncs.toByteLength(format), 0),
   toSampleCount: (isAntiAliased: boolean): number => isAntiAliased ? 4 : 1,
-  toWorkGroupSize: (size: WorkGroupSize, instanceCount: number): WorkGroupSize => {
+  toWorkGroupSize: (size: WPKWorkGroupSize, instanceCount: number): WPKWorkGroupSize => {
     const totalThreads = size.x * (size.y || 1) * (size.z || 1);
     const x = Math.ceil(instanceCount / totalThreads);
     return {

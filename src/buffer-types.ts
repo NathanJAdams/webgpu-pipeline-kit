@@ -1,3 +1,4 @@
+import { WPKScalarFormat } from './element-formats';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance-types';
 import { ArrayIndex, ExactlyOne, NonEmptyArray, TupleOf } from './utils';
 
@@ -14,7 +15,7 @@ export type WPKFormatRef<T0, T1 = undefined> = {
     ref_1: T1;
   });
 export type WPKScalarFormatReference<TFormat extends WPKInstanceFormat> = {
-  [K in keyof TFormat]: TFormat[K] extends 'scalar'
+  [K in keyof TFormat]: TFormat[K] extends WPKScalarFormat
   ? WPKFormatRef<K>
   : never
 }[keyof TFormat];
@@ -44,7 +45,7 @@ type WPKHasVec<TFormat extends WPKInstanceFormat, TVecLength extends number> = {
   vec: TupleOf<WPKFormatReference<TFormat>, TVecLength>;
 };
 export type WPKHasScalarXorVec<TFormat extends WPKInstanceFormat, TVecLength extends number | undefined = undefined> = ExactlyOne<
-  WPKHasScalar<TFormat>
+  & WPKHasScalar<TFormat>
   & (TVecLength extends number
     ? WPKHasVec<TFormat, TVecLength>
     : object

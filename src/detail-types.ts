@@ -1,4 +1,4 @@
-import { WorkGroupSize } from './pipeline-utils';
+import { WPKWorkGroupSize } from './pipeline-utils';
 
 export type WPKShaderModuleDetail = {
     code: string;
@@ -12,7 +12,7 @@ export type WPKBindGroupsDetail = Array<WPKBindGroupDetail>;
 export type WPKComputePipelineDetail = {
     bindGroups: WPKBindGroupsDetail;
     pipeline: GPUComputePipeline;
-    workGroupSizeFunc: () => WorkGroupSize;
+    workGroupSizeFunc: () => WPKWorkGroupSize;
 };
 export type WPKVertexBufferDetail = {
     location: number;

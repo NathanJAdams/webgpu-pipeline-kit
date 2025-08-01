@@ -1,7 +1,7 @@
 import { WPKBufferFormatKey, WPKEntityBufferFormats, WPKMeshBufferResource, WPKResource, WPKTrackedBuffer } from './buffer-types';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKMesh, meshFuncs } from './mesh';
-import { pipelineFuncs, WorkGroupSize } from './pipeline-utils';
+import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { WPKUserDefinedBufferLocation, WPKMeshBufferLocation } from './shaders';
 import { strideFuncs } from './strides';
@@ -129,7 +129,7 @@ export const pipelineResourceFactory = {
   ofComputeDetail: (
     bindGroupsResource: WPKResource<WPKBindGroupsDetail>,
     computePipelineResource: WPKResource<GPUComputePipeline>,
-    workGroupSizeFunc: () => WorkGroupSize
+    workGroupSizeFunc: () => WPKWorkGroupSize
   ): WPKResource<WPKComputePipelineDetail> => {
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupsResource, computePipelineResource] as const,

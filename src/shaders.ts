@@ -1,6 +1,6 @@
 import { WPKBufferFormatKey, WPKBufferFormats } from './buffer-types';
 import { WPKMesh } from './mesh';
-import { WorkGroupSize } from './pipeline-utils';
+import { WPKWorkGroupSize } from './pipeline-utils';
 import { OneOrBoth } from './utils';
 
 type WPKHasEntryPoint = {
@@ -20,7 +20,7 @@ export type WPKUserDefinedBufferLocation<TBufferFormats extends WPKBufferFormats
 };
 
 type WPKComputePass = WPKHasEntryPoint & {
-    workGroupSize: WorkGroupSize;
+    workGroupSize: WPKWorkGroupSize;
 };
 type WPKRenderPass<TBufferFormats extends WPKBufferFormats<any, any>> = {
     vertex: WPKHasEntryPoint & {
