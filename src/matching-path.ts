@@ -36,4 +36,4 @@ type _WPKMatchingPath<TType, TMatchingType, TPrefix extends string, TDepth exten
   }[keyof TType & string]
   : never;
 
-export type WPKMatchingPath<TType, TMatchingType> = _WPKMatchingPath<TType, TMatchingType, '', 4>;
+export type WPKMatchingPath<TType, TMatchingType> = _WPKMatchingPath<TType, TMatchingType, '', 3>;
