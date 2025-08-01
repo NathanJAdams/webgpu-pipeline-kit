@@ -10,7 +10,7 @@
   "homepage": "https://github.com/NathanJAdams/webgpu-pipeline-kit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NathanJAdams/webgpu-pipeline-kit"
+    "url": "git+https://github.com/NathanJAdams/webgpu-pipeline-kit.git"
   },
   "keywords": [
     "WebGPU",
