@@ -1,5 +1,5 @@
-import { WPKBufferFormatMap } from './buffer-format';
-import { WPKInstanceFormat, WPKInstanceOf } from './instance';
+import { WPKBufferFormatMap } from '../buffer-format';
+import { WPKInstanceFormat, WPKInstanceOf } from '../instance';
 
 const _uniformFormat = {
   gameTime: 'number',
