@@ -1,10 +1,12 @@
-import { WPKBufferFormatKey, WPKBufferFormatMapEntity } from './buffer-format';
-import { WPKMeshBufferResource, WPKTrackedBuffer } from './buffers';
+import { WPKTrackedBuffer } from './buffer-factory';
+import { WPKBufferFormatKey, WPKBufferFormatMapEntity } from './buffer-formats';
+import { WPKMeshBufferResource } from './buffer-resources';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
+import { WPKInstanceFormat } from './instance';
 import { WPKMesh, meshFuncs } from './mesh';
 import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
 import { resourceFactory, WPKResource } from './resources';
-import { WPKUserDefinedBufferLocation, WPKMeshBufferLocation } from './shaders';
+import { WPKMeshBufferLocation, WPKUserDefinedBufferLocation } from './shaders';
 import { strideFuncs } from './strides';
 import { vertexAttributesFactory } from './vertex-attributes';
 import { vertexFormatsFactory } from './vertex-formats';
@@ -156,10 +158,14 @@ export const pipelineResourceFactory = {
     }];
     return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
   },
-  ofBindingVertexBufferDetail: <TBufferFormats extends WPKBufferFormatMapEntity<any>>(
-    bindingBufferLocation: WPKUserDefinedBufferLocation<TBufferFormats>,
+  ofBindingVertexBufferDetail: <
+    TUniformFormat extends WPKInstanceFormat,
+    TEntityFormat extends WPKInstanceFormat,
+    TBufferFormats extends WPKBufferFormatMapEntity<TEntityFormat>,
+  >(
+    bindingBufferLocation: WPKUserDefinedBufferLocation<TUniformFormat, TEntityFormat, TBufferFormats>,
     bufferFormats: TBufferFormats,
-    buffersResources: Record<WPKBufferFormatKey<TBufferFormats>, WPKResource<WPKTrackedBuffer>>,
+    buffersResources: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>
   ): WPKResource<WPKVertexBufferDetail> => {
     const { buffer, location, step } = bindingBufferLocation;
     const bufferFormat = bufferFormats[buffer];

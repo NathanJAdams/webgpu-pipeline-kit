@@ -1,17 +1,26 @@
-import { bufferFactory } from './buffer-factory';
-import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-format';
-import { WPKBufferResources, WPKMeshBufferResource, WPKMutableOptions, WPKTrackedBuffer } from './buffers';
+import { bufferFactory, WPKTrackedBuffer } from './buffer-factory';
+import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
+import { WPKEntityCache as WPKEntityCache, WPKUniformCache as WPKUniformCache } from './cache';
 import { dataExtractorFactory } from './data-extractor';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
-import { WPKInstanceCache } from './InstanceCache';
 import { WPKMesh, meshFuncs } from './mesh';
 import { WPKResource } from './resources';
 import { strideFuncs } from './strides';
-import { updatedInstancesFuncs } from './updated-instances';
-import { BidiMap, changeDetectorFactory, CopySlice, ValueSlices } from './utils';
+import { CopySlice, ValueSlices } from './utils';
 
 type WPKMutator<T> = {
-    mutate: (input: T) => void;
+  mutate: (input: T) => void;
+};
+
+export type WPKMeshBufferResource = {
+  indices: WPKResource<WPKTrackedBuffer>;
+  vertices: WPKResource<WPKTrackedBuffer>;
+};
+
+export type WPKBufferResources<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = {
+  buffers: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>;
+  instanceCount: number;
+  update: () => void;
 };
 
 export const bufferResourcesFactory = {
@@ -24,37 +33,27 @@ export const bufferResourcesFactory = {
     };
   },
   ofUniformAndInstances: <
-        TUniformFormat extends WPKInstanceFormat,
-        TEntityFormat extends WPKInstanceFormat,
-        TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>,
-        TMutableUniform extends boolean,
-        TMutableInstances extends boolean,
-        TResizeableInstances extends boolean,
-    >(
+    TUniformFormat extends WPKInstanceFormat,
+    TEntityFormat extends WPKInstanceFormat,
+    TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>,
+  >(
     name: string,
-    initialUniform: WPKInstanceOf<TUniformFormat>,
-    initialInstances: WPKInstanceOf<TEntityFormat>[],
+    uniformCache: WPKUniformCache<TUniformFormat, any>,
+    entityCache: WPKEntityCache<TEntityFormat, any, any>,
     bufferFormats: TBufferFormats,
-    bufferUsages: Record<WPKBufferFormatKey<TBufferFormats>, GPUBufferUsageFlags>,
-    mutableOptions: WPKMutableOptions<TMutableUniform, TMutableInstances, TResizeableInstances>,
-  ): WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, TResizeableInstances> => {
-    const { isMutableUniform, isMutableInstances, isResizeableInstances } = mutableOptions;
-    let nextUniform = initialUniform;
-    const uniformChangeDetector = changeDetectorFactory.ofTripleEquals(initialUniform);
+    bufferUsages: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, GPUBufferUsageFlags>,
+  ): WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats> => {
+    const initialInstances = entityCache.calculateChanges().values;
     const uniformMutators: WPKMutator<WPKInstanceOf<TUniformFormat>>[] = [];
-    const mutatedInstancesByIndex = new Map<number, WPKInstanceOf<TEntityFormat>>;
-    const instanceIdIndexes = new BidiMap<string, number>();
     const instanceMutators: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>>[] = [];
-    const instanceCache = new WPKInstanceCache<WPKInstanceOf<TEntityFormat>>();
     const buffers: Record<string, WPKResource<WPKTrackedBuffer>> = {};
-    initialInstances.forEach((initialInstance) => instanceCache.add(initialInstance));
     for (const [key, bufferFormat] of Object.entries(bufferFormats)) {
       const { bufferType, contentType } = bufferFormat;
       const usage = bufferUsages[key];
       const label = `${name}-buffer-${key}`;
       if (bufferType === 'uniform') {
         const extractor = dataExtractorFactory.of(bufferFormat.marshall);
-        if (isMutableUniform) {
+        if (uniformCache.isMutable) {
           const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
           const buffer = bufferFactory.ofMutable(stride, label, usage);
           const uniformMutator: WPKMutator<WPKInstanceOf<TUniformFormat>> = {
@@ -66,13 +65,13 @@ export const bufferResourcesFactory = {
           buffers[key] = buffer;
           uniformMutators.push(uniformMutator);
         } else {
-          const data = extractor.extract([initialUniform]);
+          const data = extractor.extract([uniformCache.get()]);
           const buffer = bufferFactory.ofData(data, label, usage);
           buffers[key] = buffer;
         }
       } else if (bufferType === 'entity') {
         if (contentType === 'layout') {
-          if (isResizeableInstances) {
+          if (entityCache.isResizeable) {
             const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
             const buffer = bufferFactory.ofResizeable(false, label, usage);
             buffers[key] = buffer;
@@ -89,13 +88,13 @@ export const bufferResourcesFactory = {
             instanceMutators.push(mutator);
           } else {
             const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
-            buffers[key] = bufferFactory.ofSize(initialInstances.length * stride, label, usage);
+            buffers[key] = bufferFactory.ofSize(entityCache.count * stride, label, usage);
           }
         } else if (contentType === 'marshalled') {
-          if (isResizeableInstances) {
+          if (entityCache.isResizeable) {
             const buffer = bufferFactory.ofStaged(label, usage);
             buffers[key] = buffer;
-            if (isMutableInstances) {
+            if (entityCache.isMutable) {
               const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
               const extractor = dataExtractorFactory.of(bufferFormat.marshall);
               const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
@@ -115,7 +114,7 @@ export const bufferResourcesFactory = {
               instanceMutators.push(mutator);
             }
           } else {
-            if (isMutableInstances) {
+            if (entityCache.isMutable) {
               const buffer = bufferFactory.ofStaged(label, usage);
               buffers[key] = buffer;
               const extractor = dataExtractorFactory.of(bufferFormat.marshall);
@@ -140,50 +139,19 @@ export const bufferResourcesFactory = {
         throw Error(`Cannot create buffer for unknown buffer type ${bufferType}`);
       }
     }
-    const bufferResources: WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, boolean, boolean, boolean> = {
+    return {
       buffers,
-      instanceCount: () => isResizeableInstances
-        ? instanceCache.count()
-        : initialInstances.length,
+      instanceCount: entityCache.count,
       update() {
-        if (isMutableUniform && uniformChangeDetector.compareAndUpdate(nextUniform)) {
-          uniformMutators.forEach((uniformMutator) => uniformMutator.mutate(nextUniform));
+        if (uniformCache.isDirty) {
+          const uniform = uniformCache.get();
+          uniformMutators.forEach((uniformMutator) => uniformMutator.mutate(uniform));
         }
-        if (isResizeableInstances) {
-          if (instanceCache.isDirty()) {
-            const command = instanceCache.command();
-            if (command.added.size > 0 || command.mutated.size > 0 || command.removed.size > 0) {
-              const mutatedSlices = updatedInstancesFuncs.byIdIndex(instanceIdIndexes, command);
-              instanceMutators.forEach((instanceMutator) => instanceMutator.mutate(mutatedSlices));
-            }
-          }
-        } else if (isMutableInstances) {
-          if (mutatedInstancesByIndex.size > 0) {
-            const mutatedSlices = updatedInstancesFuncs.byIndex(mutatedInstancesByIndex);
-            instanceMutators.forEach((instanceMutator) => instanceMutator.mutate(mutatedSlices));
-            mutatedInstancesByIndex.clear();
-          }
+        if (entityCache.isDirty) {
+          const changes = entityCache.calculateChanges();
+          instanceMutators.forEach((instanceMutator) => instanceMutator.mutate(changes));
         }
       },
     };
-    if (isMutableUniform) {
-      const mutableUniformBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, true, false, false>;
-      mutableUniformBufferResources.mutateUniform = (uniform) => nextUniform = uniform;
-    }
-    if (isMutableInstances) {
-      if (isResizeableInstances) {
-        const mutableInstancesBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, true, true>;
-        mutableInstancesBufferResources.mutateInstanceById = (id, instance) => instanceCache.mutate(id, instance);
-      } else {
-        const mutableInstancesBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, true, false>;
-        mutableInstancesBufferResources.mutateInstanceByIndex = mutatedInstancesByIndex.set;
-      }
-    }
-    if (isResizeableInstances) {
-      const resizeableInstancesBufferResources = bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, true>;
-      resizeableInstancesBufferResources.add = (instance) => instanceCache.add(instance);
-      resizeableInstancesBufferResources.remove = (instanceId) => instanceCache.remove(instanceId);
-    }
-    return bufferResources as WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats, TMutableUniform, TMutableInstances, TResizeableInstances>;
   },
 };

@@ -1,4 +1,4 @@
-import { WPKLayout, WPKUserFormat } from './buffer-format';
+import { WPKLayout, WPKUserFormat } from './buffer-formats';
 import { WPKInstanceFormat } from './instance';
 import { strideFuncs } from './strides';
 
@@ -12,7 +12,7 @@ export const vertexFormatsFactory = {
       case 'vec4': return `${datumType}x4`;
     }
   },
-  ofUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat>): GPUVertexFormat => {
+  ofUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat, any>): GPUVertexFormat => {
     const { datumType } = userFormat;
     const dimensionMultiple = strideFuncs.dimensionMultipleOfUserFormat(userFormat);
     return (dimensionMultiple === 1)

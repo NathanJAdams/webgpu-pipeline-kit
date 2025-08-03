@@ -8,7 +8,7 @@ export type WPKPipelineRunner = {
 };
 
 export const pipelineRunnerFactory = {
-  of: async (canvas: HTMLCanvasElement, ...pipelines: NonEmptyArray<WPKPipeline<any, any, boolean, boolean, boolean>>): Promise<WPKPipelineRunner> => {
+  of: async (canvas: HTMLCanvasElement, ...pipelines: NonEmptyArray<WPKPipeline>): Promise<WPKPipelineRunner> => {
     const context = pipelineFuncs.getContext(canvas);
     const device = await pipelineFuncs.getDevice();
     const format = pipelineFuncs.getFormat();

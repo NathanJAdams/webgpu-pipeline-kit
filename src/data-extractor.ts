@@ -1,4 +1,4 @@
-import { toMarshalledRef, WPKFormatMarshall, WPKPrimitive } from './buffer-format';
+import { toMarshalledRef, WPKFormatMarshall, WPKPrimitive } from './buffer-formats';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { strideFuncs } from './strides';
 import { callCreatorOf, floatFuncs } from './utils';
@@ -39,12 +39,12 @@ const datumSetters = createDatumSetters();
 const LITTLE_ENDIAN = true;
 
 export const dataExtractorFactory = {
-  of: <TFormat extends WPKInstanceFormat>(marshallFormats: WPKFormatMarshall<TFormat>): WPKDataExtractor<TFormat> => {
+  of: <TFormat extends WPKInstanceFormat>(marshallFormats: WPKFormatMarshall<TFormat, any>): WPKDataExtractor<TFormat> => {
     let totalStride = 0;
     const dataBridges: WPKDataBridge<TFormat>[] = [];
-    for (const format of marshallFormats) {
-      const userFormatRef = toMarshalledRef(format);
-      const { datumType } = format;
+    for (const userFormat of marshallFormats) {
+      const userFormatRef = toMarshalledRef(userFormat);
+      const { datumType } = userFormat;
       const datumStride = strideFuncs.ofVertexFormat(datumType);
       const stride = userFormatRef.datumCount * datumStride;
       const datumSetter = datumSetters.get(datumType);

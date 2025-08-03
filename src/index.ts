@@ -1,4 +1,4 @@
-export type { WPKBufferFormatMap } from './buffer-format';
+export type { WPKBufferFormatMap } from './buffer-formats';
 export * from './factories';
 export * from './instance';
 export type { WPKPipelineOptions } from './pipeline';

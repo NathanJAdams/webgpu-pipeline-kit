@@ -1,4 +1,3 @@
-import { WPKTrackedBuffer } from './buffers';
 import { WPKResource } from './resources';
 import { Capacity, CopySlice, mathFuncs, ValueSlices } from './utils';
 
@@ -27,11 +26,17 @@ const toValidSize = (label: string, bytesLength: number): number => {
   return mathFuncs.nextMultipleOf(clampedBytesLength, VALID_BYTES_MULTIPLE);
 };
 
-export type WPKMutable<T> = {
+type WPKBufferMutable<T> = {
     mutate: (data: ArrayBuffer, target: T) => void;
 };
-export type WPKResizeable = {
+type WPKBufferResizeable = {
     resize: (bytesLength: number) => void;
+};
+
+export type WPKTrackedBuffer = {
+  isNew: boolean;
+  buffer: GPUBuffer;
+  destroy: () => void;
 };
 
 export const bufferFactory = {
@@ -112,7 +117,7 @@ export const bufferFactory = {
       },
     };
   },
-  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags): WPKResizeable & WPKResource<WPKTrackedBuffer> => {
+  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
     let previousBuffer: GPUBuffer | undefined;
     let currentBuffer: GPUBuffer | undefined;
     const capacity = new Capacity(MINIMUM_BYTES_LENGTH, 1.2, 1.5);
@@ -169,7 +174,7 @@ export const bufferFactory = {
       },
     };
   },
-  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKMutable<number> & WPKResource<WPKTrackedBuffer> => {
+  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
     const size = toValidSize(label, bytesLength);
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
@@ -213,7 +218,7 @@ export const bufferFactory = {
       },
     };
   },
-  ofStaged: (label: string, usage: GPUBufferUsageFlags): WPKMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
+  ofStaged: (label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
     const staging = bufferFactory.ofResizeable(false, `${label}-staging`, GPUBufferUsage.COPY_SRC);
     const backing = bufferFactory.ofResizeable(true, `${label}-staging`, usage | GPUBufferUsage.COPY_DST);
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;

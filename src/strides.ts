@@ -1,4 +1,4 @@
-import { isUserFormatScalar, isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKFormatLayout, WPKFormatMarshall, WPKLayout, WPKPrimitive, WPKUserFormat } from './buffer-format';
+import { isUserFormatScalar, isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKFormatLayout, WPKFormatMarshall, WPKLayout, WPKPrimitive, WPKUserFormat } from './buffer-formats';
 import { WPKInstanceFormat } from './instance';
 
 export const strideFuncs = {
@@ -18,7 +18,7 @@ export const strideFuncs = {
       case 'unorm8': return 1;
     }
   },
-  dimensionMultipleOfUserFormat: <TInstanceFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TInstanceFormat>): number => {
+  dimensionMultipleOfUserFormat: <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): number => {
     if (isUserFormatScalar(userFormat)) {
       return 1;
     } else if (isUserFormatVec2(userFormat)) {
@@ -42,12 +42,12 @@ export const strideFuncs = {
   ofFormatLayout: (formatLayout: WPKFormatLayout): number => {
     return formatLayout.reduce((acc, layout) => acc + strideFuncs.ofLayout(layout), 0);
   },
-  ofUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat>): number => {
+  ofUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat, any>): number => {
     const datumStride = strideFuncs.ofVertexFormat(userFormat.datumType);
     const multiple = strideFuncs.dimensionMultipleOfUserFormat(userFormat);
     return datumStride * multiple;
   },
-  ofFormatMarshall: <TFormat extends WPKInstanceFormat>(format: WPKFormatMarshall<TFormat>): number => {
+  ofFormatMarshall: <TFormat extends WPKInstanceFormat>(format: WPKFormatMarshall<TFormat, any>): number => {
     return format.reduce((acc, userFormat) => acc + strideFuncs.ofUserFormat(userFormat), 0);
   },
 };
