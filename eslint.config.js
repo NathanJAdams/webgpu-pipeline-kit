@@ -41,7 +41,15 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      indent: ['error', 2, { SwitchCase: 1 }],
+      indent: ['error', 2,
+        {
+          SwitchCase: 1,
+          FunctionDeclaration: {
+            parameters: 'first',
+          },
+          ignoredNodes: [],
+        },
+      ],
       'linebreak-style': ['error', 'unix'],
       quotes: ['error', 'single'],
       semi: ['error', 'always'],
