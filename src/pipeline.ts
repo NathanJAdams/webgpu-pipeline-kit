@@ -8,7 +8,7 @@ import { meshFuncs } from './mesh';
 import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory, WPKResource } from './resources';
-import { WPKBufferBinding, WPKComputeShader, shaderFuncs, WPKRenderShader, WPKShader } from './shaders';
+import { shaderFuncs, WPKBufferBinding, WPKComputeShader, WPKRenderShader, WPKShader } from './shaders';
 import { arrayFuncs, changeDetectorFactory, Color, recordFuncs } from './utils';
 
 export type WPKPipeline = {
@@ -28,13 +28,14 @@ export const pipelineFactory = {
   of: <
     TUniformFormat extends WPKInstanceFormat,
     TEntityFormat extends WPKInstanceFormat,
-    TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(
-      name: string,
-      bufferFormats: TBufferFormats,
-      shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormats>,
-      uniformCache: WPKUniformCache<TUniformFormat, any>,
-      entityCache: WPKEntityCache<TEntityFormat, any, any>,
-    ): WPKPipeline => {
+    TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>
+  >(
+    name: string,
+    bufferFormats: TBufferFormats,
+    shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormats>,
+    uniformCache: WPKUniformCache<TUniformFormat, any>,
+    entityCache: WPKEntityCache<TEntityFormat, any, any>,
+  ): WPKPipeline => {
     const bufferUsages = toBufferUsages(shader, bufferFormats);
     const bufferResources = bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages);
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);

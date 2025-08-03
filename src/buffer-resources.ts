@@ -1,9 +1,9 @@
 import { bufferFactory, WPKTrackedBuffer } from './buffer-factory';
 import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
-import { WPKEntityCache as WPKEntityCache, WPKUniformCache as WPKUniformCache } from './cache';
+import { WPKEntityCache, WPKUniformCache } from './cache';
 import { dataExtractorFactory } from './data-extractor';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
-import { WPKMesh, meshFuncs } from './mesh';
+import { meshFuncs, WPKMesh } from './mesh';
 import { WPKResource } from './resources';
 import { strideFuncs } from './strides';
 import { CopySlice, ValueSlices } from './utils';

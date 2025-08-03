@@ -49,6 +49,7 @@ export const cacheFactory = {
     TUniformFormat extends WPKInstanceFormat,
     TMutable extends boolean
   >(
+    _uniformFormat: TUniformFormat,
     initialUniform: WPKInstanceOf<TUniformFormat>,
     mutable: TMutable,
   ): WPKUniformCache<TUniformFormat, TMutable> => {
@@ -72,6 +73,7 @@ export const cacheFactory = {
     TEntityFormat extends WPKInstanceFormat,
     TMutable extends boolean
   >(
+    _entityFormat: TEntityFormat,
     mutable: TMutable,
     ...elements: WPKInstanceOf<TEntityFormat>[]
   ): WPKEntityCache<TEntityFormat, TMutable, false> => {
@@ -98,6 +100,7 @@ export const cacheFactory = {
     TEntityFormat extends WPKInstanceFormat,
     TMutable extends boolean
   >(
+    _entityFormat: TEntityFormat,
     mutable: TMutable
   ): WPKEntityCache<TEntityFormat, TMutable, true> => {
     const idIndexes = new BidiMap<string, number>();

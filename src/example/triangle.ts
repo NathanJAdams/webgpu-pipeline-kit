@@ -37,9 +37,9 @@ const _triangle: Triangle = {
   },
 };
 
-const _uniformCache = cacheFactory.ofUniform(_uniform, false);
-const _entityCacheFixed = cacheFactory.ofEntitiesFixedSize(true, _triangle);
-const _entityCacheResizeable = cacheFactory.ofEntitiesResizeable(true);
+const _uniformCache = cacheFactory.ofUniform(_uniformFormat, _uniform, false);
+const _entityCacheFixed = cacheFactory.ofEntitiesFixedSize(_triangleFormat, true, _triangle);
+const _entityCacheResizeable = cacheFactory.ofEntitiesResizeable(_triangleFormat, true);
 
 const _triangleBufferFormats = {
   uniforms: {
@@ -65,7 +65,13 @@ const _triangleBufferFormats = {
       datumType: 'float16',
       scalar: 'positionTuple.0',
     }, {
-      datumType: 'sint32',
+      datumType: 'sint8',
+      vec2: [
+        'positionObject.x',
+        'positionObject.y',
+      ],
+    }, {
+      datumType: 'uint32',
       vec3: 'positionTuple',
     }, {
       datumType: 'sint32',
@@ -123,10 +129,10 @@ const _shader = {
   },
 } as const satisfies WPKShader<TriangleUniformFormat, TriangleFormat, TriangleBufferFormats>;
 
-// const pipeline = pipelineFactory.of(
-//   'triangle',
-//   _triangleBufferFormats,
-//   _shader,
-//   _uniformCache,
-//   _entityCacheResizeable
-// );
+const _pipeline = pipelineFactory.of(
+  'triangle',
+  _triangleBufferFormats,
+  _shader,
+  _uniformCache,
+  _entityCacheResizeable
+);
