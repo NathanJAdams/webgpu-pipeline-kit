@@ -7506,8 +7506,6 @@ __metadata:
     tsup: "npm:^8.5.0"
     typescript: "npm:^5.8.3"
     uuid: "npm:^11.1.0"
-  bin:
-    webgpu-pipeline-kit: ./dist/cli/generate.js
   languageName: unknown
   linkType: soft
 
