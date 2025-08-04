@@ -1,7 +1,7 @@
 {
   "name": "webgpu-pipeline-kit",
   "description": "A type-safe declarative way of creating WebGPU pipelines",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "author": {
     "name": "Nathan Adams",
     "url": "https://github.com/NathanJAdams"
@@ -10,7 +10,7 @@
   "homepage": "https://github.com/NathanJAdams/webgpu-pipeline-kit",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NathanJAdams/webgpu-pipeline-kit.git"
+    "url": "https://github.com/NathanJAdams/webgpu-pipeline-kit.git"
   },
   "keywords": [
     "WebGPU",
@@ -21,24 +21,17 @@
     "LICENSE",
     "README.md"
   ],
-  "type": "module",
-  "browser": "./dist/esm/index.js",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/types/index.d.ts",
-      "default": "./dist/esm/index.js"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "yarn clean && yarn build:cjs && yarn build:esm && yarn build:types",
-    "build:cjs": "tsc --project tsconfig.cjs.json",
-    "build:esm": "tsc --project tsconfig.esm.json",
-    "build:types": "tsc --project tsconfig.types.json",
+    "build": "tsup",
     "clean": "rimraf ./dist/",
     "lint": "eslint ./src --fix && madge --circular src/**/*",
     "test": "jest --silent=false --passWithNoTests"
@@ -60,6 +53,7 @@
     "rimraf": "^6.0.1",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "uuid": "^11.1.0"
   },

@@ -1,7 +1,28 @@
 {
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "noEmit": true,
-  }
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": [
+      "DOM",
+      "ES2020"
+    ],
+    "moduleResolution": "nodenext",
+    "module": "nodenext",
+    "removeComments": true,
+    "rootDir": "src",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2020",
+    "types": [
+      "@webgpu/types"
+    ],
+  },
+  "exclude": [
+    "dist"
+  ],
+  "include": [
+    "src"
+  ],
 }
