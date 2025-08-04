@@ -18,7 +18,8 @@
     ],
   },
   "exclude": [
-    "dist"
+    "dist",
+    "src/example"
   ],
   "include": [
     "src"

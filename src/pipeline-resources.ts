@@ -6,7 +6,7 @@ import { WPKInstanceFormat } from './instance';
 import { WPKMesh, meshFuncs } from './mesh';
 import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
 import { resourceFactory, WPKResource } from './resources';
-import { WPKMeshBufferLocation, WPKUserDefinedBufferLocation } from './shaders';
+import { WPKBufferLocationMesh, WPKBufferLocationUserDefined } from './shaders';
 import { strideFuncs } from './strides';
 import { vertexAttributesFactory } from './vertex-attributes';
 import { vertexFormatsFactory } from './vertex-formats';
@@ -145,8 +145,8 @@ export const pipelineResourceFactory = {
   },
 
   // render
-  ofMeshVertexBufferDetail: (
-    meshBufferLocation: WPKMeshBufferLocation,
+  ofVertexBufferDetailMesh: (
+    meshBufferLocation: WPKBufferLocationMesh,
     meshBufferResource: WPKMeshBufferResource
   ): WPKResource<WPKVertexBufferDetail> => {
     const { format, location, step } = meshBufferLocation;
@@ -158,18 +158,14 @@ export const pipelineResourceFactory = {
     }];
     return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
   },
-  ofBindingVertexBufferDetail: <
-    TUniformFormat extends WPKInstanceFormat,
-    TEntityFormat extends WPKInstanceFormat,
-    TBufferFormats extends WPKBufferFormatMapEntity<TEntityFormat>,
-  >(
-    bindingBufferLocation: WPKUserDefinedBufferLocation<TUniformFormat, TEntityFormat, TBufferFormats>,
+  ofVertexBufferDetailBufferLocation: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMapEntity<TEntityFormat>,>(
+    bufferLocation: WPKBufferLocationUserDefined<TUniformFormat, TEntityFormat, TBufferFormats>,
     bufferFormats: TBufferFormats,
-    buffersResources: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>
+    trackedBufferResources: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>
   ): WPKResource<WPKVertexBufferDetail> => {
-    const { buffer, location, step } = bindingBufferLocation;
+    const { buffer, location, step } = bufferLocation;
     const bufferFormat = bufferFormats[buffer];
-    const bufferResource = buffersResources[buffer];
+    const bufferResource = trackedBufferResources[buffer];
     const { contentType } = bufferFormat;
     const arrayStride = (contentType === 'layout')
       ? strideFuncs.ofFormatLayout(bufferFormat.layout)

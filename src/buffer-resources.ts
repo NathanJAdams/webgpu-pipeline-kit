@@ -32,11 +32,7 @@ export const bufferResourcesFactory = {
       vertices,
     };
   },
-  ofUniformAndInstances: <
-    TUniformFormat extends WPKInstanceFormat,
-    TEntityFormat extends WPKInstanceFormat,
-    TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>,
-  >(
+  ofUniformAndInstances: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(
     name: string,
     uniformCache: WPKUniformCache<TUniformFormat, any>,
     entityCache: WPKEntityCache<TEntityFormat, any, any>,

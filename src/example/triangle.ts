@@ -1,57 +1,50 @@
-import { WPKBufferFormatMap } from '../buffer-formats';
-import { cacheFactory } from '../cache';
-import { WPKInstanceFormat, WPKInstanceOf } from '../instance';
-import { meshFactory } from '../mesh';
-import { pipelineFactory, WPKPipelineOptions } from '../pipeline';
-import { pipelineRunnerFactory } from '../pipeline-runner';
-import { WPKShader } from '../shaders';
-import { colorFactory } from '../utils';
+import { factories, WPKBufferFormatMap, WPKInstanceFormat, WPKInstanceOf, WPKPipelineDefinition, WPKPipelineOptions, WPKShader } from 'webgpu-pipeline-kit';
 
-const uniformFormat = {
-  gameTime: 'number',
+const uniformFormatTriangle = {
+  gameTimeTriangle: 'number',
 } as const satisfies WPKInstanceFormat;
-type TriangleUniformFormat = typeof uniformFormat;
-type TriangleUniform = WPKInstanceOf<TriangleUniformFormat>;
+type UniformFormatTriangle = typeof uniformFormatTriangle;
+type UniformTriangle = WPKInstanceOf<UniformFormatTriangle>;
 
-const triangleFormat = {
-  primaryId: 'string',
-  positionTuple: ['number', 'number', 'number'],
-  positionObject: {
+const entityFormatTriangle = {
+  primaryIdTriangle: 'string',
+  positionTupleTriangle: ['number', 'number', 'number'],
+  positionObjectTriangle: {
     x: 'number',
     y: 'number',
     z: 'number',
   },
 } as const satisfies WPKInstanceFormat;
-type TriangleFormat = typeof triangleFormat;
+type EntityFormatTriangle = typeof entityFormatTriangle;
 
-type Triangle = WPKInstanceOf<TriangleFormat>;
+type EntityTriangle = WPKInstanceOf<EntityFormatTriangle>;
 
-const uniform: TriangleUniform = {
-  gameTime: 123,
+const uniformTriangle: UniformTriangle = {
+  gameTimeTriangle: 123,
 };
-const _triangle: Triangle = {
-  primaryId: 'abc',
-  positionTuple: [546, 12.4, -900],
-  positionObject: {
+const _entityTriangle: EntityTriangle = {
+  primaryIdTriangle: 'abc',
+  positionTupleTriangle: [546, 12.4, -900],
+  positionObjectTriangle: {
     x: 123,
     y: 456,
     z: 789,
   },
 };
 
-const uniformCache = cacheFactory.ofUniform(uniformFormat, uniform, false);
-const entityCache = cacheFactory.ofEntitiesResizeable(triangleFormat, true);
+const uniformCacheTriangle = factories.cache.ofUniform(uniformFormatTriangle, uniformTriangle, false);
+const entityCacheTriangle = factories.cache.ofEntitiesResizeable(entityFormatTriangle, true);
 
-const triangleBufferFormats = {
-  uniforms: {
+const bufferFormatsTriangle = {
+  uniformsTriangle: {
     bufferType: 'uniform',
     contentType: 'marshalled',
     marshall: [{
       datumType: 'uint32',
-      scalar: 'gameTime',
+      scalar: 'gameTimeTriangle',
     }],
   },
-  calculated: {
+  calculatedTriangle: {
     bufferType: 'entity',
     contentType: 'layout',
     layout: [{
@@ -59,37 +52,37 @@ const triangleBufferFormats = {
       dimension: 'scalar',
     }],
   },
-  physical: {
+  physicalTriangle: {
     bufferType: 'entity',
     contentType: 'marshalled',
     marshall: [{
       datumType: 'float16',
-      scalar: 'positionTuple.0',
+      scalar: 'positionTupleTriangle.0',
     }, {
       datumType: 'sint8',
       vec2: [
-        'positionObject.x',
-        'positionObject.y',
+        'positionObjectTriangle.x',
+        'positionObjectTriangle.y',
       ],
     }, {
       datumType: 'uint32',
-      vec3: 'positionTuple',
+      vec3: 'positionTupleTriangle',
     }, {
       datumType: 'sint32',
       entityIndexFromResizeableEntityCache: {
-        key: 'primaryId',
-        target: entityCache,
+        key: 'primaryIdTriangle',
+        target: entityCacheTriangle,
       },
     }],
   },
-} satisfies WPKBufferFormatMap<TriangleUniformFormat, TriangleFormat>;
+} as const satisfies WPKBufferFormatMap<UniformFormatTriangle, EntityFormatTriangle>;
 
-type TriangleBufferFormats = typeof triangleBufferFormats;
-const shader = {
+type BufferFormatsTriangle = typeof bufferFormatsTriangle;
+const shaderTriangle: WPKShader<UniformFormatTriangle, EntityFormatTriangle, BufferFormatsTriangle> = {
   compute: {
     bufferBindings: [{
       binding: 0,
-      buffer: 'uniforms',
+      buffer: 'uniformsTriangle',
       group: 0,
     }],
     shader: '',
@@ -104,9 +97,9 @@ const shader = {
     bufferBindings: [{
       binding: 0,
       group: 1,
-      buffer: 'physical',
+      buffer: 'physicalTriangle',
     }],
-    mesh: meshFactory.sphere(4),
+    mesh: factories.mesh.sphere(4),
     passes: [{
       vertex: {
         entryPoint: '',
@@ -119,7 +112,7 @@ const shader = {
           type: 'user-defined',
           step: 'instance',
           location: 0,
-          buffer: 'physical',
+          buffer: 'physicalTriangle',
         }],
       },
       fragment: {
@@ -128,21 +121,160 @@ const shader = {
     }],
     shader: '',
   },
-} as const satisfies WPKShader<TriangleUniformFormat, TriangleFormat, TriangleBufferFormats>;
+};
 
-const pipeline = pipelineFactory.of(
-  'triangle',
-  triangleBufferFormats,
-  shader,
-  uniformCache,
-  entityCache
-);
+const pipelineDefinitionTriangle: WPKPipelineDefinition<UniformFormatTriangle, EntityFormatTriangle, BufferFormatsTriangle> = {
+  name: 'triangle',
+  bufferFormats: bufferFormatsTriangle,
+  shader: shaderTriangle,
+  uniformCache: uniformCacheTriangle,
+  entityCache: entityCacheTriangle,
+};
+
+const uniformFormatCube = {
+  gameTimeCube: 'number',
+} as const satisfies WPKInstanceFormat;
+type UniformFormatCube = typeof uniformFormatCube;
+type UniformCube = WPKInstanceOf<UniformFormatCube>;
+
+const entityFormatCube = {
+  primaryIdCube: 'string',
+  positionTupleCube: ['number', 'number', 'number'],
+  positionObjectCube: {
+    x: 'number',
+    y: 'number',
+    z: 'number',
+  },
+} as const satisfies WPKInstanceFormat;
+type EntityFormatCube = typeof entityFormatCube;
+
+type EntityCube = WPKInstanceOf<EntityFormatCube>;
+
+const uniformCube: UniformCube = {
+  gameTimeCube: 123,
+};
+const _entityCube: EntityCube = {
+  primaryIdCube: 'abc',
+  positionTupleCube: [546, 12.4, -900],
+  positionObjectCube: {
+    x: 123,
+    y: 456,
+    z: 789,
+  },
+};
+
+const uniformCacheCube = factories.cache.ofUniform(uniformFormatCube, uniformCube, false);
+const entityCacheCube = factories.cache.ofEntitiesResizeable(entityFormatCube, true);
+
+const bufferFormatsCube = {
+  uniformsCube: {
+    bufferType: 'uniform',
+    contentType: 'marshalled',
+    marshall: [{
+      datumType: 'uint32',
+      scalar: 'gameTimeCube',
+    }],
+  },
+  calculatedCube: {
+    bufferType: 'entity',
+    contentType: 'layout',
+    layout: [{
+      datumType: 'float32',
+      dimension: 'scalar',
+    }],
+  },
+  physicalCube: {
+    bufferType: 'entity',
+    contentType: 'marshalled',
+    marshall: [{
+      datumType: 'float16',
+      scalar: 'positionTupleCube.0',
+    }, {
+      datumType: 'sint8',
+      vec2: [
+        'positionObjectCube.x',
+        'positionObjectCube.y',
+      ],
+    }, {
+      datumType: 'uint32',
+      vec3: 'positionTupleCube',
+    }, {
+      datumType: 'sint32',
+      entityIndexFromResizeableEntityCache: {
+        key: 'primaryIdCube',
+        target: entityCacheTriangle,
+      },
+    }],
+  },
+} as const satisfies WPKBufferFormatMap<UniformFormatCube, EntityFormatCube>;
+
+type BufferFormatsCube = typeof bufferFormatsCube;
+const shaderCube: WPKShader<UniformFormatCube, EntityFormatCube, BufferFormatsCube> = {
+  compute: {
+    bufferBindings: [{
+      binding: 0,
+      buffer: 'uniformsCube',
+      group: 0,
+    }, {
+      binding: 1,
+      group: 0,
+      buffer: factories.shader.ofForeignBufferRef(uniformFormatTriangle, entityFormatTriangle, bufferFormatsTriangle, 'calculatedTriangle'),
+    }],
+    shader: '',
+    passes: [{
+      entryPoint: 'main',
+      workGroupSize: {
+        x: 64,
+      },
+    }],
+  },
+  render: {
+    bufferBindings: [{
+      binding: 0,
+      group: 1,
+      buffer: 'physicalCube',
+    }, {
+      binding: 1,
+      group: 1,
+      buffer: factories.shader.ofForeignBufferRef(uniformFormatTriangle, entityFormatTriangle, bufferFormatsTriangle, 'uniformsTriangle'),
+    }],
+    mesh: factories.mesh.sphere(4),
+    passes: [{
+      vertex: {
+        entryPoint: '',
+        bufferLocations: [{
+          type: 'mesh',
+          step: 'vertex',
+          format: 'float32x3',
+          location: 0,
+        }, {
+          type: 'user-defined',
+          step: 'instance',
+          location: 0,
+          buffer: 'physicalCube',
+        }],
+      },
+      fragment: {
+        entryPoint: '',
+      },
+    }],
+    shader: '',
+  },
+};
+
+const pipelineDefinitionCube: WPKPipelineDefinition<UniformFormatCube, EntityFormatCube, BufferFormatsCube> = {
+  name: 'cube',
+  bufferFormats: bufferFormatsCube,
+  shader: shaderCube,
+  uniformCache: uniformCacheCube,
+  entityCache: entityCacheCube,
+};
 
 const _testFunction = async () => {
   const canvas = {} as HTMLCanvasElement;
-  const pipelineRunner = await pipelineRunnerFactory.of(canvas, pipeline);
+  const pipelineRunner = await factories.pipelineRunner.of(canvas, pipelineDefinitionTriangle, pipelineDefinitionCube);
   const options: WPKPipelineOptions = {
-    clear: colorFactory.BLACK,
+    clear: factories.color.BLACK,
     isAntiAliased: true,
   };
   pipelineRunner.invoke(options);
