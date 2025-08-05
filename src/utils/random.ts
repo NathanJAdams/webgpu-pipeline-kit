@@ -1,4 +1,4 @@
-import { SFC32 } from '@thi.ng/random';
+import { Xoshiro128 } from '@thi.ng/random';
 
 import { Range } from './range';
 
@@ -31,13 +31,13 @@ export type Random = {
 
 export const randomFactory = {
   ofSeed: (seed: Seed): Random => {
-    const sfc32 = new SFC32([seed.a, seed.b, seed.c, seed.d]);
-    return createRandomFromSfc32(sfc32);
+    const xoshiro128 = new Xoshiro128([seed.a, seed.b, seed.c, seed.d]);
+    return createRandomFromXoshiro128(xoshiro128);
   },
   ofString: (str: string): Random => {
     const seed = createSeedFromString(str);
-    const sfc32 = new SFC32([seed.a, seed.b, seed.c, seed.d]);
-    return createRandomFromSfc32(sfc32);
+    const xoshiro128 = new Xoshiro128([seed.a, seed.b, seed.c, seed.d]);
+    return createRandomFromXoshiro128(xoshiro128);
   },
 };
 
@@ -67,10 +67,10 @@ const hashChars = (seed: string, hash: number, startIndex: number, endIndex: num
   return hash;
 };
 
-const createRandomFromSfc32 = (sfc32: SFC32): Random => {
+const createRandomFromXoshiro128 = (xoshiro128: Xoshiro128): Random => {
   return {
     getSeed() {
-      const buffer = sfc32.buffer;
+      const buffer = xoshiro128.buffer;
       return {
         a: buffer[0],
         b: buffer[1],
@@ -85,10 +85,10 @@ const createRandomFromSfc32 = (sfc32: SFC32): Random => {
       return this.true(1 - proportion);
     },
     true(proportion) {
-      return sfc32.float() < proportion;
+      return xoshiro128.float() < proportion;
     },
     int() {
-      return sfc32.int();
+      return xoshiro128.int();
     },
     intRange(range: Range) {
       return this.intMinMax(range.min, range.max);
@@ -98,10 +98,10 @@ const createRandomFromSfc32 = (sfc32: SFC32): Random => {
       return this.intMinMax(-abs, abs);
     },
     intMinMax(min: number, max: number) {
-      return sfc32.minmaxInt(min, max + 1);
+      return xoshiro128.minmaxInt(min, max + 1);
     },
     float() {
-      return sfc32.float();
+      return xoshiro128.float();
     },
     floatRange(range: Range) {
       return this.floatMinMax(range.min, range.max);
@@ -111,7 +111,7 @@ const createRandomFromSfc32 = (sfc32: SFC32): Random => {
       return this.floatMinMax(-abs, abs);
     },
     floatMinMax(min: number, max: number) {
-      return sfc32.minmax(min, max);
+      return xoshiro128.minmax(min, max);
     },
     lowerCharCode() {
       return this.intMinMax(97, 123);
@@ -130,7 +130,7 @@ const createRandomFromSfc32 = (sfc32: SFC32): Random => {
     wordMinMax(min: number, max: number) {
       const charCodes: number[] = [];
       charCodes.push(this.upperCharCode());
-      const subsequent = sfc32.minmaxUint(min, max);
+      const subsequent = xoshiro128.minmaxUint(min, max);
       for (let i = 1; i <= subsequent; i++) {
         charCodes.push(this.lowerCharCode());
       }

@@ -8,8 +8,8 @@
       "DOM",
       "ES2020"
     ],
-    "moduleResolution": "nodenext",
-    "module": "nodenext",
+    "moduleResolution": "bundler",
+    "module": "esnext",
     "removeComments": true,
     "rootDir": "src",
     "skipLibCheck": true,
