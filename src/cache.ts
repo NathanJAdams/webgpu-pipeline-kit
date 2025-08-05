@@ -14,7 +14,7 @@ type WPKCacheResizeable<T> = {
 export type WPKUniformCache<TUniformFormat extends WPKInstanceFormat, TMutable extends boolean> =
   & {
     isMutable: TMutable;
-    isDirty: boolean;
+    isDirty: () => boolean;
     get: () => WPKInstanceOf<TUniformFormat>;
   }
   & (
@@ -29,8 +29,8 @@ export type WPKEntityCache<TEntityFormat extends WPKInstanceFormat, TMutable ext
   & {
     isMutable: TMutable;
     isResizeable: TResizeable;
-    count: number;
-    isDirty: boolean;
+    count: () => number;
+    isDirty: () => boolean;
     calculateChanges: () => ValueSlices<WPKInstanceOf<TEntityFormat>[]>;
   }
   & (TMutable extends true
@@ -58,7 +58,7 @@ export const cacheFactory = {
     let next: WPKInstanceOf<TUniformFormat> = initialUniform;
     const cache: WPKUniformCache<TUniformFormat, any> = {
       isMutable: mutable,
-      isDirty: previous !== next,
+      isDirty: () => previous !== next,
       get() {
         previous = next;
         return next;
@@ -82,8 +82,8 @@ export const cacheFactory = {
     const cache: WPKEntityCache<TEntityFormat, any, false> = {
       isMutable: mutable,
       isResizeable: false,
-      count: elements.length,
-      isDirty: mutated.size > 0,
+      count: () => elements.length,
+      isDirty: () => mutated.size > 0,
       calculateChanges() {
         const slices = sliceFuncs.ofMap(mutated);
         mutated.clear();
@@ -114,8 +114,8 @@ export const cacheFactory = {
     const cache: WPKEntityCache<TEntityFormat, any, true> = {
       isMutable: mutable,
       isResizeable: true,
-      count: backing.size,
-      isDirty: added.size > 0 || mutated.size > 0 || removed.size > 0,
+      count: () => backing.size,
+      isDirty: () => added.size > 0 || mutated.size > 0 || removed.size > 0,
       calculateChanges() {
         added.forEach((instance, id) => backing.set(id, instance));
         mutated.forEach((instance, id) => backing.set(id, instance));

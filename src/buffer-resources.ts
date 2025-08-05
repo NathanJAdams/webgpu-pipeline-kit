@@ -20,7 +20,7 @@ export type WPKMeshBufferResource = {
 
 export type WPKBufferResources<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = {
   buffers: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>;
-  instanceCount: number;
+  instanceCount: () => number;
   update: () => void;
 };
 
@@ -94,7 +94,7 @@ export const bufferResourcesFactory = {
             instanceMutators.push(mutator);
           } else {
             const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
-            buffers[key] = bufferFactory.ofSize(entityCache.count * stride, label, usage);
+            buffers[key] = bufferFactory.ofSize(entityCache.count() * stride, label, usage);
           }
         } else if (contentType === 'marshalled') {
           lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity marshalled`);
@@ -152,14 +152,14 @@ export const bufferResourcesFactory = {
     }
     return {
       buffers,
-      instanceCount: entityCache.count,
+      instanceCount: () => entityCache.count(),
       update() {
-        if (uniformCache.isDirty) {
+        if (uniformCache.isDirty()) {
           lazyTrace(LOGGER, () => 'Uniform cache is dirty, mutating uniform');
           const uniform = uniformCache.get();
           uniformMutators.forEach((uniformMutator) => uniformMutator.mutate(uniform));
         }
-        if (entityCache.isDirty) {
+        if (entityCache.isDirty()) {
           lazyTrace(LOGGER, () => 'Entity cache is dirty, mutating uniform');
           const changes = entityCache.calculateChanges();
           instanceMutators.forEach((instanceMutator) => instanceMutator.mutate(changes));

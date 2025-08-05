@@ -220,16 +220,16 @@ const toPipelineDetailResource = <TUniformFormat extends WPKInstanceFormat, TEnt
     throw Error('Error when creating pipeline, no buffer resources');
   }
   const computePipelineDetailsResource = shaderFuncs.isComputeShader(shader)
-    ? toComputePipelineDetailsResource(name, shader, () => bufferResources.instanceCount, bufferFormats, bufferResources, allBufferResources)
+    ? toComputePipelineDetailsResource(name, shader, () => bufferResources.instanceCount(), bufferFormats, bufferResources, allBufferResources)
     : undefined;
   const renderPipelineDetailResource = shaderFuncs.isRenderShader(shader)
-    ? toRenderPipelineDetailsResource(name, shader, () => bufferResources.instanceCount, bufferFormats, bufferResources, allBufferResources, isAntiAliasedFunc, textureFormatFunc)
+    ? toRenderPipelineDetailsResource(name, shader, () => bufferResources.instanceCount(), bufferFormats, bufferResources, allBufferResources, isAntiAliasedFunc, textureFormatFunc)
     : undefined;
   lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
   return {
     get(device, queue, encoder) {
       lazyTrace(LOGGER, () => `Creating pipeline detail ${name}`);
-      const isValid = bufferResources.instanceCount > 0;
+      const isValid = bufferResources.instanceCount() > 0;
       const pipelineDetail: WPKPipelineDetail = {
         isValid,
       };
