@@ -1,6 +1,6 @@
 import log, { Logger, LogLevelDesc } from 'loglevel';
 
-export type WPKLogNamespace =
+type WPKLogNamespace =
   | 'buffer'
   | 'cache'
   | 'data'

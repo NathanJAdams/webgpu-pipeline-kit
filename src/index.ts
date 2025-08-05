@@ -3,5 +3,4 @@ export { factories } from './factories';
 export type { WPKInstanceFormat, WPKInstanceOf } from './instance';
 export type { WPKPipelineDefinition, WPKPipelineOptions } from './pipeline';
 export type { WPKShader } from './shaders';
-export type { WPKLogNamespace } from './logging';
 export { setLogLevel } from './logging';
