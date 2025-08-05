@@ -48,7 +48,7 @@ export type WPKTrackedBuffer = {
 
 export const bufferFactory = {
   ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
-    lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usage} from data of byte length ${data.byteLength}`);
+    lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${data.byteLength}`);
     const size = toValidSize(label, data.byteLength);
     if (size > data.byteLength) {
       lazyTrace(LOGGER, () => `Aligning buffer ${label} to new size ${size}`);
@@ -63,7 +63,7 @@ export const bufferFactory = {
       get(device, queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
-          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usage}`);
+          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
             label,
             size,
@@ -95,7 +95,7 @@ export const bufferFactory = {
     };
   },
   ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
-    lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usage} of byte length ${bytesLength}`);
+    lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} of byte length ${bytesLength}`);
     const size = toValidSize(label, bytesLength);
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
@@ -103,7 +103,7 @@ export const bufferFactory = {
       get(device, _queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
-          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usage}`);
+          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
             label,
             size,
@@ -133,7 +133,7 @@ export const bufferFactory = {
     };
   },
   ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
-    lazyDebug(LOGGER, () => `Creating resizeable buffer '${label}' of usage ${usage}`);
+    lazyDebug(LOGGER, () => `Creating resizeable buffer '${label}' of usage ${usageToString(usage)}`);
     let previousBuffer: GPUBuffer | undefined;
     let currentBuffer: GPUBuffer | undefined;
     const capacity = new Capacity(MINIMUM_BYTES_LENGTH, 1.2, 1.5);
@@ -160,7 +160,7 @@ export const bufferFactory = {
           previousBytesLength = capacity.capacity;
           capacity.ensureCapacity(desiredBytesLength);
           capacity.capacity = toValidSize(label, capacity.capacity);
-          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${capacity.capacity} and usage ${usage}`);
+          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${capacity.capacity} and usage ${usageToString(usage)}`);
           previousBuffer = currentBuffer;
           const newBuffer = currentBuffer = device.createBuffer({
             label,
@@ -196,7 +196,7 @@ export const bufferFactory = {
     };
   },
   ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
-    lazyDebug(LOGGER, () => `Creating mutable buffer '${label}' of usage ${usage} from data of byte length ${bytesLength}`);
+    lazyDebug(LOGGER, () => `Creating mutable buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
     const size = toValidSize(label, bytesLength);
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
@@ -209,7 +209,7 @@ export const bufferFactory = {
       get(device, queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
-          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usage}`);
+          lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
             label,
             size,
@@ -245,7 +245,7 @@ export const bufferFactory = {
     };
   },
   ofStaged: (label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
-    lazyDebug(LOGGER, () => `Creating staged buffer '${label}' of usage ${usage}`);
+    lazyDebug(LOGGER, () => `Creating staged buffer '${label}' of usage ${usageToString(usage)}`);
     const stagingLabel = `${label}-staging`;
     const backingLabel = `${label}-backing`;
     const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC);
@@ -284,4 +284,19 @@ export const bufferFactory = {
       },
     };
   },
+};
+
+export const usageToString = (usage: GPUBufferUsageFlags): string => {
+  const flagNames: string[] = [];
+  if ((usage & GPUBufferUsage.COPY_DST) === GPUBufferUsage.COPY_DST) { flagNames.push('COPY_DST'); }
+  if ((usage & GPUBufferUsage.COPY_SRC) === GPUBufferUsage.COPY_SRC) { flagNames.push('COPY_SRC'); }
+  if ((usage & GPUBufferUsage.INDEX) === GPUBufferUsage.INDEX) { flagNames.push('INDEX'); }
+  if ((usage & GPUBufferUsage.INDIRECT) === GPUBufferUsage.INDIRECT) { flagNames.push('INDIRECT'); }
+  if ((usage & GPUBufferUsage.MAP_READ) === GPUBufferUsage.MAP_READ) { flagNames.push('MAP_READ'); }
+  if ((usage & GPUBufferUsage.MAP_WRITE) === GPUBufferUsage.MAP_WRITE) { flagNames.push('MAP_WRITE'); }
+  if ((usage & GPUBufferUsage.QUERY_RESOLVE) === GPUBufferUsage.QUERY_RESOLVE) { flagNames.push('QUERY_RESOLVE'); }
+  if ((usage & GPUBufferUsage.STORAGE) === GPUBufferUsage.STORAGE) { flagNames.push('STORAGE'); }
+  if ((usage & GPUBufferUsage.UNIFORM) === GPUBufferUsage.UNIFORM) { flagNames.push('UNIFORM'); }
+  if ((usage & GPUBufferUsage.VERTEX) === GPUBufferUsage.VERTEX) { flagNames.push('VERTEX'); }
+  return `[${flagNames.join(', ')}]`;
 };

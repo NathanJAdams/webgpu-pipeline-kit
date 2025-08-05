@@ -1,3 +1,4 @@
+import { usageToString } from './buffer-factory';
 import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatMapEntity, WPKBufferType, WPKBufferTypes, WPKContentType } from './buffer-formats';
 import { bufferResourcesFactory, WPKBufferResources } from './buffer-resources';
 import { WPKEntityCache, WPKUniformCache } from './cache';
@@ -174,7 +175,7 @@ const toBufferUsages = <TUniformFormat extends WPKInstanceFormat, TEntityFormat 
         usage |= GPUBufferUsage.VERTEX;
       }
     }
-    lazyTrace(LOGGER, () => `Buffer ${key} has usage ${usage}`);
+    lazyTrace(LOGGER, () => `Buffer ${key} has usage ${usageToString(usage)}`);
     if (usage === 0) {
       lazyWarn(LOGGER, () => `Buffer ${key} isn't used`);
     }
