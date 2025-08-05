@@ -1,7 +1,5 @@
-import { v4 as uuid } from 'uuid';
-
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
-import { BidiMap, CopySlice, Slice, sliceFuncs, ValueSlices } from './utils';
+import { BidiMap, CopySlice, randomFactory, Slice, sliceFuncs, ValueSlices } from './utils';
 
 type WPKCacheMutable<T, TKey> = {
   mutate: (id: TKey, element: T) => void;
@@ -43,6 +41,8 @@ export type WPKEntityCache<TEntityFormat extends WPKInstanceFormat, TMutable ext
     ? WPKCacheResizeable<WPKInstanceOf<TEntityFormat>>
     : object
   );
+
+const random = randomFactory.ofString(new Date().toISOString());
 
 export const cacheFactory = {
   ofUniform: <
@@ -210,7 +210,7 @@ export const cacheFactory = {
         return command;
       },
       add(element) {
-        const id = uuid();
+        const id = random.uuidV4Like();
         added.set(id, element);
         return id;
       },

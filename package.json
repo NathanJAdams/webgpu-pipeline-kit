@@ -1,7 +1,7 @@
 {
   "name": "webgpu-pipeline-kit",
   "description": "A type-safe declarative way of creating WebGPU pipelines",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "author": {
     "name": "Nathan Adams",
     "url": "https://github.com/NathanJAdams"
@@ -54,8 +54,7 @@
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.0",
-    "typescript": "^5.8.3",
-    "uuid": "^11.1.0"
+    "typescript": "^5.8.3"
   },
   "packageManager": "yarn@4.9.2"
 }

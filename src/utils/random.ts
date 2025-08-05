@@ -24,6 +24,7 @@ export type Random = {
   floatMinMax(min: number, max: number): number;
   lowerCharCode(): number;
   upperCharCode(): number;
+  uuidV4Like(): string;
   word(): string;
   wordRange(range: Range): string;
   wordMinMax(min: number, max: number): string;
@@ -118,6 +119,20 @@ const createRandomFromXoshiro128 = (xoshiro128: Xoshiro128): Random => {
     },
     upperCharCode() {
       return this.intMinMax(65, 91);
+    },
+    uuidV4Like() {
+      const hex = [];
+      for (let i = 0; i < 4; i++) {
+        const r = this.int() >>> 0;
+        hex.push(r.toString(16).padStart(8, '0'));
+      }
+      return (
+        hex[0] + '-' +
+        hex[1].slice(0, 4) + '-4' + hex[1].slice(5, 8) + '-' +
+        ((parseInt(hex[2][0], 16) & 0x3) | 0x8).toString(16) + hex[2].slice(1, 4) + '-' +
+        hex[2].slice(4) +
+        hex[3]
+      );
     },
     word() {
       const min = this.intMinMax(2, 5);
