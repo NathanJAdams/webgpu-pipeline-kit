@@ -3,6 +3,7 @@ import { bufferResourcesFactory, WPKBufferResources } from './buffer-resources';
 import { WPKEntityCache, WPKUniformCache } from './cache';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKPipelineDetail, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKInstanceFormat } from './instance';
+import { getLogger, lazyDebug, lazyInfo, lazyTrace, lazyWarn } from './logging';
 import { meshFuncs } from './mesh';
 import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
@@ -37,13 +38,17 @@ type WPKPipelineDetailOptions = {
   textureFormat: GPUTextureFormat;
 };
 
+const LOGGER = getLogger('pipeline');
+
 export const pipelineRunnerFactory = {
   of: async (canvas: HTMLCanvasElement, ...definitions: NonEmptyArray<WPKPipelineDefinition<any, any, any>>): Promise<WPKPipelineRunner> => {
+    lazyInfo(LOGGER, () => `Creating pipeline runner from ${definitions.length} pipeline definitions`);
     const allBufferResources = toAllBufferResources(definitions);
     const pipelines = toPipelines(definitions, allBufferResources);
     const context = pipelineFuncs.getContext(canvas);
-    const device = await pipelineFuncs.getDevice();
-    const format = pipelineFuncs.getFormat();
+    const gpu = pipelineFuncs.getGpu();
+    const device = await pipelineFuncs.getDevice(gpu);
+    const format = pipelineFuncs.getFormat(gpu);
     const alphaMode = 'opaque';
     context.configure({
       alphaMode,
@@ -54,6 +59,7 @@ export const pipelineRunnerFactory = {
     return {
       // async not strictly needed, but useful to prevent changing signature in case future changes need it
       async invoke(options) {
+        lazyDebug(LOGGER, () => `Update ${allBufferResources.size} buffers`);
         for (const bufferResources of allBufferResources.values()) {
           bufferResources.update();
         }
@@ -68,25 +74,33 @@ export const pipelineRunnerFactory = {
         const { clear, isAntiAliased } = options;
         const clearValue = [clear.r, clear.g, clear.b, clear.a || 1];
         const views = getViews(isAntiAliased);
+        lazyTrace(LOGGER, () => `Creating pipeline details from ${pipelines.length} pipelines`);
         const pipelineDetails = pipelines.map((pipeline) => pipeline.pipelineDetail(device, queue, encoder, detailOptions));
         const validPipelines = pipelineDetails.filter((pipelineDetail) => pipelineDetail.isValid);
-        for (const pipelineDetail of validPipelines) {
+        lazyDebug(LOGGER, () => `Invoking ${validPipelines.length} valid pipelines`);
+        for (const [pipelineIndex, pipelineDetail] of validPipelines.entries()) {
+          lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(pipelineDetail)}`);
           const { compute } = pipelineDetail;
           if (compute !== undefined) {
+            lazyTrace(LOGGER, () => `Compute shader of pipeline[${pipelineIndex}]`);
             const computePass = encoder.beginComputePass();
-            for (const computeEntry of compute) {
+            for (const [computeEntryIndex, computeEntry] of compute.entries()) {
+              lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}]`);
               const { bindGroups, pipeline, workGroupSizeFunc } = computeEntry;
               const workGroupSize = workGroupSizeFunc();
               computePass.setPipeline(pipeline);
               for (const bindGroup of bindGroups) {
+                lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] set bind group ${JSON.stringify(bindGroup)}`);
                 computePass.setBindGroup(bindGroup.index, bindGroup.group);
               }
+              lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch work group ${JSON.stringify(workGroupSize)}`);
               computePass.dispatchWorkgroups(workGroupSize.x, workGroupSize.y, workGroupSize.z);
             }
             computePass.end();
           }
           const { render } = pipelineDetail;
           if (render !== undefined) {
+            lazyTrace(LOGGER, () => `Render shader of pipeline[${pipelineIndex}]`);
             const renderPass = encoder.beginRenderPass({
               label: 'render-encoder',
               colorAttachments: [{
@@ -96,22 +110,28 @@ export const pipelineRunnerFactory = {
                 storeOp: 'store'
               }]
             });
-            for (const renderEntry of render) {
+            for (const [renderEntryIndex, renderEntry] of render.entries()) {
+              lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}]`);
               const { bindGroups, pipeline, indices, vertexBuffers, drawCountsFunc } = renderEntry;
               const drawCounts = drawCountsFunc();
               renderPass.setPipeline(pipeline);
               for (const bindGroup of bindGroups) {
+                lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set bind group ${JSON.stringify(bindGroup)}`);
                 renderPass.setBindGroup(bindGroup.index, bindGroup.group);
               }
+              lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set indices buffer`);
               renderPass.setIndexBuffer(indices.buffer, indices.format);
               for (const [slot, vertexBuffer] of vertexBuffers.entries()) {
+                lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set vertex buffer in slot ${slot}`);
                 renderPass.setVertexBuffer(slot, vertexBuffer);
               }
+              lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] draw indexed ${JSON.stringify(drawCounts)}`);
               renderPass.drawIndexed(drawCounts.indexCount, drawCounts.instanceCount);
             }
             renderPass.end();
           }
         }
+        lazyTrace(LOGGER, () => `Submit encoder for ${validPipelines.length} pipelines`);
         device.queue.submit([encoder.finish()]);
       },
     };
@@ -119,8 +139,10 @@ export const pipelineRunnerFactory = {
 };
 
 const toAllBufferResources = (definitions: NonEmptyArray<WPKPipelineDefinition<any, any, any>>): Map<WPKBufferFormatMap<any, any>, WPKBufferResources<any, any, any>> => {
+  lazyDebug(LOGGER, () => `Create buffer resources from ${definitions.length} definitions`);
   const map = new Map<WPKBufferFormatMap<any, any>, WPKBufferResources<any, any, any>>();
   for (const definition of definitions) {
+    lazyTrace(LOGGER, () => `Create buffer resources for definition ${JSON.stringify(definition)}`);
     const { name, uniformCache, entityCache, bufferFormats, shader } = definition;
     const bufferUsages = toBufferUsages(shader, bufferFormats);
     const bufferResources = bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages);
@@ -133,7 +155,9 @@ const toBufferUsages = <TUniformFormat extends WPKInstanceFormat, TEntityFormat 
   shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormatMap>,
   bufferFormats: TBufferFormatMap,
 ): Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormatMap>, GPUBufferUsageFlags> => {
+  lazyDebug(LOGGER, () => `Calculate buffer usage from buffer formats ${JSON.stringify(Object.keys(bufferFormats))}`);
   return recordFuncs.mapRecord(bufferFormats, (bufferFormat, key) => {
+    lazyTrace(LOGGER, () => `Calculate buffer usage from buffer format ${JSON.stringify(key)}`);
     const isBinding = shader.compute?.bufferBindings.some(bb => bb.buffer === key) || shader.render?.bufferBindings.some(bb => bb.buffer === key);
     const isLocation = shader.render?.passes.some(p => p.vertex.bufferLocations.some(bl => bl.type === 'user-defined' && bl.buffer === key));
     const { bufferType } = bufferFormat;
@@ -150,8 +174,9 @@ const toBufferUsages = <TUniformFormat extends WPKInstanceFormat, TEntityFormat 
         usage |= GPUBufferUsage.VERTEX;
       }
     }
+    lazyTrace(LOGGER, () => `Buffer ${key} has usage ${usage}`);
     if (usage === 0) {
-      console.warn(`Buffer ${key} isn't used`);
+      lazyWarn(LOGGER, () => `Buffer ${key} isn't used`);
     }
     return usage;
   }) as Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormatMap>, GPUBufferUsageFlags>;
@@ -188,6 +213,7 @@ const toPipelineDetailResource = <TUniformFormat extends WPKInstanceFormat, TEnt
   allBufferResources: Map<WPKBufferFormatMap<any, any>, WPKBufferResources<any, any, any>>,
 ): WPKResource<WPKPipelineDetail> => {
   const { name, shader, bufferFormats } = definition;
+  lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
   const bufferResources = allBufferResources.get(bufferFormats);
   if (bufferResources === undefined) {
     throw Error('Error when creating pipeline, no buffer resources');
@@ -198,9 +224,10 @@ const toPipelineDetailResource = <TUniformFormat extends WPKInstanceFormat, TEnt
   const renderPipelineDetailResource = shaderFuncs.isRenderShader(shader)
     ? toRenderPipelineDetailsResource(name, shader, () => bufferResources.instanceCount, bufferFormats, bufferResources, allBufferResources, isAntiAliasedFunc, textureFormatFunc)
     : undefined;
+  lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
   return {
     get(device, queue, encoder) {
-      bufferResources.update();
+      lazyTrace(LOGGER, () => `Creating pipeline detail ${name}`);
       const isValid = bufferResources.instanceCount > 0;
       const pipelineDetail: WPKPipelineDetail = {
         isValid,
@@ -226,6 +253,7 @@ const toComputePipelineDetailsResource = <TUniformFormat extends WPKInstanceForm
   bufferResources: WPKBufferResources<any, any, any>,
   allBufferResources: Map<WPKBufferFormatMap<any, any>, WPKBufferResources<any, any, any>>,
 ): WPKResource<WPKComputePipelineDetail[]> | undefined => {
+  lazyDebug(LOGGER, () => `Creating compute pipeline details resource ${name}`);
   const { compute: { bufferBindings, passes } } = computeShader;
   const visibility = GPUShaderStage.COMPUTE;
   const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, bufferBindings, bufferFormats);
@@ -254,6 +282,7 @@ const toRenderPipelineDetailsResource = <TUniformFormat extends WPKInstanceForma
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
 ): WPKResource<WPKRenderPipelineDetail[]> | undefined => {
+  lazyDebug(LOGGER, () => `Creating render pipeline details resource ${name}`);
   const { render: { bufferBindings, mesh, passes } } = renderShader;
   const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, bufferBindings, bufferFormats);
@@ -300,6 +329,7 @@ const toRenderPipelineDetailsResource = <TUniformFormat extends WPKInstanceForma
 const toComputeShaderModuleDetail = <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(
   computeShader: WPKComputeShader<TUniformFormat, TEntityFormat, TBufferFormatMap>,
 ): WPKShaderModuleDetail => {
+  lazyDebug(LOGGER, () => 'Creating compute shader module detail');
   const { compute: { passes, shader } } = computeShader;
   return {
     code: shader,
@@ -310,6 +340,7 @@ const toComputeShaderModuleDetail = <TUniformFormat extends WPKInstanceFormat, T
 const toRenderShaderModuleDetail = <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(
   renderShader: WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap>,
 ): WPKShaderModuleDetail => {
+  lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { render: { passes, shader } } = renderShader;
   return {
     code: shader,
@@ -323,6 +354,7 @@ const toBindGroupLayoutEntries = <TUniformFormat extends WPKInstanceFormat, TEnt
   bufferFormats: TBufferFormatMap,
   group: number,
 ): GPUBindGroupLayoutEntry[] => {
+  lazyDebug(LOGGER, () => 'Creating bind group layout entries');
   return bufferBindings
     .filter((bufferBinding) => bufferBinding.group === group)
     .map((bufferBinding) => {
@@ -342,6 +374,7 @@ const toBindGroupLayoutEntries = <TUniformFormat extends WPKInstanceFormat, TEnt
 };
 
 const toBufferBindingType = <TBufferType extends WPKBufferType, TContentType extends WPKContentType>(visibility: GPUShaderStageFlags, bufferFormat: WPKBufferTypes<TBufferType, TContentType>): GPUBufferBindingType => {
+  lazyDebug(LOGGER, () => 'Calculating buffer binding type');
   return bufferFormat.bufferType === 'uniform'
     ? 'uniform'
     : (visibility === GPUShaderStage.COMPUTE) && (bufferFormat.contentType === 'layout')
@@ -355,6 +388,7 @@ const toBindGroupLayoutsResource = <TUniformFormat extends WPKInstanceFormat, TE
   bufferBindings: WPKBufferBinding<TUniformFormat, TEntityFormat, TBufferFormatMap>[],
   bufferFormats: TBufferFormatMap
 ): WPKResource<GPUBindGroupLayout[]> => {
+  lazyDebug(LOGGER, () => 'Creating bind group layouts resource');
   const maxBindGroup = toMaxBindGroup(bufferBindings);
   const bindGroupLayoutResources: WPKResource<GPUBindGroupLayout>[] = [];
   for (let group = 0; group <= maxBindGroup; group++) {
@@ -374,6 +408,7 @@ const toBindGroupsDetailResource = <TUniformFormat extends WPKInstanceFormat, TE
   bufferResources: WPKBufferResources<any, any, any>,
   allBufferResources: Map<WPKBufferFormatMap<any, any>, WPKBufferResources<any, any, any>>,
 ): WPKResource<WPKBindGroupsDetail> => {
+  lazyDebug(LOGGER, () => 'Creating bind groups detail resource');
   const maxBindGroup = toMaxBindGroup(bufferBindings);
   const bindGroupDetailResources: WPKResource<WPKBindGroupDetail>[] = [];
   for (let group = 0; group <= maxBindGroup; group++) {
@@ -395,6 +430,7 @@ const toBindGroupEntriesResources = <TUniformFormat extends WPKInstanceFormat, T
   allBufferResources: Map<WPKBufferFormatMap<any, any>, WPKBufferResources<any, any, any>>,
   group: number
 ): WPKResource<GPUBindGroupEntry>[] => {
+  lazyDebug(LOGGER, () => 'Creating bind group entries resources');
   return bufferBindings
     .filter((bufferBinding) => bufferBinding.group === group)
     .map((bufferBinding) => {
@@ -410,6 +446,8 @@ const toBindGroupEntriesResources = <TUniformFormat extends WPKInstanceFormat, T
 };
 
 const toMaxBindGroup = <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(
-  bufferBindings: WPKBufferBinding<TUniformFormat, TEntityFormat, TBufferFormatMap>[]): number => {
+  bufferBindings: WPKBufferBinding<TUniformFormat, TEntityFormat, TBufferFormatMap>[]
+): number => {
+  lazyDebug(LOGGER, () => 'Calculating max bind group');
   return bufferBindings.reduce((max, bufferBinding) => Math.max(max, bufferBinding.group), -1);
 };

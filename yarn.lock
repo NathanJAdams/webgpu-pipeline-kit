@@ -5190,6 +5190,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"loglevel@npm:^1.9.2":
+  version: 1.9.2
+  resolution: "loglevel@npm:1.9.2"
+  checksum: 10c0/1e317fa4648fe0b4a4cffef6de037340592cee8547b07d4ce97a487abe9153e704b98451100c799b032c72bb89c9366d71c9fb8192ada8703269263ae77acdc7
+  languageName: node
+  linkType: hard
+
 "lru-cache@npm:^10.0.1, lru-cache@npm:^10.2.0":
   version: 10.4.3
   resolution: "lru-cache@npm:10.4.3"
@@ -7490,6 +7497,7 @@ __metadata:
     eslint: "npm:^9.32.0"
     eslint-plugin-import: "npm:^2.32.0"
     jest: "npm:^30.0.5"
+    loglevel: "npm:^1.9.2"
     madge: "npm:^8.0.0"
     rimraf: "npm:^6.0.1"
     ts-jest: "npm:^29.4.0"

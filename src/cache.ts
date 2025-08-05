@@ -1,4 +1,5 @@
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
+import { getLogger, lazyDebug, lazyTrace } from './logging';
 import { BidiMap, CopySlice, randomFactory, Slice, sliceFuncs, ValueSlices } from './utils';
 
 type WPKCacheMutable<T, TKey> = {
@@ -42,17 +43,17 @@ export type WPKEntityCache<TEntityFormat extends WPKInstanceFormat, TMutable ext
     : object
   );
 
+const LOGGER = getLogger('cache');
+
 const random = randomFactory.ofString(new Date().toISOString());
 
 export const cacheFactory = {
-  ofUniform: <
-    TUniformFormat extends WPKInstanceFormat,
-    TMutable extends boolean
-  >(
+  ofUniform: <TUniformFormat extends WPKInstanceFormat, TMutable extends boolean>(
     _uniformFormat: TUniformFormat,
     initialUniform: WPKInstanceOf<TUniformFormat>,
     mutable: TMutable,
   ): WPKUniformCache<TUniformFormat, TMutable> => {
+    lazyDebug(LOGGER, () => `Creating uniform cache from format ${JSON.stringify(_uniformFormat)}`);
     let previous: WPKInstanceOf<TUniformFormat> = initialUniform;
     let next: WPKInstanceOf<TUniformFormat> = initialUniform;
     const cache: WPKUniformCache<TUniformFormat, any> = {
@@ -64,19 +65,18 @@ export const cacheFactory = {
       },
     };
     if (mutable) {
+      lazyTrace(LOGGER, () => 'Making uniform cache mutable');
       const typedCached = cache as WPKUniformCache<TUniformFormat, true>;
       typedCached.mutate = (uniform) => next = uniform;
     }
     return cache as WPKUniformCache<TUniformFormat, TMutable>;
   },
-  ofEntitiesFixedSize: <
-    TEntityFormat extends WPKInstanceFormat,
-    TMutable extends boolean
-  >(
+  ofEntitiesFixedSize: <TEntityFormat extends WPKInstanceFormat, TMutable extends boolean>(
     _entityFormat: TEntityFormat,
     mutable: TMutable,
     ...elements: WPKInstanceOf<TEntityFormat>[]
   ): WPKEntityCache<TEntityFormat, TMutable, false> => {
+    lazyDebug(LOGGER, () => `Creating fixed size entity cache from format ${JSON.stringify(_entityFormat)}`);
     const mutated = new Map<number, WPKInstanceOf<TEntityFormat>>();
     elements.forEach((element, index) => mutated.set(index, element));
     const cache: WPKEntityCache<TEntityFormat, any, false> = {
@@ -87,22 +87,25 @@ export const cacheFactory = {
       calculateChanges() {
         const slices = sliceFuncs.ofMap(mutated);
         mutated.clear();
+        lazyTrace(LOGGER, () => `Calculated entity cache changes ${JSON.stringify(slices)}`);
         return slices;
       },
     };
     if (mutable) {
+      lazyTrace(LOGGER, () => 'Making entity cache mutable');
       const typedCache = cache as WPKEntityCache<TEntityFormat, true, false>;
-      typedCache.mutate = mutated.set;
+      typedCache.mutate = (index, instance) => {
+        lazyTrace(LOGGER, () => `Mutating instance with index ${index}`);
+        mutated.set(index, instance);
+      };
     }
     return cache as WPKEntityCache<TEntityFormat, TMutable, false>;
   },
-  ofEntitiesResizeable: <
-    TEntityFormat extends WPKInstanceFormat,
-    TMutable extends boolean
-  >(
+  ofEntitiesResizeable: <TEntityFormat extends WPKInstanceFormat, TMutable extends boolean>(
     _entityFormat: TEntityFormat,
     mutable: TMutable
   ): WPKEntityCache<TEntityFormat, TMutable, true> => {
+    lazyDebug(LOGGER, () => `Creating resizeable entity cache from format ${JSON.stringify(_entityFormat)}`);
     const idIndexes = new BidiMap<string, number>();
     const backing = new Map<string, WPKInstanceOf<TEntityFormat>>();
     const added = new Map<string, WPKInstanceOf<TEntityFormat>>();
@@ -207,14 +210,17 @@ export const cacheFactory = {
         added.clear();
         removed.clear();
         mutated.clear();
+        lazyTrace(LOGGER, () => `Calculated entity cache changes ${JSON.stringify(command)}`);
         return command;
       },
       add(element) {
         const id = random.uuidV4Like();
+        lazyTrace(LOGGER, () => `Add element with id ${id}`);
         added.set(id, element);
         return id;
       },
       remove(id) {
+        lazyTrace(LOGGER, () => `Remove element with id ${id}`);
         if (backing.has(id)) {
           added.delete(id);
           mutated.delete(id);
@@ -223,14 +229,18 @@ export const cacheFactory = {
       },
       indexOf(id) {
         const index = idIndexes.get(id);
-        return (index === undefined)
+        const validIndex = (index === undefined)
           ? -1
           : index;
+        lazyTrace(LOGGER, () => `Index of id ${id} is ${validIndex}`);
+        return validIndex;
       },
     };
     if (mutable) {
+      lazyTrace(LOGGER, () => 'Making entity cache mutable');
       const typedCache = cache as WPKEntityCache<TEntityFormat, true, true>;
       typedCache.mutate = (id, instance) => {
+        lazyTrace(LOGGER, () => `Mutating instance with id ${id}`);
         if (!removed.has(id)) {
           if (backing.has(id)) {
             mutated.set(id, instance);

@@ -37,7 +37,8 @@
     "test": "jest --silent=false --passWithNoTests"
   },
   "dependencies": {
-    "@thi.ng/random": "^4.1.23"
+    "@thi.ng/random": "^4.1.23",
+    "loglevel": "^1.9.2"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
