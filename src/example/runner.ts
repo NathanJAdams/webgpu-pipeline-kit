@@ -8,7 +8,8 @@ export const run = async (): Promise<void> => {
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
   }
-  const pipelineRunner = await factories.pipelineRunner.of(canvas, pipelineDefinition);
+  const pipelineRunner = await factories.pipelineRunner.of(canvas);
+  pipelineRunner.add('triangle', pipelineDefinition);
   const options: WPKPipelineOptions = {
     clear: factories.color.BLACK,
     isAntiAliased: true,
