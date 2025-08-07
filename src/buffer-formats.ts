@@ -62,7 +62,7 @@ export type WPKUserFormatVec4<TFormat extends WPKInstanceFormat> = WPKDatumType 
   vec4: WPKPathVec4<TFormat>;
 };
 export type WPKUserFormatEntityIndex<TEntityFormat extends WPKInstanceFormat> = WPKDatumType<WPKPrimitiveSignedInt> & {
-  key: WPKMatchingPath<WPKInstanceOf<TEntityFormat>, string>;
+  entityIdKey: WPKMatchingPath<WPKInstanceOf<TEntityFormat>, string>;
 };
 export type WPKUserFormat<TFormat extends WPKInstanceFormat, TIsEntity extends boolean> =
   | WPKUserFormatScalar<TFormat>
@@ -116,4 +116,4 @@ export const isUserFormatScalar = <TEntityFormat extends WPKInstanceFormat>(user
 export const isUserFormatVec2 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec2<TEntityFormat> => (userFormat as WPKUserFormatVec2<any>).vec2 !== undefined;
 export const isUserFormatVec3 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec3<TEntityFormat> => (userFormat as WPKUserFormatVec3<any>).vec3 !== undefined;
 export const isUserFormatVec4 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec4<TEntityFormat> => (userFormat as WPKUserFormatVec4<any>).vec4 !== undefined;
-export const isUserFormatEntityIndex = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatEntityIndex<TEntityFormat> => (userFormat as WPKUserFormatEntityIndex<TEntityFormat>).key !== undefined;
+export const isUserFormatEntityIndex = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatEntityIndex<TEntityFormat> => (userFormat as WPKUserFormatEntityIndex<TEntityFormat>).entityIdKey !== undefined;

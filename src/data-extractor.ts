@@ -113,7 +113,7 @@ const toMarshalledRef = <TEntityFormat extends WPKInstanceFormat>(userFormat: WP
       : ofVecDirect(userFormat.vec4, 4);
   } else if (isUserFormatEntityIndex(userFormat)) {
     if (entityCache !== undefined && entityCache.isResizeable) {
-      return ofEntityIndex(userFormat.key, entityCache as WPKEntityCache<TEntityFormat, any, true>);
+      return ofEntityIndex(userFormat.entityIdKey, entityCache as WPKEntityCache<TEntityFormat, any, true>);
     } else {
       throw Error(`Cannot create entity index format reference with fixed size entity cache from ${JSON.stringify(userFormat)}`);
     }
@@ -161,19 +161,19 @@ const ofVecSplit = <TEntityFormat extends WPKInstanceFormat>(paths: string[]): W
     },
   };
 };
-const ofEntityIndex = <TEntityFormat extends WPKInstanceFormat>(key: string, target: WPKEntityCache<any, any, true>): WPKUserFormatRef<TEntityFormat> => {
-  lazyDebug(LOGGER, () => `Creating entity index ref from key '${key}'`);
-  const refPath = toRefPath(key);
+const ofEntityIndex = <TEntityFormat extends WPKInstanceFormat>(entityIdKey: string, target: WPKEntityCache<any, any, true>): WPKUserFormatRef<TEntityFormat> => {
+  lazyDebug(LOGGER, () => `Creating entity index ref from entity id key '${entityIdKey}'`);
+  const refPath = toRefPath(entityIdKey);
   return {
     datumCount: 1,
     valuesOf(instance) {
       const id = valueAtPath(instance, refPath, 0);
       if (typeof id !== 'string') {
-        throw Error(`Value found at path ${key} must be a string but was a ${typeof id}`);
+        throw Error(`Value found at path ${entityIdKey} must be a string but was a ${typeof id}`);
       } else {
         const index = target.indexOf(id);
         if (index === -1) {
-          lazyWarn(LOGGER, () => `ID at path ${key} was '${id}' and could not be found, index falling back to -1`);
+          lazyWarn(LOGGER, () => `ID at path ${entityIdKey} was '${id}' and could not be found, index falling back to -1`);
         }
         lazyTrace(LOGGER, () => `Found entity index ${index} for id '${id}'`);
         return index;
