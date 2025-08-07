@@ -6,8 +6,10 @@ type WPKPrimitive8 = 'sint8' | 'snorm8' | 'uint8' | 'unorm8';
 type WPKPrimitive16 = 'sint16' | 'snorm16' | 'uint16' | 'unorm16' | 'float16';
 type WPKPrimitive32 = 'sint32' | 'uint32' | 'float32';
 type WPKPrimitiveSignedInt = 'sint8' | 'sint16' | 'sint32';
+type WPKPrimitiveUnsignedInt = 'uint8' | 'uint16' | 'uint32';
 export type WPKPrimitive = WPKPrimitive8 | WPKPrimitive16 | WPKPrimitive32;
 
+type WPKMatchingPathBoolean<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, boolean>;
 type WPKMatchingPathScalar<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, number>;
 type WPKMatchingPathVec2<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, [number, number]>;
 type WPKMatchingPathVec3<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, [number, number, number]>;
@@ -20,12 +22,14 @@ type WPKDatumType<TDatumType = WPKPrimitive> = {
 type WPKLayoutTypes<TDimension, TDatumType = WPKPrimitive> = WPKDatumType<TDatumType> & {
   dimension: TDimension;
 };
+type WPKLayoutBoolean = WPKLayoutTypes<'boolean'>;
 type WPKLayoutScalar = WPKLayoutTypes<'scalar'>;
 type WPKLayoutVec2 = WPKLayoutTypes<'vec2'>;
 type WPKLayoutVec3 = WPKLayoutTypes<'vec3', WPKPrimitive32>;
 type WPKLayoutVec4 = WPKLayoutTypes<'vec4'>;
-export type WPKLayout = WPKLayoutScalar | WPKLayoutVec2 | WPKLayoutVec3 | WPKLayoutVec4;
+export type WPKLayout = WPKLayoutBoolean | WPKLayoutScalar | WPKLayoutVec2 | WPKLayoutVec3 | WPKLayoutVec4;
 
+type WPKPathBoolean<TFormat extends WPKInstanceFormat> = WPKMatchingPathBoolean<TFormat>;
 type WPKPathScalar<TFormat extends WPKInstanceFormat> = WPKMatchingPathScalar<TFormat>;
 type WPKPathVec2<TFormat extends WPKInstanceFormat> =
   | WPKMatchingPathVec2<TFormat>
@@ -49,6 +53,9 @@ type WPKPathVec4<TFormat extends WPKInstanceFormat> =
     WPKMatchingPathScalar<TFormat>,
   ];
 
+export type WPKUserFormatBoolean<TFormat extends WPKInstanceFormat> = WPKDatumType<WPKPrimitiveUnsignedInt> & {
+  boolean: WPKPathBoolean<TFormat>;
+};
 export type WPKUserFormatScalar<TFormat extends WPKInstanceFormat> = WPKDatumType & {
   scalar: WPKPathScalar<TFormat>;
 };
@@ -65,6 +72,7 @@ export type WPKUserFormatEntityIndex<TEntityFormat extends WPKInstanceFormat> = 
   entityIdKey: WPKMatchingPath<WPKInstanceOf<TEntityFormat>, string>;
 };
 export type WPKUserFormat<TFormat extends WPKInstanceFormat, TIsEntity extends boolean> =
+  | WPKUserFormatBoolean<TFormat>
   | WPKUserFormatScalar<TFormat>
   | WPKUserFormatVec2<TFormat>
   | WPKUserFormatVec3<TFormat>
@@ -112,6 +120,7 @@ export type WPKBufferFormatKeyEntity<TUniformFormat extends WPKInstanceFormat, T
   }[keyof TBufferFormats];
 export type WPKBufferFormatKey<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = string & (keyof TBufferFormats);
 
+export const isUserFormatBoolean = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatBoolean<TEntityFormat> => (userFormat as WPKUserFormatBoolean<any>).boolean !== undefined;
 export const isUserFormatScalar = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatScalar<TEntityFormat> => (userFormat as WPKUserFormatScalar<any>).scalar !== undefined;
 export const isUserFormatVec2 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec2<TEntityFormat> => (userFormat as WPKUserFormatVec2<any>).vec2 !== undefined;
 export const isUserFormatVec3 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec3<TEntityFormat> => (userFormat as WPKUserFormatVec3<any>).vec3 !== undefined;

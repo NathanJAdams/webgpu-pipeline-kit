@@ -1,4 +1,4 @@
-import { isUserFormatEntityIndex, isUserFormatScalar, isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKFormatMarshall, WPKPrimitive, WPKUserFormat } from './buffer-formats';
+import { isUserFormatBoolean, isUserFormatEntityIndex, isUserFormatScalar, isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKFormatMarshall, WPKPrimitive, WPKUserFormat } from './buffer-formats';
 import { WPKEntityCache } from './cache';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { getLogger, lazyDebug, lazyTrace, lazyWarn } from './logging';
@@ -97,7 +97,9 @@ type WPKUserFormatRef<TFormat extends WPKInstanceFormat> = {
 type WPKRefPath = Array<(string | number)>;
 
 const toMarshalledRef = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>, entityCache?: WPKEntityCache<TEntityFormat, any, any>): WPKUserFormatRef<TEntityFormat> => {
-  if (isUserFormatScalar(userFormat)) {
+  if (isUserFormatBoolean(userFormat)) {
+    return ofBoolean(userFormat.boolean);
+  } else if (isUserFormatScalar(userFormat)) {
     return ofScalar(userFormat.scalar);
   } else if (isUserFormatVec2(userFormat)) {
     return Array.isArray(userFormat.vec2)
@@ -122,13 +124,25 @@ const toMarshalledRef = <TEntityFormat extends WPKInstanceFormat>(userFormat: WP
   }
 };
 
+const ofBoolean = <TEntityFormat extends WPKInstanceFormat>(path: string): WPKUserFormatRef<TEntityFormat> => {
+  lazyDebug(LOGGER, () => `Creating boolean ref from path '${path}'`);
+  const refPath = toRefPath(path);
+  return {
+    datumCount: 1,
+    valuesOf: (instance) => {
+      const value = booleanValueOfInstanceAtPath(instance, refPath);
+      lazyTrace(LOGGER, () => `Found value ${JSON.stringify(value)} at path '${path}'`);
+      return value ? 1 : 0;
+    },
+  };
+};
 const ofScalar = <TEntityFormat extends WPKInstanceFormat>(path: string): WPKUserFormatRef<TEntityFormat> => {
   lazyDebug(LOGGER, () => `Creating scalar ref from path '${path}'`);
   const refPath = toRefPath(path);
   return {
     datumCount: 1,
     valuesOf: (instance) => {
-      const value = valueOfInstanceAtPath(instance, refPath);
+      const value = numberValueOfInstanceAtPath(instance, refPath);
       lazyTrace(LOGGER, () => `Found value ${JSON.stringify(value)} at path '${path}'`);
       return value;
     },
@@ -155,7 +169,7 @@ const ofVecSplit = <TEntityFormat extends WPKInstanceFormat>(paths: string[]): W
   return {
     datumCount: paths.length,
     valuesOf: (instance) => {
-      const values = refPaths.map(refPath => valueOfInstanceAtPath(instance, refPath));
+      const values = refPaths.map(refPath => numberValueOfInstanceAtPath(instance, refPath));
       lazyTrace(LOGGER, () => `Found array ${JSON.stringify(values)} at paths '${JSON.stringify(paths)}'`);
       return values;
     },
@@ -207,7 +221,14 @@ const valueAtPath = (input: any, refPath: WPKRefPath, pathIndex: number): unknow
   }
   throw Error(`Cannot index using non-integer or string field ${indexValue}. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
 };
-const valueOfInstanceAtPath = <TEntityFormat extends WPKInstanceFormat>(instance: WPKInstanceOf<TEntityFormat>, refPath: WPKRefPath): number => {
+const booleanValueOfInstanceAtPath = <TEntityFormat extends WPKInstanceFormat>(instance: WPKInstanceOf<TEntityFormat>, refPath: WPKRefPath): boolean => {
+  const value = valueAtPath(instance, refPath, 0);
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  throw Error(`Value ${JSON.stringify(value)} at path ${refPath} is not a boolean`);
+};
+const numberValueOfInstanceAtPath = <TEntityFormat extends WPKInstanceFormat>(instance: WPKInstanceOf<TEntityFormat>, refPath: WPKRefPath): number => {
   const value = valueAtPath(instance, refPath, 0);
   if (typeof value === 'number') {
     return value;
