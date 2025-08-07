@@ -10,6 +10,7 @@ export * from './math';
 export * from './OneOrBoth';
 export * from './random';
 export * from './record';
+export * from './shallow-map';
 export * from './slice';
 export * from './string';
 export * from './types';

@@ -3,7 +3,6 @@ import { mathFuncs, Vec3, vec3Funcs } from './utils';
 
 export type WPKVertices = Vec3[];
 export type WPKIndices = Vec3[];
-
 export type WPKMesh = {
   vertices: WPKVertices;
   indices: WPKIndices;

@@ -1,40 +1,41 @@
 import { WPKWorkGroupSize } from './pipeline-utils';
 
 export type WPKShaderModuleDetail = {
-    code: string;
-    entryPoints: string[];
+  code: string;
+  entryPoints: string[];
 };
 export type WPKBindGroupDetail = {
-    index: number;
-    group: GPUBindGroup;
+  index: number;
+  group: GPUBindGroup;
 };
 export type WPKBindGroupsDetail = Array<WPKBindGroupDetail>;
 export type WPKComputePipelineDetail = {
-    bindGroups: WPKBindGroupsDetail;
-    pipeline: GPUComputePipeline;
-    workGroupSizeFunc: () => WPKWorkGroupSize;
+  bindGroups: WPKBindGroupsDetail;
+  pipeline: GPUComputePipeline;
+  workGroupSizeFunc: () => WPKWorkGroupSize;
 };
 export type WPKVertexBufferDetail = {
-    location: number;
-    buffer: GPUBuffer;
-    layout: GPUVertexBufferLayout;
+  location: number;
+  buffer: GPUBuffer;
+  layout: GPUVertexBufferLayout;
 };
 export type WPKDrawCounts = {
-    indexCount: number;
-    instanceCount: number;
+  indexCount: number;
+  instanceCount: number;
 };
 export type WPKRenderPipelineDetail = {
-    bindGroups: WPKBindGroupsDetail;
-    pipeline: GPURenderPipeline;
-    indices: {
-        buffer: GPUBuffer;
-        format: GPUIndexFormat;
-    };
-    vertexBuffers: GPUBuffer[];
-    drawCountsFunc: () => WPKDrawCounts;
+  bindGroups: WPKBindGroupsDetail;
+  pipeline: GPURenderPipeline;
+  indices: {
+    buffer: GPUBuffer;
+    format: GPUIndexFormat;
+  };
+  vertexBuffers: GPUBuffer[];
+  drawCountsFunc: () => WPKDrawCounts;
 };
 export type WPKPipelineDetail = {
-    isValid: boolean;
-    compute?: WPKComputePipelineDetail[];
-    render?: WPKRenderPipelineDetail[];
+  name: string;
+  instanceCount: number;
+  compute?: WPKComputePipelineDetail[];
+  render?: WPKRenderPipelineDetail[];
 };

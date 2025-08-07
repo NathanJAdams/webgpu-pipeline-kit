@@ -43,13 +43,13 @@ const datumSetters = createDatumSetters();
 const LITTLE_ENDIAN = true;
 
 export const dataExtractorFactory = {
-  of: <TFormat extends WPKInstanceFormat>(marshallFormats: WPKFormatMarshall<TFormat, any>): WPKDataExtractor<TFormat> => {
+  of: <TFormat extends WPKInstanceFormat>(marshallFormats: WPKFormatMarshall<TFormat, any>, entityCache?: WPKEntityCache<TFormat, any, any>): WPKDataExtractor<TFormat> => {
     lazyDebug(LOGGER, () => 'Create data extractor');
     let totalStride = 0;
     const dataBridges: WPKDataBridge<TFormat>[] = [];
     for (const userFormat of marshallFormats) {
       lazyTrace(LOGGER, () => `Create ref from user format ${JSON.stringify(userFormat)}`);
-      const userFormatRef = toMarshalledRef(userFormat);
+      const userFormatRef = toMarshalledRef(userFormat, entityCache);
       const { datumType } = userFormat;
       const datumStride = strideFuncs.ofVertexFormat(datumType);
       const stride = userFormatRef.datumCount * datumStride;
@@ -96,7 +96,7 @@ type WPKUserFormatRef<TFormat extends WPKInstanceFormat> = {
 };
 type WPKRefPath = Array<(string | number)>;
 
-const toMarshalledRef = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): WPKUserFormatRef<TEntityFormat> => {
+const toMarshalledRef = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>, entityCache?: WPKEntityCache<TEntityFormat, any, any>): WPKUserFormatRef<TEntityFormat> => {
   if (isUserFormatScalar(userFormat)) {
     return ofScalar(userFormat.scalar);
   } else if (isUserFormatVec2(userFormat)) {
@@ -112,8 +112,11 @@ const toMarshalledRef = <TEntityFormat extends WPKInstanceFormat>(userFormat: WP
       ? ofVecSplit(userFormat.vec4)
       : ofVecDirect(userFormat.vec4, 4);
   } else if (isUserFormatEntityIndex(userFormat)) {
-    const { entityIndexFromResizeableEntityCache: { key, target } } = userFormat;
-    return ofEntityIndex(key, target);
+    if (entityCache !== undefined && entityCache.isResizeable) {
+      return ofEntityIndex(userFormat.key, entityCache as WPKEntityCache<TEntityFormat, any, true>);
+    } else {
+      throw Error(`Cannot create entity index format reference with fixed size entity cache from ${JSON.stringify(userFormat)}`);
+    }
   } else {
     throw Error(`Cannot create format reference from ${JSON.stringify(userFormat)}`);
   }

@@ -4,7 +4,7 @@ import { WPKEntityCache, WPKUniformCache } from './cache';
 import { dataExtractorFactory } from './data-extractor';
 import { WPKInstanceFormat, WPKInstanceOf } from './instance';
 import { getLogger, lazyDebug, lazyTrace } from './logging';
-import { meshFuncs, WPKMesh } from './mesh';
+import { meshFuncs, WPKMesh } from './meshes';
 import { WPKResource } from './resources';
 import { strideFuncs } from './strides';
 import { CopySlice, ValueSlices } from './utils';
@@ -102,26 +102,23 @@ export const bufferResourcesFactory = {
             lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is resizeable`);
             const buffer = bufferFactory.ofStaged(label, usage);
             buffers[key] = buffer;
-            if (entityCache.isMutable) {
-              lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is resizeable is mutable`);
-              const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
-              const extractor = dataExtractorFactory.of(bufferFormat.marshall);
-              const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
-                mutate(input) {
-                  const { copySlices, values } = input;
-                  const data = extractor.extract(values);
-                  const targetSlices = copySlices.map((copySlice): CopySlice => {
-                    return {
-                      length: copySlice.length * stride,
-                      min: copySlice.min * stride,
-                      toIndex: copySlice.toIndex * stride,
-                    };
-                  });
-                  buffer.mutate(data, targetSlices);
-                },
-              };
-              instanceMutators.push(mutator);
-            }
+            const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
+            const extractor = dataExtractorFactory.of(bufferFormat.marshall, entityCache);
+            const mutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> = {
+              mutate(input) {
+                const { copySlices, values } = input;
+                const data = extractor.extract(values);
+                const targetSlices = copySlices.map((copySlice): CopySlice => {
+                  return {
+                    length: copySlice.length * stride,
+                    min: copySlice.min * stride,
+                    toIndex: copySlice.toIndex * stride,
+                  };
+                });
+                buffer.mutate(data, targetSlices);
+              },
+            };
+            instanceMutators.push(mutator);
           } else {
             if (entityCache.isMutable) {
               lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is mutable`);

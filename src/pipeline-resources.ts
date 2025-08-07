@@ -4,7 +4,7 @@ import { WPKMeshBufferResource } from './buffer-resources';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKInstanceFormat } from './instance';
 import { getLogger, lazyDebug, lazyTrace } from './logging';
-import { WPKMesh, meshFuncs } from './mesh';
+import { meshFuncs, WPKMesh } from './meshes';
 import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
 import { resourceFactory, WPKResource } from './resources';
 import { WPKBufferLocationMesh, WPKBufferLocationUserDefined } from './shaders';

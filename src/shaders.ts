@@ -1,6 +1,6 @@
 import { WPKBufferFormatKey, WPKBufferFormatKeyEntity, WPKBufferFormatMap } from './buffer-formats';
-import { WPKInstanceFormat } from './instance';
-import { WPKMesh } from './mesh';
+import { WPKInstanceFormat, WPKInstanceOf } from './instance';
+import { WPKMeshFactoryMap } from './mesh-factory';
 import { WPKWorkGroupSize } from './pipeline-utils';
 import { OneOrBoth } from './utils';
 
@@ -27,7 +27,14 @@ export type WPKBufferLocationUserDefined<TUniformFormat extends WPKInstanceForma
 type WPKBufferLocation<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> =
   | WPKBufferLocationMesh
   | WPKBufferLocationUserDefined<TUniformFormat, TEntityFormat, TBufferFormatMap>;
-type WPKRenderPass<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = {
+type WPKRenderPassMesh<TMeshFactoryMap extends WPKMeshFactoryMap> = {
+  [K in keyof TMeshFactoryMap]: {
+    key: K;
+    parameters: WPKInstanceOf<TMeshFactoryMap[K]['parameters']>;
+  }
+}[keyof TMeshFactoryMap];
+type WPKRenderPass<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>, TMeshFactoryMap extends WPKMeshFactoryMap> = {
+  mesh: WPKRenderPassMesh<TMeshFactoryMap>;
   vertex: WPKHasEntryPoint & {
     bufferLocations: Array<WPKBufferLocation<TUniformFormat, TEntityFormat, TBufferFormatMap>>;
   };
@@ -51,25 +58,21 @@ export type WPKComputeShader<TUniformFormat extends WPKInstanceFormat, TEntityFo
     passes: Array<WPKComputePass>;
   }
 };
-export type WPKRenderShader<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = {
+export type WPKRenderShader<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>, TMeshFactoryMap extends WPKMeshFactoryMap> = {
   render: {
     shader: string;
     bufferBindings: Array<WPKBufferBinding<TUniformFormat, TEntityFormat, TBufferFormatMap>>;
-    passes: Array<WPKRenderPass<TUniformFormat, TEntityFormat, TBufferFormatMap>>;
-    mesh: WPKMesh;
+    passes: Array<WPKRenderPass<TUniformFormat, TEntityFormat, TBufferFormatMap, TMeshFactoryMap>>;
   };
 };
-export type WPKShader<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> =
+export type WPKShader<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>, TMeshFactoryMap extends WPKMeshFactoryMap> =
   OneOrBoth<
     WPKComputeShader<TUniformFormat, TEntityFormat, TBufferFormatMap>,
-    WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap>
+    WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap, TMeshFactoryMap>
   >;
 
-export const shaderFactory = {
-  ofForeignBufferRef: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(_foreignUniformFormat: TUniformFormat, _foreignEntityFormat: TEntityFormat, foreignBufferFormats: TBufferFormatMap, key: WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormatMap>): WPKForeignBufferRef<TUniformFormat, TEntityFormat, TBufferFormatMap> => ({ formats: foreignBufferFormats, key }),
-};
 export const shaderFuncs = {
   isBufferBindingRefNative: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(bufferBindingRef: WPKBufferBindingRef<TUniformFormat, TEntityFormat, TBufferFormatMap>): bufferBindingRef is WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormatMap> => typeof bufferBindingRef === 'string',
-  isComputeShader: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormatMap>): shader is WPKComputeShader<TUniformFormat, TEntityFormat, TBufferFormatMap> => (shader as WPKComputeShader<TUniformFormat, TEntityFormat, TBufferFormatMap>).compute !== undefined,
-  isRenderShader: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormatMap>): shader is WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap> => (shader as WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap>).render !== undefined,
+  isComputeShader: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>, TMeshFactoryMap extends WPKMeshFactoryMap>(shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormatMap, TMeshFactoryMap>): shader is WPKComputeShader<TUniformFormat, TEntityFormat, TBufferFormatMap> => (shader as WPKComputeShader<TUniformFormat, TEntityFormat, TBufferFormatMap>).compute !== undefined,
+  isRenderShader: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormatMap extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>, TMeshFactoryMap extends WPKMeshFactoryMap>(shader: WPKShader<TUniformFormat, TEntityFormat, TBufferFormatMap, TMeshFactoryMap>): shader is WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap, TMeshFactoryMap> => (shader as WPKRenderShader<TUniformFormat, TEntityFormat, TBufferFormatMap, TMeshFactoryMap>).render !== undefined,
 };

@@ -1,9 +1,10 @@
-import { factories, WPKShader } from 'webgpu-pipeline-kit';
+import { WPKShader } from 'webgpu-pipeline-kit';
 
 import { BufferFormats } from './buffer-formats';
 import { EntityFormat, UniformFormat } from './instance-formats';
+import { MeshFactories } from './meshes';
 
-export const shader: WPKShader<UniformFormat, EntityFormat, BufferFormats> = {
+export const shader: WPKShader<UniformFormat, EntityFormat, BufferFormats, MeshFactories> = {
   compute: {
     shader: `
       @group(0) @binding(0)
@@ -63,8 +64,13 @@ export const shader: WPKShader<UniformFormat, EntityFormat, BufferFormats> = {
       binding: 1,
       buffer: 'offsets',
     }],
-    mesh: factories.mesh.triangle(0.5),
     passes: [{
+      mesh: {
+        key: 'ball',
+        parameters: {
+          subdivisions: 4,
+        },
+      },
       vertex: {
         entryPoint: 'vertex_main',
         bufferLocations: [{

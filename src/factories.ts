@@ -1,7 +1,6 @@
 import { cacheFactory } from './cache';
-import { meshFactory } from './mesh';
+import { meshFactory } from './meshes';
 import { pipelineRunnerFactory } from './pipeline';
-import { shaderFactory } from './shaders';
 import { colorFactory } from './utils';
 
 export const factories = {
@@ -9,5 +8,4 @@ export const factories = {
   cache: cacheFactory,
   mesh: meshFactory,
   pipelineRunner: pipelineRunnerFactory,
-  shader: shaderFactory,
 };

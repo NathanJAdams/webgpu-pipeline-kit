@@ -34,4 +34,18 @@ export const arrayFuncs = {
       return acc;
     }, new Map<K, V>());
   },
+  toMultiMap: <T, K, V>(array: T[], toKey: (item: T) => K, toValue: (item: T) => V): Map<K, V[]> => {
+    const map = new Map<K, V[]>();
+    for (const item of array) {
+      const key = toKey(item);
+      const value = toValue(item);
+      const values = map.get(key);
+      if (values === undefined) {
+        map.set(key, [value]);
+      } else {
+        values.push(value);
+      }
+    }
+    return map;
+  },
 };
