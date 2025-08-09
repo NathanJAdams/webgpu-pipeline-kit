@@ -1,4 +1,5 @@
-import { getLogger, lazyTrace } from './logging';
+import { logFactory } from './logging';
+import { logFuncs } from './utils';
 
 export type WPKWorkGroupSize = {
   x: number;
@@ -6,7 +7,7 @@ export type WPKWorkGroupSize = {
   z?: number;
 };
 
-const LOGGER = getLogger('pipeline');
+const LOGGER = logFactory.getLogger('pipeline');
 
 const VERTEX_FORMAT_BYTE_LENGTHS: Record<GPUVertexFormat, number> = {
   float16: 2 * 1,
@@ -55,12 +56,12 @@ const VERTEX_FORMAT_BYTE_LENGTHS: Record<GPUVertexFormat, number> = {
 export const pipelineFuncs = {
   toByteLength: (format: GPUVertexFormat): number => {
     const byteLength = VERTEX_FORMAT_BYTE_LENGTHS[format];
-    lazyTrace(LOGGER, () => `Byte length of '${format}' is ${byteLength}`);
+    logFuncs.lazyTrace(LOGGER, () => `Byte length of '${format}' is ${byteLength}`);
     return byteLength;
   },
   toByteLengthTotal: (formats: GPUVertexFormat[]): number => {
     const totalByteLength = formats.reduce((currentByteLength, format) => currentByteLength + pipelineFuncs.toByteLength(format), 0);
-    lazyTrace(LOGGER, () => `Total byte length of '${JSON.stringify(formats)}' is ${totalByteLength}`);
+    logFuncs.lazyTrace(LOGGER, () => `Total byte length of '${JSON.stringify(formats)}' is ${totalByteLength}`);
     return totalByteLength;
   },
   toSampleCount: (isAntiAliased: boolean): number => isAntiAliased ? 4 : 1,
@@ -72,11 +73,11 @@ export const pipelineFuncs = {
       y: 1,
       z: 1,
     };
-    lazyTrace(LOGGER, () => `Calculated work group size from ${JSON.stringify(size)} and instance count ${instanceCount} is ${JSON.stringify(workGroupSize)}`);
+    logFuncs.lazyTrace(LOGGER, () => `Calculated work group size from ${JSON.stringify(size)} and instance count ${instanceCount} is ${JSON.stringify(workGroupSize)}`);
     return workGroupSize;
   },
   getContext: (canvas: HTMLCanvasElement): GPUCanvasContext => {
-    lazyTrace(LOGGER, () => 'Get webgpu context from canvas');
+    logFuncs.lazyTrace(LOGGER, () => 'Get webgpu context from canvas');
     const context = canvas.getContext('webgpu');
     if (context === null) {
       throw Error('Failed to get WebGPU context from canvas');
@@ -84,7 +85,7 @@ export const pipelineFuncs = {
     return context;
   },
   getGpu: (): GPU => {
-    lazyTrace(LOGGER, () => 'Get gpu from navigator');
+    logFuncs.lazyTrace(LOGGER, () => 'Get gpu from navigator');
     const { gpu } = navigator;
     if (gpu === undefined) {
       throw Error('WebGPU not supported in this browser');
@@ -92,16 +93,16 @@ export const pipelineFuncs = {
     return gpu;
   },
   getFormat: (gpu: GPU): GPUTextureFormat => {
-    lazyTrace(LOGGER, () => 'Get format from gpu');
+    logFuncs.lazyTrace(LOGGER, () => 'Get format from gpu');
     return gpu.getPreferredCanvasFormat();
   },
   getDevice: async (gpu: GPU): Promise<GPUDevice> => {
-    lazyTrace(LOGGER, () => 'Get adapter from gpu');
+    logFuncs.lazyTrace(LOGGER, () => 'Get adapter from gpu');
     const adapter = await gpu.requestAdapter();
     if (adapter === null) {
       throw Error('Failed to request GPU adapter');
     }
-    lazyTrace(LOGGER, () => 'Get device from adapter');
+    logFuncs.lazyTrace(LOGGER, () => 'Get device from adapter');
     return await adapter.requestDevice();
   },
 };

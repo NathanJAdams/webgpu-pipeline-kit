@@ -1,5 +1,5 @@
-import { getLogger, lazyDebug } from './logging';
-import { mathFuncs, Vec3, vec3Funcs } from './utils';
+import { logFactory } from './logging';
+import { logFuncs, mathFuncs, Vec3, vec3Funcs } from './utils';
 
 export type WPKVertices = Vec3[];
 export type WPKIndices = Vec3[];
@@ -10,7 +10,7 @@ export type WPKMesh = {
   winding: GPUFrontFace;
 };
 
-const LOGGER = getLogger('mesh');
+const LOGGER = logFactory.getLogger('mesh');
 
 export const meshFuncs = {
   UINT32_INDEX_COUNT: 1 << 16,
@@ -63,7 +63,7 @@ export const meshFactory = {
     };
   },
   triangle: (topProportion: number, axis: Vec3 = vec3Funcs.Z): WPKMesh => {
-    lazyDebug(LOGGER, () => `Creating triangle mesh with top proportion ${topProportion}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating triangle mesh with top proportion ${topProportion}`);
     const axisNormalized = vec3Funcs.normalize(axis);
 
     // Pick a non-parallel reference vector for tangent
@@ -102,7 +102,7 @@ export const meshFactory = {
     };
   },
   cube: (): WPKMesh => {
-    lazyDebug(LOGGER, () => 'Creating cube mesh');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating cube mesh');
     const vertices: Vec3[] = [
       // Front face
       [-1, -1, 1], // front bottom left
@@ -143,7 +143,7 @@ export const meshFactory = {
     };
   },
   sphere(subdivisions: number): WPKMesh {
-    lazyDebug(LOGGER, () => `Creating sphere mesh with sub divisions ${subdivisions}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating sphere mesh with sub divisions ${subdivisions}`);
     const phi = (1 + Math.sqrt(5)) / 2;
     const unnormalizedVertices: Vec3[] = [
       [-1, phi, 0],

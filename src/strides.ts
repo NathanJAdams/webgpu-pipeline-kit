@@ -1,4 +1,4 @@
-import { isUserFormatScalar, isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKFormatLayout, WPKFormatMarshall, WPKLayout, WPKPrimitive, WPKUserFormat } from './buffer-formats';
+import { isUserFormatNumber, isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKFormatLayout, WPKFormatMarshall, WPKLayout, WPKPrimitive, WPKUserFormat } from './buffer-formats';
 import { WPKInstanceFormat } from './instance';
 
 export const strideFuncs = {
@@ -19,7 +19,7 @@ export const strideFuncs = {
     }
   },
   dimensionMultipleOfUserFormat: <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): number => {
-    if (isUserFormatScalar(userFormat)) {
+    if (isUserFormatNumber(userFormat)) {
       return 1;
     } else if (isUserFormatVec2(userFormat)) {
       return 2;
@@ -30,9 +30,10 @@ export const strideFuncs = {
     }
     throw Error(`Cannot find dimension of user format ${JSON.stringify(userFormat)}`);
   },
-  dimensionMultipleOfLayout: (dimension: 'scalar' | 'vec2' | 'vec3' | 'vec4'): number => {
+  dimensionMultipleOfLayout: (dimension: 'boolean' | 'number' | 'vec2' | 'vec3' | 'vec4'): number => {
     switch (dimension) {
-      case 'scalar': return 1;
+      case 'boolean': return 1;
+      case 'number': return 1;
       case 'vec2': return 2;
       case 'vec3': return 3;
       case 'vec4': return 4;

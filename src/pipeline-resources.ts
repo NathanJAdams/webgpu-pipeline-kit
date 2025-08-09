@@ -3,15 +3,15 @@ import { WPKBufferFormatKey, WPKBufferFormatMapEntity, WPKLayout, WPKUserFormat 
 import { WPKMeshBufferResource } from './buffer-resources';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
 import { WPKInstanceFormat } from './instance';
-import { getLogger, lazyDebug, lazyTrace } from './logging';
+import { logFactory } from './logging';
 import { meshFuncs, WPKMesh } from './meshes';
 import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
 import { resourceFactory, WPKResource } from './resources';
 import { WPKBufferLocationMesh, WPKBufferLocationUserDefined } from './shaders';
 import { strideFuncs } from './strides';
-import { NonEmptyArray } from './utils';
+import { logFuncs, NonEmptyArray } from './utils';
 
-const LOGGER = getLogger('pipeline');
+const LOGGER = logFactory.getLogger('pipeline');
 
 export const pipelineResourceFactory = {
   // layouts
@@ -20,10 +20,10 @@ export const pipelineResourceFactory = {
     entries: GPUBindGroupLayoutEntry[]
   ): WPKResource<GPUBindGroupLayout> => {
     const label = `${name}-bind-group-layout`;
-    lazyDebug(LOGGER, () => `Creating bind group layout resource ${label}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating bind group layout resource ${label}`);
     return resourceFactory.ofCached({
       get(device, _queue, _encoder) {
-        lazyTrace(LOGGER, () => `Creating bind group layout ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating bind group layout ${label}`);
         return device.createBindGroupLayout({
           label,
           entries,
@@ -36,11 +36,11 @@ export const pipelineResourceFactory = {
     bindGroupLayoutsResource: WPKResource<GPUBindGroupLayout[]>
   ): WPKResource<GPUPipelineLayout> => {
     const label = `${name}-pipeline-layout`;
-    lazyDebug(LOGGER, () => `Creating pipeline layout resource ${label}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating pipeline layout resource ${label}`);
     return resourceFactory.ofCached({
       get(device, queue, encoder) {
         const bindGroupLayouts = bindGroupLayoutsResource.get(device, queue, encoder);
-        lazyTrace(LOGGER, () => `Creating pipeline layout ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating pipeline layout ${label}`);
         return device.createPipelineLayout({
           label,
           bindGroupLayouts,
@@ -56,12 +56,12 @@ export const pipelineResourceFactory = {
     pipelineLayoutResource: WPKResource<GPUPipelineLayout>
   ): WPKResource<GPUShaderModule> => {
     const label = `${name}-shader`;
-    lazyDebug(LOGGER, () => `Creating shader module resource ${label}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating shader module resource ${label}`);
     const { code, entryPoints } = shaderModule;
     return resourceFactory.ofCachedFromDependencies(
       [pipelineLayoutResource],
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => `Creating shader module ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating shader module ${label}`);
         return device.createShaderModule({
           label,
           code,
@@ -79,11 +79,11 @@ export const pipelineResourceFactory = {
     binding: number,
     bufferResource: WPKResource<WPKTrackedBuffer>
   ): WPKResource<GPUBindGroupEntry> => {
-    lazyDebug(LOGGER, () => `Creating bind group entry resource binding ${binding}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating bind group entry resource binding ${binding}`);
     return resourceFactory.ofCachedFromDependencies(
       [bufferResource] as const,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => `Creating bind group entry binding ${binding}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating bind group entry binding ${binding}`);
         return {
           binding,
           resource: {
@@ -100,11 +100,11 @@ export const pipelineResourceFactory = {
     bindGroupEntriesResource: WPKResource<GPUBindGroupEntry[]>
   ): WPKResource<GPUBindGroup> => {
     const label = `${name}-bind-group-${group}`;
-    lazyDebug(LOGGER, () => `Creating bind group resource ${label}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating bind group resource ${label}`);
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupLayoutResource, bindGroupEntriesResource] as const,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => `Creating bind group ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating bind group ${label}`);
         return device.createBindGroup({
           label,
           layout: values[0],
@@ -117,11 +117,11 @@ export const pipelineResourceFactory = {
     index: number,
     bindGroupResource: WPKResource<GPUBindGroup>,
   ): WPKResource<WPKBindGroupDetail> => {
-    lazyDebug(LOGGER, () => `Creating bind group detail resource index ${index}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating bind group detail resource index ${index}`);
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupResource],
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => `Creating bind group detail index ${index}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating bind group detail index ${index}`);
         return {
           group: values[0],
           index,
@@ -139,11 +139,11 @@ export const pipelineResourceFactory = {
     entryPoint: string
   ): WPKResource<GPUComputePipeline> => {
     const label = `${name}-compute-pipeline-${index}`;
-    lazyDebug(LOGGER, () => `Creating compute pipeline resource ${label}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating compute pipeline resource ${label}`);
     return resourceFactory.ofCachedFromDependencies(
       [pipelineLayoutResource, shaderResource] as const,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => `Creating compute pipeline ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating compute pipeline ${label}`);
         return device.createComputePipeline({
           label,
           layout: values[0],
@@ -160,11 +160,11 @@ export const pipelineResourceFactory = {
     computePipelineResource: WPKResource<GPUComputePipeline>,
     workGroupSizeFunc: () => WPKWorkGroupSize
   ): WPKResource<WPKComputePipelineDetail> => {
-    lazyDebug(LOGGER, () => 'Creating compute detail resource');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating compute detail resource');
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupsResource, computePipelineResource] as const,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => 'Creating compute detail');
+        logFuncs.lazyTrace(LOGGER, () => 'Creating compute detail');
         return {
           bindGroups: values[0],
           pipeline: values[1],
@@ -179,7 +179,7 @@ export const pipelineResourceFactory = {
     meshBufferLocation: WPKBufferLocationMesh,
     meshBufferResource: WPKMeshBufferResource
   ): WPKResource<WPKVertexBufferDetail> => {
-    lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from mesh');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from mesh');
     const { format, location, step } = meshBufferLocation;
     const arrayStride = pipelineFuncs.toByteLength(format);
     const attributes: GPUVertexAttribute[] = [{
@@ -194,7 +194,7 @@ export const pipelineResourceFactory = {
     bufferFormats: TBufferFormats,
     trackedBufferResources: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>
   ): WPKResource<WPKVertexBufferDetail> => {
-    lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from buffer location');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from buffer location');
     const { buffer, location, step } = bufferLocation;
     const bufferFormat = bufferFormats[buffer];
     const bufferResource = trackedBufferResources[buffer];
@@ -208,7 +208,7 @@ export const pipelineResourceFactory = {
     return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, bufferResource);
   },
   ofVertexAttributes: <T>(shaderLocation: number, array: NonEmptyArray<T>, toFormat: (element: T) => GPUVertexFormat, toStride: (element: T) => number): GPUVertexAttribute[] => {
-    lazyDebug(LOGGER, () => 'Creating vertex attributes');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex attributes');
     let offset = 0;
     return array.map((element): GPUVertexAttribute => {
       const format = toFormat(element);
@@ -223,17 +223,18 @@ export const pipelineResourceFactory = {
     });
   },
   ofVertexFormatLayout: (layout: WPKLayout): GPUVertexFormat => {
-    lazyDebug(LOGGER, () => `Calculating vertex format from layout ${JSON.stringify(layout)}`);
+    logFuncs.lazyDebug(LOGGER, () => `Calculating vertex format from layout ${JSON.stringify(layout)}`);
     const { datumType, dimension } = layout;
     switch (dimension) {
-      case 'scalar': return datumType;
+      case 'boolean': return datumType;
+      case 'number': return datumType;
       case 'vec2': return `${datumType}x2`;
       case 'vec3': return `${datumType}x3`;
       case 'vec4': return `${datumType}x4`;
     }
   },
   ofVertexFormatUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat, any>): GPUVertexFormat => {
-    lazyDebug(LOGGER, () => `Calculating vertex format from user format ${JSON.stringify(userFormat)}`);
+    logFuncs.lazyDebug(LOGGER, () => `Calculating vertex format from user format ${JSON.stringify(userFormat)}`);
     const { datumType } = userFormat;
     const dimensionMultiple = strideFuncs.dimensionMultipleOfUserFormat(userFormat);
     return (dimensionMultiple === 1)
@@ -247,11 +248,11 @@ export const pipelineResourceFactory = {
     step: GPUVertexStepMode,
     bufferResource: WPKResource<WPKTrackedBuffer>
   ): WPKResource<WPKVertexBufferDetail> => {
-    lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource');
     return resourceFactory.ofCachedFromDependencies(
       [bufferResource] as const,
       (_device, _queue, _encoder, values) => {
-        lazyTrace(LOGGER, () => 'Creating vertex buffer detail');
+        logFuncs.lazyTrace(LOGGER, () => 'Creating vertex buffer detail');
         return {
           buffer: values[0].buffer,
           layout: {
@@ -267,11 +268,11 @@ export const pipelineResourceFactory = {
   ofVertexBuffers: (
     vertexBufferDetailResources: WPKResource<WPKVertexBufferDetail>[]
   ): WPKResource<GPUBuffer[]> => {
-    lazyDebug(LOGGER, () => 'Creating vertex buffers resource');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffers resource');
     return resourceFactory.ofCachedFromDependencies(
       vertexBufferDetailResources,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => 'Creating vertex buffers');
+        logFuncs.lazyTrace(LOGGER, () => 'Creating vertex buffers');
         return values.map((data) => data.buffer);
       },
     );
@@ -279,11 +280,11 @@ export const pipelineResourceFactory = {
   ofVertexBufferLayouts: (
     vertexBufferDetailsResource: WPKResource<WPKVertexBufferDetail[]>
   ): WPKResource<GPUVertexBufferLayout[]> => {
-    lazyDebug(LOGGER, () => 'Creating vertex buffer layouts resource');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer layouts resource');
     return resourceFactory.ofCachedFromDependencies(
       [vertexBufferDetailsResource] as const,
       (_device, _queue, _encoder, values) => {
-        lazyTrace(LOGGER, () => 'Creating vertex buffer layouts');
+        logFuncs.lazyTrace(LOGGER, () => 'Creating vertex buffer layouts');
         return values[0].map((data) => data.layout);
       },
     );
@@ -301,7 +302,7 @@ export const pipelineResourceFactory = {
     textureFormatFunc: () => GPUTextureFormat,
   ): WPKResource<GPURenderPipeline> => {
     const label = `${name}-render-pipeline-${index}`;
-    lazyDebug(LOGGER, () => `Creating render pipeline resource ${label}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline resource ${label}`);
     const topology = mesh.topology;
     const frontFace = mesh.winding;
     const cullMode = meshFuncs.cullMode(mesh);
@@ -314,7 +315,7 @@ export const pipelineResourceFactory = {
     return resourceFactory.ofCachedFromDependencies(
       [renderPipelineLayoutResource, shaderModuleResource, vertexBufferLayoutsResource, isAntiAliasedResource, textureFormatResource] as const,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => `Creating render pipeline ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating render pipeline ${label}`);
         return device.createRenderPipeline({
           label,
           layout: values[0],
@@ -350,11 +351,11 @@ export const pipelineResourceFactory = {
     renderPipelineResource: WPKResource<GPURenderPipeline>,
     drawCountsFunc: () => WPKDrawCounts,
   ): WPKResource<WPKRenderPipelineDetail> => {
-    lazyDebug(LOGGER, () => 'Creating render pipeline detail resource');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating render pipeline detail resource');
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupsDetailResource, indicesBufferResource, vertexBuffersResource, renderPipelineResource] as const,
       (device, queue, encoder, values) => {
-        lazyTrace(LOGGER, () => 'Creating render pipeline detail');
+        logFuncs.lazyTrace(LOGGER, () => 'Creating render pipeline detail');
         return ({
           bindGroups: values[0],
           indices: {

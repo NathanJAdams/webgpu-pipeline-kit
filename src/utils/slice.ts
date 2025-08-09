@@ -1,16 +1,51 @@
+export type Indexed<T> = readonly [number, T];
+
 export type Slice = {
-    min: number;
-    length: number;
+  min: number;
+  length: number;
 };
 export type CopySlice = Slice & {
-    toIndex: number;
+  toIndex: number;
 };
 export type ValueSlices<T> = {
-    values: T;
-    copySlices: CopySlice[];
+  values: T;
+  copySlices: CopySlice[];
 };
 
 export const sliceFuncs = {
+  ofArray: <T, S>(array: T[], toIndexFunc: (element: T) => number, toSlicedValueFunc: (element: T) => S): ValueSlices<S[]> => {
+    const indexed = array.map(element => [toIndexFunc(element), toSlicedValueFunc(element)] as const);
+    return sliceFuncs.ofIndexed(indexed);
+  },
+  ofMap: <K, V, T>(map: Map<K, V>, toIndexFunc: (value: V, key: K) => number, toSlicedValueFunc: (value: V, key: K) => T): ValueSlices<T[]> => {
+    const indexed = Array.from(map.entries(), ([key, value]) => [toIndexFunc(value, key), toSlicedValueFunc(value, key)] as const);
+    return sliceFuncs.ofIndexed(indexed);
+  },
+  ofSet: <T, S>(set: Set<T>, toIndexFunc: (element: T) => number, toSlicedValueFunc: (element: T) => S): ValueSlices<S[]> => {
+    const indexed = Array.from(set.values()).map(element => [toIndexFunc(element), toSlicedValueFunc(element)] as const);
+    return sliceFuncs.ofIndexed(indexed);
+  },
+  ofIndexed: <T>(indexed: Indexed<T>[]): ValueSlices<T[]> => {
+    const sorted = indexed.sort(([indexA], [indexB]) => indexA - indexB);
+    const values = sorted.map(([, value]) => value);
+    const indexes = sorted.map(([index]) => index);
+    const slices = sliceFuncs.ofInts(indexes);
+    const copySlices = Array.from<CopySlice>({ length: slices.length });
+    let fromIndex = 0;
+    for (const [sliceIndex, slice] of slices.entries()) {
+      const { length, min } = slice;
+      copySlices[sliceIndex] = {
+        min: fromIndex,
+        length: length,
+        toIndex: min,
+      };
+      fromIndex += length;
+    }
+    return {
+      copySlices,
+      values,
+    };
+  },
   ofInts: (nums: number[]): Slice[] => {
     const slices: Slice[] = [];
     if (nums.length === 0) {
@@ -33,26 +68,5 @@ export const sliceFuncs = {
     }
     slices.push({ min, length: max + 1 - min });
     return slices;
-  },
-  ofMap: <V>(map: Map<number, V>): ValueSlices<V[]> => {
-    const sortedEntries = Array.from(map.entries()).sort(([indexA], [indexB]) => indexA - indexB);
-    const values = sortedEntries.map(([, value]) => value);
-    const indexes = sortedEntries.map(([index]) => index);
-    const slices = sliceFuncs.ofInts(indexes);
-    const copySlices = Array.from<CopySlice>({ length: slices.length });
-    let fromIndex = 0;
-    for (const [sliceIndex, slice] of slices.entries()) {
-      const { length, min } = slice;
-      copySlices[sliceIndex] = {
-        min: fromIndex,
-        length: length,
-        toIndex: min,
-      };
-      fromIndex += length;
-    }
-    return {
-      copySlices,
-      values,
-    };
   },
 };

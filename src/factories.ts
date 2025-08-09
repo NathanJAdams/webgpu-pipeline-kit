@@ -1,11 +1,11 @@
-import { cacheFactory } from './cache';
+import { displayFactory } from './display';
 import { meshFactory } from './meshes';
-import { pipelineRunnerFactory } from './pipeline';
+import { pipelineFactory } from './pipeline';
 import { colorFactory } from './utils';
 
 export const factories = {
   color: colorFactory,
-  cache: cacheFactory,
   mesh: meshFactory,
-  pipelineRunner: pipelineRunnerFactory,
+  pipeline: pipelineFactory,
+  display: displayFactory,
 };

@@ -8,7 +8,7 @@ export const bufferFormats = {
     contentType: 'marshalled',
     marshall: [{
       datumType: 'float32',
-      scalar: 'gameTime',
+      number: 'gameTime',
     }],
   },
   offsets: {
