@@ -51,6 +51,7 @@ export const packedCacheFactory = {
                 .map(idGetter => idGetter(entity))
                 .filter(entityId => !removed.has(entityId) && (added.has(entityId) || backing.has(entityId)));
               entityIdReferences.set(id, new Set(entityIds));
+              entityIdsReferencedBy.set(id, new Set<string>());
             }
             // added - link new entity id references back
             for (const id of added.keys()) {
@@ -111,7 +112,7 @@ export const packedCacheFactory = {
           }
           // removed
           if (removed.size > 0) {
-            // remove - gather all entity ids that used to reference a removed entity
+            // remove - gather all entity ids that used to reference any removed entity
             const entityIdsReferencingRemoved = new Set<string>();
             for (const id of removed.values()) {
               const referencedBy = entityIdsReferencedBy.get(id);
