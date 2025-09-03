@@ -105,11 +105,6 @@ export type WPKPipelineDetail = {
 //#endregion
 
 //#region dispatch
-export type WPKWorkGroupSize = {
-  x: number;
-  y?: number;
-  z?: number;
-};
 export type WPKDispatchSize = [number, number, number];
 export type WPKDispatchParams = {
   instanceCount: number;

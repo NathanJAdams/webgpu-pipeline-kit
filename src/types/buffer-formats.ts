@@ -1,5 +1,5 @@
 import { WPKPathMat2x2, WPKPathMat2x3, WPKPathMat2x4, WPKPathMat3x2, WPKPathMat3x3, WPKPathMat3x4, WPKPathMat4x2, WPKPathMat4x3, WPKPathMat4x4, WPKPathNumber, WPKPathString, WPKPathVec2, WPKPathVec3, WPKPathVec4 } from './data-paths';
-import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKShaderStructEntry, WPKShaderVectorUntyped } from './shaders';
+import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKShaderStructEntry, WPKShaderVectorUntyped } from './structs';
 import { NonEmptyArray } from '../utils';
 
 export type WPKShaderHasComponentType<TComponentType extends WPKShaderScalar> = {
