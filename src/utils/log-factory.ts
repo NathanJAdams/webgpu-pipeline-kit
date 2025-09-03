@@ -14,11 +14,8 @@ export class LogFactory<TNamespaces extends readonly string[]> {
     if (namespace !== undefined) {
       this.getLogger(namespace).setLevel(level);
     } else {
-      const allLoggers = log.getLoggers();
-      for (const [name, logger] of Object.entries(allLoggers)) {
-        if (name.startsWith(this.prefix)) {
-          logger.setLevel(level);
-        }
+      for (const namespace of this.namespaces) {
+        this.getLogger(namespace).setLevel(level);
       }
     }
   };
@@ -26,27 +23,27 @@ export class LogFactory<TNamespaces extends readonly string[]> {
 
 export const logFuncs = {
   lazyError: (logger: Logger, errorMessageFunc: () => any): void => {
-    if (logger.getLevel() <= logger.levels.ERROR) {
+    if (logger.getLevel() >= logger.levels.ERROR) {
       logger.error(errorMessageFunc());
     }
   },
   lazyWarn: (logger: Logger, warnMessageFunc: () => any): void => {
-    if (logger.getLevel() <= logger.levels.WARN) {
+    if (logger.getLevel() >= logger.levels.WARN) {
       logger.warn(warnMessageFunc());
     }
   },
   lazyInfo: (logger: Logger, infoMessageFunc: () => any): void => {
-    if (logger.getLevel() <= logger.levels.INFO) {
+    if (logger.getLevel() >= logger.levels.INFO) {
       logger.info(infoMessageFunc());
     }
   },
   lazyDebug: (logger: Logger, debugMessageFunc: () => any): void => {
-    if (logger.getLevel() <= logger.levels.DEBUG) {
+    if (logger.getLevel() >= logger.levels.DEBUG) {
       logger.debug(debugMessageFunc());
     }
   },
   lazyTrace: (logger: Logger, traceMessageFunc: () => any): void => {
-    if (logger.getLevel() <= logger.levels.TRACE) {
+    if (logger.getLevel() >= logger.levels.TRACE) {
       logger.log(traceMessageFunc());
     }
   },

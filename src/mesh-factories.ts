@@ -1,14 +1,6 @@
 import { logFactory } from './logging';
+import { WPKIndices, WPKMesh, WPKMeshParametersDeclaration, WPKMeshTemplateCreator, WPKVertices } from './types';
 import { logFuncs, mathFuncs, Vec3, vec3Funcs } from './utils';
-
-export type WPKVertices = Vec3[];
-export type WPKIndices = Vec3[];
-export type WPKMesh = {
-  vertices: WPKVertices;
-  indices: WPKIndices;
-  topology: GPUPrimitiveTopology;
-  winding: GPUFrontFace;
-};
 
 const LOGGER = logFactory.getLogger('mesh');
 
@@ -51,6 +43,13 @@ export const meshFuncs = {
     const verticesArray = new Float32Array(flatVertices);
     return verticesArray.buffer;
   },
+};
+
+export const meshTemplateFactory = {
+  of: <TParameters extends WPKMeshParametersDeclaration>(parameters: TParameters, toMesh: WPKMeshTemplateCreator<TParameters>) => ({
+    parameters,
+    toMesh,
+  }),
 };
 
 export const meshFactory = {

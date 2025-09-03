@@ -1,93 +1,61 @@
-import { WPKShader } from 'webgpu-pipeline-kit';
-
+import { builders } from '../..';
 import { BufferFormats } from './buffer-formats';
-import { EntityFormat, UniformFormat } from './instance-formats';
-import { MeshFactories } from './meshes';
+import { Triangle, TriangleUniform } from './instance-formats';
+import { MeshTemplates } from './mesh-templates';
 
-export const shader: WPKShader<UniformFormat, EntityFormat, BufferFormats, MeshFactories> = {
-  compute: {
-    shader: `
-      @group(0) @binding(0)
-      var<uniform> uniforms: vec2<f32>;
+const groupBindings = builders.groupBindings<TriangleUniform, Triangle, BufferFormats>()
+  .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
+  .pushObject().group(0).binding(1).buffer('offsets').buildElement()
+  .buildArray();
 
-      @group(0) @binding(1)
-      var<storage, read_write> offsets: array<vec2<f32>>;
+const computeShader = builders.computeShader<TriangleUniform, Triangle, BufferFormats>()
+  .groupBindings(groupBindings)
+  .passesArray()
+  .pushObject()
+  .workGroupSize({ x: 64 })
+  .entryPoint('compute_pass_1')
+  .code((params) => `
+    let angle = f32(${params.instance_index}) * 6.28318 / 60.0;
+    ${params.bindings.offsets}[${params.instance_index}] = vec2<f32>(cos(angle), sin(angle)) * 0.95;
+  `)
+  .build()
+  .buildPasses()
+  .buildObject();
 
-      @compute @workgroup_size(1)
-      fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-          let i = id.x;
-          let angle = f32(i) * 6.28318 / 60.0;
-          offsets[i] = vec2<f32>(cos(angle), sin(angle)) * 0.95;
-      }`,
-    bufferBindings: [{
-      group: 0,
-      binding: 0,
-      buffer: 'uniforms',
-    }, {
-      group: 0,
-      binding: 1,
-      buffer: 'offsets',
-    }],
-    passes: [{
-      entryPoint: 'main',
-      workGroupSize: {
-        x: 1,
-      },
-    }],
-  },
-  render: {
-    shader: `
-      @group(1) @binding(0)
-      var<uniform> uniforms: vec2<f32>;
+const meshTemplate = builders.meshTemplate<MeshTemplates>()
+  .key('triangle')
+  .parametersObject()
+  .top(0.5)
+  .buildParameters()
+  .buildObject();
 
-      @group(1) @binding(1)
-      var<storage, read> offsets: array<vec2<f32>>;
+const vertexShader = builders.vertexShader<TriangleUniform, Triangle, BufferFormats>()
+  .entryPoint('vertex_main')
+  .returnType('builtin_position')
+  .code((params) => `
+    return vec4<f32>(0.025 * ${params.vertex_position}.xy + ${params.bindings.offsets}[${params.instance_index}], 0.0, 1.0);
+  `)
+  .buildObject();
 
-      @vertex
-      fn vertex_main(
-          @location(0) pos: vec3<f32>,
-          @location(1) offset: vec2<f32>
-      ) -> @builtin(position) vec4<f32> {
-          return vec4<f32>(0.025 * pos.xy + offset, 0.0, 1.0);
-      }
+const fragmentShader = builders.fragmentShader<TriangleUniform, Triangle, BufferFormats>()
+  .entryPoint('fragment_main')
+  .code((_params) => `
+    return vec4<f32>(0.025, 0.0, 0.0, 1.0);
+  `)
+  .buildObject();
 
-      @fragment
-      fn fragment_main() -> @location(0) vec4<f32> {
-          return vec4(1.0, 0.3, 0.3, 1.0);
-      }`,
-    bufferBindings: [{
-      group: 1,
-      binding: 0,
-      buffer: 'uniforms',
-    }, {
-      group: 1,
-      binding: 1,
-      buffer: 'offsets',
-    }],
-    passes: [{
-      mesh: {
-        key: 'ball',
-        parameters: {
-          subdivisions: 4,
-        },
-      },
-      vertex: {
-        entryPoint: 'vertex_main',
-        bufferLocations: [{
-          type: 'mesh',
-          step: 'vertex',
-          location: 0,
-          format: 'float32x3',
-        }, {
-          type: 'user-defined',
-          step: 'instance',
-          location: 1,
-          buffer: 'offsets',
-        }],
-      },
-      fragment: {
-        entryPoint: 'fragment_main',
-      },
-    }],
-  },
-};
+const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
+  .groupBindings(groupBindings)
+  .passesArray()
+  .pushObject()
+  .mesh(meshTemplate)
+  .vertex(vertexShader)
+  .fragment(fragmentShader)
+  .buildElement()
+  .buildPasses()
+  .buildObject();
+
+export const shader = builders.shader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
+  .compute(computeShader)
+  .render(renderShader)
+  .buildObject();

@@ -1,34 +1,22 @@
-import { bufferFactory, WPKTrackedBuffer } from './buffer-factory';
-import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
-import { WPKEntityCache, WPKUniformCache } from './cache';
-import { datumBatchEncoderFactory } from './datum-batch-encoder';
-import { WPKInstanceFormat, WPKInstanceOf } from './instance';
+import { bufferFactory } from './buffer-factory';
 import { logFactory } from './logging';
-import { meshFuncs, WPKMesh } from './meshes';
-import { WPKResource } from './resources';
-import { strideFuncs } from './strides';
+import { marshallerFactory } from './marshall';
+import { meshFuncs } from './mesh-factories';
+import { DISPATCH_FORMAT } from './shader-reserved';
+import { toStride } from './shader-utils';
+import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferMutable, WPKBufferResources, WPKEntityCache, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
 import { CopySlice, logFuncs, ValueSlices } from './utils';
-
-type WPKMutator<T> = {
-  mutate: (input: T) => void;
-};
-
-export type WPKMeshBufferResource = {
-  indices: WPKResource<WPKTrackedBuffer>;
-  vertices: WPKResource<WPKTrackedBuffer>;
-};
-
-export type WPKBufferResources<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = {
-  buffers: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>;
-  instanceCount: () => number;
-  update: () => void;
-};
 
 const LOGGER = logFactory.getLogger('buffer');
 
 export const bufferResourcesFactory = {
+  ofDispatch: (name: string): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
+    logFuncs.lazyDebug(LOGGER, () => `Creating dispatch buffer ${name}`);
+    const stride = toStride(DISPATCH_FORMAT.marshall);
+    return bufferFactory.ofMutable(stride, `${name}-buffer-dispatch`, GPUBufferUsage.UNIFORM);
+  },
   ofMesh: (name: string, mesh: WPKMesh): WPKMeshBufferResource => {
-    LOGGER.debug(`Creating mesh buffer ${name}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating mesh buffer ${name}`);
     const indices = bufferFactory.ofData(meshFuncs.toIndicesData(mesh), `${name}-indices`, GPUBufferUsage.INDEX);
     const vertices = bufferFactory.ofData(meshFuncs.toVerticesData(mesh), `${name}-vertices`, GPUBufferUsage.VERTEX);
     return {
@@ -36,33 +24,33 @@ export const bufferResourcesFactory = {
       vertices,
     };
   },
-  ofUniformAndInstances: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>>(
+  ofUniformAndInstances: <TUniform, TEntity, TBufferFormats extends WPKBufferFormatMap<TUniform, TEntity>>(
     name: string,
-    uniformCache: WPKUniformCache<TUniformFormat, any>,
-    entityCache: WPKEntityCache<TEntityFormat, any, any>,
+    uniformCache: WPKUniformCache<TUniform, any>,
+    entityCache: WPKEntityCache<TEntity, any, any>,
     bufferFormats: TBufferFormats,
-    bufferUsages: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, GPUBufferUsageFlags>,
-  ): WPKBufferResources<TUniformFormat, TEntityFormat, TBufferFormats> => {
+    bufferUsages: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormats>, GPUBufferUsageFlags>,
+  ): WPKBufferResources<TUniform, TEntity, TBufferFormats> => {
     const initialInstances = entityCache.calculateChanges().values;
-    const uniformMutators: WPKMutator<WPKInstanceOf<TUniformFormat>>[] = [];
+    const uniformMutators: WPKMutator<TUniform>[] = [];
     const buffers: Record<string, WPKResource<WPKTrackedBuffer>> = {};
-    let instanceMutator: WPKMutator<ValueSlices<WPKInstanceOf<TEntityFormat>[]>> | undefined;
+    let instanceMutator: WPKMutator<ValueSlices<TEntity[]>> | undefined;
     logFuncs.lazyDebug(LOGGER, () => `Create buffer resources for ${name}`);
     for (const [key, bufferFormat] of Object.entries(bufferFormats)) {
       logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key}`);
-      const { bufferType, contentType } = bufferFormat;
+      const { bufferType } = bufferFormat;
       const usage = bufferUsages[key];
       const label = `${name}-buffer-${key}`;
       if (bufferType === 'uniform') {
         logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type uniform`);
-        const datumBatchEncoder = datumBatchEncoderFactory.of(bufferFormat.marshall);
+        const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
         if (uniformCache.isMutable) {
           logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:uniform is mutable`);
-          const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
+          const stride = toStride(bufferFormat.marshall);
           const buffer = bufferFactory.ofMutable(stride, label, usage);
-          const uniformMutator: WPKMutator<WPKInstanceOf<TUniformFormat>> = {
+          const uniformMutator: WPKMutator<TUniform> = {
             mutate(input) {
-              const data = datumBatchEncoder.encode([input]);
+              const data = marshaller.encode([input]);
               buffer.mutate(data, 0);
             },
           };
@@ -70,75 +58,71 @@ export const bufferResourcesFactory = {
           uniformMutators.push(uniformMutator);
         } else {
           logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:uniform is not mutable`);
-          const data = datumBatchEncoder.encode([uniformCache.get()]);
+          const data = marshaller.encode([uniformCache.get()]);
           const buffer = bufferFactory.ofData(data, label, usage);
           buffers[key] = buffer;
         }
-      } else if (bufferType === 'entity') {
-        if (contentType === 'layout') {
-          logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity layout`);
-          if (entityCache.isResizeable) {
-            const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
-            const buffer = bufferFactory.ofResizeable(false, label, usage);
-            buffers[key] = buffer;
-            let maxInstanceCount = 0;
-            instanceMutator = {
-              mutate(input) {
-                const { copySlices } = input;
-                const maxCopySliceIndex = copySlices.reduce((max, copySlice) => Math.max(max, copySlice.toIndex + copySlice.length), 0);
-                maxInstanceCount = Math.max(maxInstanceCount, maxCopySliceIndex + 1);
-                const bytesLength = maxInstanceCount * stride;
-                buffer.resize(bytesLength);
-              },
-            };
-          } else {
-            const stride = strideFuncs.ofFormatLayout(bufferFormat.layout);
-            buffers[key] = bufferFactory.ofSize(entityCache.count() * stride, label, usage);
-          }
-        } else if (contentType === 'marshalled') {
-          logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity marshalled`);
-          if (entityCache.isResizeable) {
-            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is resizeable`);
+      } else if (bufferType === 'editable') {
+        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity layout`);
+        if (entityCache.isResizeable) {
+          const stride = toStride(bufferFormat.layout);
+          const buffer = bufferFactory.ofResizeable(false, label, usage);
+          buffers[key] = buffer;
+          let maxInstanceCount = 0;
+          instanceMutator = {
+            mutate(input) {
+              const { copySlices } = input;
+              const maxCopySliceIndex = copySlices.reduce((max, copySlice) => Math.max(max, copySlice.toIndex + copySlice.length), 0);
+              maxInstanceCount = Math.max(maxInstanceCount, maxCopySliceIndex + 1);
+              const bytesLength = maxInstanceCount * stride;
+              buffer.resize(bytesLength);
+            },
+          };
+        } else {
+          const stride = toStride(bufferFormat.layout);
+          buffers[key] = bufferFactory.ofSize(entityCache.count() * stride, label, usage);
+        }
+      } else if (bufferType === 'marshalled') {
+        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity marshalled`);
+        if (entityCache.isResizeable) {
+          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is resizeable`);
+          const buffer = bufferFactory.ofStaged(label, usage);
+          buffers[key] = buffer;
+          const stride = toStride(bufferFormat.marshall);
+          const marshaller = marshallerFactory.ofMarshalled(bufferFormat, entityCache);
+          instanceMutator = {
+            mutate(input) {
+              const { copySlices, values } = input;
+              const data = marshaller.encode(values);
+              const targetSlices = copySlices.map((copySlice): CopySlice => {
+                return {
+                  length: copySlice.length * stride,
+                  min: copySlice.min * stride,
+                  toIndex: copySlice.toIndex * stride,
+                };
+              });
+              buffer.mutate(data, targetSlices);
+            },
+          };
+        } else {
+          if (entityCache.isMutable) {
+            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is mutable`);
             const buffer = bufferFactory.ofStaged(label, usage);
             buffers[key] = buffer;
-            const stride = strideFuncs.ofFormatMarshall(bufferFormat.marshall);
-            const datumBatchEncoder = datumBatchEncoderFactory.of(bufferFormat.marshall, entityCache);
+            const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
             instanceMutator = {
               mutate(input) {
                 const { copySlices, values } = input;
-                const data = datumBatchEncoder.encode(values);
-                const targetSlices = copySlices.map((copySlice): CopySlice => {
-                  return {
-                    length: copySlice.length * stride,
-                    min: copySlice.min * stride,
-                    toIndex: copySlice.toIndex * stride,
-                  };
-                });
-                buffer.mutate(data, targetSlices);
+                const data = marshaller.encode(values);
+                buffer.mutate(data, copySlices);
               },
             };
           } else {
-            if (entityCache.isMutable) {
-              logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is mutable`);
-              const buffer = bufferFactory.ofStaged(label, usage);
-              buffers[key] = buffer;
-              const datumBatchEncoder = datumBatchEncoderFactory.of(bufferFormat.marshall);
-              instanceMutator = {
-                mutate(input) {
-                  const { copySlices, values } = input;
-                  const data = datumBatchEncoder.encode(values);
-                  buffer.mutate(data, copySlices);
-                },
-              };
-            } else {
-              logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is not mutable`);
-              const datumBatchEncoder = datumBatchEncoderFactory.of(bufferFormat.marshall);
-              const data = datumBatchEncoder.encode(initialInstances);
-              buffers[key] = bufferFactory.ofData(data, label, usage);
-            }
+            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is not mutable`);
+            const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
+            const data = marshaller.encode(initialInstances);
+            buffers[key] = bufferFactory.ofData(data, label, usage);
           }
-        } else {
-          throw Error(`Cannot create buffer for unknown content type ${contentType}`);
         }
       } else {
         throw Error(`Cannot create buffer for unknown buffer type ${bufferType}`);

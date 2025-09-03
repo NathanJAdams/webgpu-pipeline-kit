@@ -1,3 +1,13 @@
+export type PositiveInteger<T extends number> =
+  T extends 0
+  ? never
+  : `${T}` extends `${infer _}.${infer _}`
+  ? never
+  : `${T}` extends `-${infer _}`
+  ? never
+  : T
+  ;
+
 export const mathFuncs = {
   HALF_PI: 0.5 * Math.PI,
   TWO_PI: 2 * Math.PI,

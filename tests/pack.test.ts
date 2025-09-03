@@ -1,10 +1,13 @@
 import { describe, test, expect } from 'vitest';
 
-import { packedCacheFactory } from '../../../src/utils';
+import { setLogLevel } from '../src/logging';
+import { packedCacheFactory } from '../src/packed-cache';
 
 type Example = {
   a: number;
 };
+
+setLogLevel('WARN');
 
 const createCache = () => packedCacheFactory.of<Example, true>(true, []);
 

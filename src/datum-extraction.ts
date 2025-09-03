@@ -1,49 +1,25 @@
-import { isUserFormatVec2, isUserFormatVec3, isUserFormatVec4, WPKMatchingPathNumber, WPKMatchingPathVec2, WPKMatchingPathVec3, WPKMatchingPathVec4, WPKUserFormatBoolean, WPKUserFormatEntityIndex, WPKUserFormatNumber, WPKUserFormatVec2, WPKUserFormatVec3, WPKUserFormatVec4 } from './buffer-formats';
-import { WPKInstanceFormat, WPKInstanceOf, WPKPrimitiveMap } from './instance';
 import { logFactory } from './logging';
+import { WPKBufferFormatElementEntityIndex, WPKBufferFormatElementMatrix, WPKBufferFormatElementScalar, WPKBufferFormatElementVector, WPKDatumExtractor, WPKMatchingPathNumber, WPKMatchingPathVec2, WPKMatchingPathVec3, WPKMatchingPathVec4, WPKPrimitiveMap, WPKRefPath, WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderVectorUntyped } from './types';
 import { logFuncs, stringFuncs } from './utils';
-
-type WPKRefPath = Array<(string | number)>;
-
-export type WPKDatumExtractor<TFormat extends WPKInstanceFormat, TValue> = (instance: WPKInstanceOf<TFormat>) => TValue;
 
 const LOGGER = logFactory.getLogger('data');
 
 export const datumExtractorFactory = {
-  ofBoolean: <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormatBoolean<TEntityFormat>): WPKDatumExtractor<TEntityFormat, boolean> => ofBoolean(userFormat.boolean),
-  ofNumber: <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormatNumber<TEntityFormat>): WPKDatumExtractor<TEntityFormat, number> => ofNumber(userFormat.number),
-  ofVec: <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormatVec2<TEntityFormat> | WPKUserFormatVec3<TEntityFormat> | WPKUserFormatVec4<TEntityFormat>): WPKDatumExtractor<TEntityFormat, number[]> => {
-    if (isUserFormatVec2(userFormat)) {
-      return Array.isArray(userFormat.vec2)
-        ? ofVecSplit(userFormat.vec2)
-        : ofVecDirect(userFormat.vec2);
-    } else if (isUserFormatVec3(userFormat)) {
-      return Array.isArray(userFormat.vec3)
-        ? ofVecSplit(userFormat.vec3)
-        : ofVecDirect(userFormat.vec3);
-    } else if (isUserFormatVec4(userFormat)) {
-      return Array.isArray(userFormat.vec4)
-        ? ofVecSplit(userFormat.vec4)
-        : ofVecDirect(userFormat.vec4);
-    }
-    throw Error(`Cannot create vec extractor from ${JSON.stringify(userFormat)}`);
+  ofScalar: <T>(format: WPKBufferFormatElementScalar<any, any>): WPKDatumExtractor<T, number> => ofNumber(format.scalar),
+  ofVector: <T>(format: WPKBufferFormatElementVector<WPKShaderVectorUntyped, WPKShaderScalar, any>): WPKDatumExtractor<T, number[]> => {
+    return Array.isArray(format.vector)
+      ? ofPathArray(format.vector)
+      : ofNumberArray(format.vector);
   },
-  ofEntityId: <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormatEntityIndex<TEntityFormat>): WPKDatumExtractor<TEntityFormat, string> => ofString(userFormat.entityIdKey),
+  ofMatrix: <T>(format: WPKBufferFormatElementMatrix<WPKShaderMatrixUntyped, any>): WPKDatumExtractor<T, number[]> => {
+    return Array.isArray(format.matrix)
+      ? ofPathArray(format.matrix.flat())
+      : ofNumberArray(format.matrix);
+  },
+  ofEntityId: <T>(format: WPKBufferFormatElementEntityIndex<T>): WPKDatumExtractor<T, string> => ofString(format.entityIdKey),
 };
 
-const ofBoolean = <TEntityFormat extends WPKInstanceFormat>(path: string): WPKDatumExtractor<TEntityFormat, boolean> => {
-  logFuncs.lazyDebug(LOGGER, () => `Creating boolean extractor from path '${path}'`);
-  const refPath = toRefPath(path);
-  return (instance) => {
-    const value = valueAtPath(instance, refPath, 0);
-    if (typeof value === 'boolean') {
-      logFuncs.lazyTrace(LOGGER, () => `Found value ${value} at path '${path}'`);
-      return value;
-    }
-    throw Error(`Value ${JSON.stringify(value)} at path '${path}' is not a boolean`);
-  };
-};
-const ofNumber = <TEntityFormat extends WPKInstanceFormat>(path: string): WPKDatumExtractor<TEntityFormat, number> => {
+const ofNumber = <T>(path: string): WPKDatumExtractor<T, number> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating number extractor from path '${path}'`);
   const refPath = toRefPath(path);
   return (instance) => {
@@ -52,7 +28,7 @@ const ofNumber = <TEntityFormat extends WPKInstanceFormat>(path: string): WPKDat
     return value;
   };
 };
-const ofVecDirect = <TEntityFormat extends WPKInstanceFormat>(path: WPKMatchingPathVec2<TEntityFormat> | WPKMatchingPathVec3<TEntityFormat> | WPKMatchingPathVec4<TEntityFormat>): WPKDatumExtractor<TEntityFormat, number[]> => {
+const ofNumberArray = <T>(path: WPKMatchingPathVec2<T> | WPKMatchingPathVec3<T> | WPKMatchingPathVec4<T>): WPKDatumExtractor<T, number[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating vec direct extractor from path '${path}'`);
   const refPath = toRefPath(path);
   return (instance) => {
@@ -67,7 +43,7 @@ const ofVecDirect = <TEntityFormat extends WPKInstanceFormat>(path: WPKMatchingP
     throw Error(`Value ${JSON.stringify(value)} at path ${refPath} is not an array`);
   };
 };
-const ofVecSplit = <TEntityFormat extends WPKInstanceFormat>(paths: WPKMatchingPathNumber<TEntityFormat>[]): WPKDatumExtractor<TEntityFormat, number[]> => {
+const ofPathArray = <T>(paths: WPKMatchingPathNumber<T>[]): WPKDatumExtractor<T, number[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating vec split extractor from path '${JSON.stringify(paths)}'`);
   const refPaths = paths.map(toRefPath);
   return (instance) => {
@@ -76,7 +52,7 @@ const ofVecSplit = <TEntityFormat extends WPKInstanceFormat>(paths: WPKMatchingP
     return values;
   };
 };
-const ofString = <TEntityFormat extends WPKInstanceFormat>(path: string): WPKDatumExtractor<TEntityFormat, string> => {
+const ofString = <T>(path: string): WPKDatumExtractor<T, string> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating string extractor from path '${path}'`);
   const refPath = toRefPath(path);
   return (instance) => {
@@ -114,7 +90,7 @@ const valueAtPath = (input: any, refPath: WPKRefPath, pathIndex: number): unknow
   }
   throw Error(`Cannot index using non-integer or string field ${indexValue}. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
 };
-const valueOnInstanceAtPathOfType = <TEntityFormat extends WPKInstanceFormat, TType extends keyof WPKPrimitiveMap>(instance: WPKInstanceOf<TEntityFormat>, refPath: WPKRefPath, type: TType): WPKPrimitiveMap[TType] => {
+const valueOnInstanceAtPathOfType = <T, TType extends keyof WPKPrimitiveMap>(instance: T, refPath: WPKRefPath, type: TType): WPKPrimitiveMap[TType] => {
   const value = valueAtPath(instance, refPath, 0);
   if (typeof value === type) {
     return value as WPKPrimitiveMap[TType];

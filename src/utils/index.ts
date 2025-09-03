@@ -9,7 +9,6 @@ export * from './log-factory';
 export * from './map';
 export * from './math';
 export * from './OneOrBoth';
-export * from './packed-cache';
 export * from './random';
 export * from './record';
 export * from './set';

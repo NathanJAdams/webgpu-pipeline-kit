@@ -1,155 +1,31 @@
-import { WPKInstanceFormat, WPKInstanceOf } from './instance';
-import { WPKMatchingPath } from './matching-path';
-import { NonEmptyArray } from './utils';
+import { WPKBufferFormatElement, WPKBufferFormatElementEntityIndex, WPKBufferFormatElementMatrix, WPKBufferFormatElementScalar, WPKBufferFormatElementVector, WPKBufferFormatMap, WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderVectorUntyped } from './types';
 
-type WPKPrimitive8 = 'sint8' | 'snorm8' | 'uint8' | 'unorm8';
-type WPKPrimitive16 = 'sint16' | 'snorm16' | 'uint16' | 'unorm16' | 'float16';
-type WPKPrimitive32 = 'sint32' | 'uint32' | 'float32';
-type WPKPrimitiveSignedInt = 'sint8' | 'sint16' | 'sint32';
-type WPKPrimitiveUnsignedInt = 'uint8' | 'uint16' | 'uint32';
-export type WPKPrimitive = WPKPrimitive8 | WPKPrimitive16 | WPKPrimitive32;
-
-export type WPKMatchingPathBoolean<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, boolean>;
-export type WPKMatchingPathNumber<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, number>;
-export type WPKMatchingPathString<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, string>;
-export type WPKMatchingPathVec2<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, [number, number]>;
-export type WPKMatchingPathVec3<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, [number, number, number]>;
-export type WPKMatchingPathVec4<TFormat extends WPKInstanceFormat> = WPKMatchingPath<WPKInstanceOf<TFormat>, [number, number, number, number]>;
-
-type WPKDatumType<TDatumType = WPKPrimitive> = {
-  datumType: TDatumType;
-};
-
-type WPKLayoutTypes<TDimension, TDatumType = WPKPrimitive> = WPKDatumType<TDatumType> & {
-  dimension: TDimension;
-};
-type WPKLayoutBoolean = WPKLayoutTypes<'boolean'>;
-type WPKLayoutNumber = WPKLayoutTypes<'number'>;
-type WPKLayoutVec2 = WPKLayoutTypes<'vec2'>;
-type WPKLayoutVec3 = WPKLayoutTypes<'vec3', WPKPrimitive32>;
-type WPKLayoutVec4 = WPKLayoutTypes<'vec4'>;
-export type WPKLayout = WPKLayoutBoolean | WPKLayoutNumber | WPKLayoutVec2 | WPKLayoutVec3 | WPKLayoutVec4;
-
-type WPKPathBoolean<TFormat extends WPKInstanceFormat> = WPKMatchingPathBoolean<TFormat>;
-type WPKPathNumber<TFormat extends WPKInstanceFormat> = WPKMatchingPathNumber<TFormat>;
-type WPKPathVec2<TFormat extends WPKInstanceFormat> =
-  | WPKMatchingPathVec2<TFormat>
-  | [
-    WPKMatchingPathNumber<TFormat>,
-    WPKMatchingPathNumber<TFormat>,
-  ];
-type WPKPathVec3<TFormat extends WPKInstanceFormat> =
-  | WPKMatchingPathVec3<TFormat>
-  | [
-    WPKMatchingPathNumber<TFormat>,
-    WPKMatchingPathNumber<TFormat>,
-    WPKMatchingPathNumber<TFormat>,
-  ];
-type WPKPathVec4<TFormat extends WPKInstanceFormat> =
-  | WPKMatchingPathVec4<TFormat>
-  | [
-    WPKMatchingPathNumber<TFormat>,
-    WPKMatchingPathNumber<TFormat>,
-    WPKMatchingPathNumber<TFormat>,
-    WPKMatchingPathNumber<TFormat>,
-  ];
-
-export type WPKUserFormatBoolean<TFormat extends WPKInstanceFormat> = WPKDatumType<WPKPrimitiveUnsignedInt> & {
-  boolean: WPKPathBoolean<TFormat>;
-};
-export type WPKUserFormatNumber<TFormat extends WPKInstanceFormat> = WPKDatumType & {
-  number: WPKPathNumber<TFormat>;
-};
-export type WPKUserFormatVec2<TFormat extends WPKInstanceFormat> = WPKDatumType & {
-  vec2: WPKPathVec2<TFormat>;
-};
-export type WPKUserFormatVec3<TFormat extends WPKInstanceFormat> = WPKDatumType<WPKPrimitive32> & {
-  vec3: WPKPathVec3<TFormat>;
-};
-export type WPKUserFormatVec4<TFormat extends WPKInstanceFormat> = WPKDatumType & {
-  vec4: WPKPathVec4<TFormat>;
-};
-export type WPKUserFormatEntityIndex<TEntityFormat extends WPKInstanceFormat> = WPKDatumType<WPKPrimitiveSignedInt> & {
-  entityIdKey: WPKMatchingPathString<TEntityFormat>;
-};
-export type WPKUserFormat<TFormat extends WPKInstanceFormat, TIsEntity extends boolean> =
-  | WPKUserFormatBoolean<TFormat>
-  | WPKUserFormatNumber<TFormat>
-  | WPKUserFormatVec2<TFormat>
-  | WPKUserFormatVec3<TFormat>
-  | WPKUserFormatVec4<TFormat>
-  | (
-    TIsEntity extends true
-    ? WPKUserFormatEntityIndex<TFormat>
-    : never
-  );
-export type WPKUserFormatRef<TFormat extends WPKInstanceFormat> = {
-  datumCount: number;
-  valuesOf: (instance: WPKInstanceOf<TFormat>) => number | number[];
-};
-
-export type WPKBufferType = 'uniform' | 'entity';
-export type WPKContentType = 'layout' | 'marshalled';
-export type WPKBufferTypes<TBufferType extends WPKBufferType, TContentType extends WPKContentType> = {
-  bufferType: TBufferType;
-  contentType: TContentType;
-};
-
-export type WPKFormatLayout = NonEmptyArray<WPKLayout>;
-export type WPKFormatMarshall<TEntityFormat extends WPKInstanceFormat, TIsEntity extends boolean> = NonEmptyArray<WPKUserFormat<TEntityFormat, TIsEntity>>;
-
-type WPKBufferDetailLayout = {
-  layout: WPKFormatLayout;
-};
-type WPKBufferDetailMarshall<TEntityFormat extends WPKInstanceFormat, TIsEntity extends boolean> = {
-  marshall: WPKFormatMarshall<TEntityFormat, TIsEntity>;
-};
-
-type WPKBufferFormatUniform<TUniformFormat extends WPKInstanceFormat> = WPKBufferTypes<'uniform', 'marshalled'> & WPKBufferDetailMarshall<TUniformFormat, false>;
-type WPKBufferFormatEntityLayout = WPKBufferTypes<'entity', 'layout'> & WPKBufferDetailLayout;
-type WPKBufferFormatEntityMarshalled<TEntityFormat extends WPKInstanceFormat> = WPKBufferTypes<'entity', 'marshalled'> & WPKBufferDetailMarshall<TEntityFormat, true>;
-type WPKBufferFormatEntity<TEntityFormat extends WPKInstanceFormat> = WPKBufferFormatEntityLayout | WPKBufferFormatEntityMarshalled<TEntityFormat>;
-type WPKBufferFormat<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat> =
-  | WPKBufferFormatUniform<TUniformFormat>
-  | WPKBufferFormatEntity<TEntityFormat>;
-export type WPKBufferFormatMapEntity<TEntityFormat extends WPKInstanceFormat> = Record<string, WPKBufferFormatEntity<TEntityFormat>>;
-export type WPKBufferFormatMap<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat> = Record<string, WPKBufferFormat<TUniformFormat, TEntityFormat>>;
-export type WPKBufferFormatKeyEntity<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> =
-  & string
-  & {
-    [K in keyof TBufferFormats]: TBufferFormats[K] extends WPKBufferFormatEntity<TEntityFormat> ? K : never
-  }[keyof TBufferFormats];
-export type WPKBufferFormatKey<TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMap<TUniformFormat, TEntityFormat>> = string & (keyof TBufferFormats);
-
-export const isUserFormatBoolean = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatBoolean<TEntityFormat> => (userFormat as WPKUserFormatBoolean<any>).boolean !== undefined;
-export const isUserFormatNumber = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatNumber<TEntityFormat> => (userFormat as WPKUserFormatNumber<any>).number !== undefined;
-export const isUserFormatVec2 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec2<TEntityFormat> => (userFormat as WPKUserFormatVec2<any>).vec2 !== undefined;
-export const isUserFormatVec3 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec3<TEntityFormat> => (userFormat as WPKUserFormatVec3<any>).vec3 !== undefined;
-export const isUserFormatVec4 = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatVec4<TEntityFormat> => (userFormat as WPKUserFormatVec4<any>).vec4 !== undefined;
-export const isUserFormatEntityIndex = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): userFormat is WPKUserFormatEntityIndex<TEntityFormat> => (userFormat as WPKUserFormatEntityIndex<TEntityFormat>).entityIdKey !== undefined;
-
-export const toDatumCount = <TEntityFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TEntityFormat, any>): number => {
-  if (isUserFormatBoolean(userFormat)) { return 1; }
-  if (isUserFormatNumber(userFormat)) { return 1; }
-  if (isUserFormatEntityIndex(userFormat)) { return 1; }
-  if (isUserFormatVec2(userFormat)) { return 2; }
-  if (isUserFormatVec3(userFormat)) { return 3; }
-  if (isUserFormatVec4(userFormat)) { return 4; }
-  throw Error(`Cannot calculate datum count from user format ${JSON.stringify(userFormat)}`);
-};
-export const findUserFormatEntityIndexes = <TEntityFormat extends WPKInstanceFormat>(bufferFormatMap: WPKBufferFormatMap<any, TEntityFormat>): WPKUserFormatEntityIndex<TEntityFormat>[] => {
-  const userFormatEntityIndexes: WPKUserFormatEntityIndex<TEntityFormat>[] = [];
-  const paths = new Set<string>();
-  for (const bufferFormat of Object.values(bufferFormatMap)) {
-    if (bufferFormat.bufferType === 'entity' && bufferFormat.contentType === 'marshalled') {
-      for (const userFormat of bufferFormat.marshall) {
-        if (isUserFormatEntityIndex(userFormat)) {
-          if (!paths.has(userFormat.entityIdKey)) {
-            userFormatEntityIndexes.push(userFormat);
+export const bufferFormatFuncs = {
+  isEntityIndex: <T>(format: WPKBufferFormatElement<T>): format is WPKBufferFormatElementEntityIndex<T> => (format as WPKBufferFormatElementEntityIndex<T>).entityIdKey !== undefined,
+  isScalar: <T>(format: WPKBufferFormatElement<T>): format is WPKBufferFormatElementScalar<any, any> => {
+    return (format as WPKBufferFormatElementScalar<any, any>).scalar !== undefined;
+  },
+  isVector: <T, TComponentType extends WPKShaderScalar>(format: WPKBufferFormatElement<T>): format is WPKBufferFormatElementVector<WPKShaderVectorUntyped, TComponentType, any> => {
+    const casted = format as WPKBufferFormatElementVector<WPKShaderVectorUntyped, WPKShaderScalar, any>;
+    return (casted.vector !== undefined);
+  },
+  isMatrix: <T>(format: WPKBufferFormatElement<T>): format is WPKBufferFormatElementMatrix<WPKShaderMatrixUntyped, any> => {
+    return (format as WPKBufferFormatElementMatrix<WPKShaderMatrixUntyped, any>).matrix !== undefined;
+  },
+  findFormatEntityIndexes: <TEntity>(bufferFormatMap: WPKBufferFormatMap<any, TEntity>): WPKBufferFormatElementEntityIndex<TEntity>[] => {
+    const userFormatEntityIndexes: WPKBufferFormatElementEntityIndex<TEntity>[] = [];
+    const paths = new Set<string>();
+    for (const bufferFormat of Object.values(bufferFormatMap)) {
+      if (bufferFormat.bufferType === 'marshalled') {
+        for (const userFormat of bufferFormat.marshall) {
+          if (bufferFormatFuncs.isEntityIndex(userFormat)) {
+            if (!paths.has(userFormat.entityIdKey)) {
+              userFormatEntityIndexes.push(userFormat);
+            }
           }
         }
       }
     }
-  }
-  return userFormatEntityIndexes;
+    return userFormatEntityIndexes;
+  },
 };

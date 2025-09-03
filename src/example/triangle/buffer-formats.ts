@@ -1,24 +1,30 @@
-import { WPKBufferFormatMap } from 'webgpu-pipeline-kit';
+import { builders } from '../..';
+import { Triangle, TriangleUniform } from './instance-formats';
 
-import { EntityFormat, UniformFormat } from './instance-formats';
+const uniforms = builders.bufferFormat<TriangleUniform, Triangle>()
+  .bufferType('uniform')
+  .marshallArray()
+  .index0Object()
+  .name('gameTime')
+  .datumType('f32')
+  .scalar('gameTime')
+  .buildIndex0()
+  .buildMarshall()
+  .buildObject();
+
+const offsets = builders.bufferFormat<TriangleUniform, Triangle>()
+  .bufferType('editable')
+  .layoutArray()
+  .index0Object()
+  .name('offset')
+  .datumType('vec2<f32>')
+  .buildIndex0()
+  .buildLayout()
+  .buildObject();
 
 export const bufferFormats = {
-  uniforms: {
-    bufferType: 'uniform',
-    contentType: 'marshalled',
-    marshall: [{
-      datumType: 'float32',
-      number: 'gameTime',
-    }],
-  },
-  offsets: {
-    bufferType: 'entity',
-    contentType: 'layout',
-    layout: [{
-      datumType: 'float32',
-      dimension: 'vec2',
-    }],
-  },
-} as const satisfies WPKBufferFormatMap<UniformFormat, EntityFormat>;
+  uniforms,
+  offsets,
+} as const;
 
 export type BufferFormats = typeof bufferFormats;

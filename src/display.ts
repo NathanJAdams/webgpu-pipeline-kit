@@ -1,29 +1,8 @@
 import { logFactory } from './logging';
-import { WPKPipeline, WPKPipelineDetailOptions } from './pipeline';
 import { pipelineFuncs } from './pipeline-utils';
-import { Color, logFuncs } from './utils';
-import { viewsFuncFactory } from './views';
-
-export type WPKDisplayAddPipelineOptionsAddBefore = {
-  before: string;
-};
-export type WPKDisplayAddPipelineOptionsAddAfter = {
-  after: string;
-};
-export type WPKDisplayAddPipelineOptions =
-  | WPKDisplayAddPipelineOptionsAddBefore
-  | WPKDisplayAddPipelineOptionsAddAfter;
-
-export type WPKDisplayOptions = {
-  clear: Color;
-  isAntiAliased: boolean;
-};
-
-export type WPKDisplay = {
-  add: (pipeline: WPKPipeline<any, any, any, any, any>, options?: WPKDisplayAddPipelineOptions) => void;
-  remove: (name: string) => void;
-  display: (options: WPKDisplayOptions) => Promise<void>;
-};
+import { WPKPipeline, WPKPipelineDetailOptions, WPKViews, WPKViewsFunc } from './types';
+import { WPKDisplay, WPKDisplayAddPipelineOptions, WPKDisplayAddPipelineOptionsAddAfter, WPKDisplayAddPipelineOptionsAddBefore } from './types';
+import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
 
@@ -44,7 +23,7 @@ export const displayFactory = {
       device,
       format,
     });
-    const getViews = viewsFuncFactory.of(canvas, context, device, format);
+    const getViews = createViewsFunc(canvas, context, device, format);
     return {
       add(pipeline, options) {
         const { name } = pipeline;
@@ -95,15 +74,14 @@ export const displayFactory = {
             const computePass = encoder.beginComputePass();
             for (const [computeEntryIndex, computeEntry] of compute.entries()) {
               logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}]`);
-              const { bindGroups, pipeline, workGroupSizeFunc } = computeEntry;
-              const workGroupSize = workGroupSizeFunc();
+              const { bindGroups, pipeline, dispatchSize } = computeEntry;
               computePass.setPipeline(pipeline);
               for (const bindGroup of bindGroups) {
                 logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] set bind group ${JSON.stringify(bindGroup)}`);
                 computePass.setBindGroup(bindGroup.index, bindGroup.group);
               }
-              logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch work group ${JSON.stringify(workGroupSize)}`);
-              computePass.dispatchWorkgroups(workGroupSize.x, workGroupSize.y, workGroupSize.z);
+              logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch size ${JSON.stringify(dispatchSize)}`);
+              computePass.dispatchWorkgroups(dispatchSize[0], dispatchSize[1], dispatchSize[2]);
             }
             computePass.end();
           }
@@ -147,6 +125,53 @@ export const displayFactory = {
   },
 };
 
+const createViewsFunc = (canvas: HTMLCanvasElement, context: GPUCanvasContext, device: GPUDevice, format: GPUTextureFormat): WPKViewsFunc => {
+  let antiAliasingTexture: GPUTexture | undefined;
+  return (isAntiAliased: boolean): WPKViews => {
+    const contextView = context.getCurrentTexture().createView();
+    if (isAntiAliased) {
+      antiAliasingTexture = getOrCreateAntiAliasingTexture(canvas, device, format, antiAliasingTexture);
+      const resolveTarget = contextView;
+      const view = antiAliasingTexture.createView();
+      return {
+        resolveTarget,
+        view,
+      };
+    } else {
+      const view = contextView;
+      return {
+        view,
+      };
+    }
+  };
+};
+
+const getOrCreateAntiAliasingTexture = (
+  canvas: HTMLCanvasElement,
+  device: GPUDevice,
+  format: GPUTextureFormat,
+  previousAntiAliasingTexture: GPUTexture | undefined,
+): GPUTexture => {
+  const { width, height } = canvas;
+  if (previousAntiAliasingTexture !== undefined) {
+    if (previousAntiAliasingTexture.width === width && previousAntiAliasingTexture.height === height) {
+      return previousAntiAliasingTexture;
+    }
+    previousAntiAliasingTexture.destroy();
+    previousAntiAliasingTexture = undefined;
+  }
+  const sampleCount = pipelineFuncs.toSampleCount(true);
+  const size = [width, height];
+  const usage = GPUTextureUsage.RENDER_ATTACHMENT;
+  const descriptor: GPUTextureDescriptor = {
+    format,
+    sampleCount,
+    size,
+    usage,
+  };
+  return device.createTexture(descriptor);
+};
+
 const toInsertIndex = (pipelines: WPKPipeline<any, any, any, any, any>[], options?: WPKDisplayAddPipelineOptions): number => {
   if (isOptionsAddBefore(options)) {
     return toInsertIndexFromName(pipelines, options.before, false);
@@ -165,5 +190,3 @@ const toInsertIndexFromName = (pipelines: WPKPipeline<any, any, any, any, any>[]
 };
 
 const toIndexFromName = (pipelines: WPKPipeline<any, any, any, any, any>[], name: string): number => pipelines.findIndex((pipeline) => pipeline.name === name);
-
-

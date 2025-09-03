@@ -1,18 +1,6 @@
 import { logFactory } from './logging';
-import { WPKResource } from './resources';
+import { WPKBufferMutable, WPKBufferResizeable, WPKMutatedData, WPKResource, WPKTrackedBuffer } from './types';
 import { Capacity, CopySlice, logFuncs, mathFuncs, ValueSlices } from './utils';
-
-enum WPKManagedBufferState {
-  Initialized,
-  New,
-  Reused,
-  Destroyed,
-}
-
-type WPKMutatedData = {
-  data: ArrayBuffer;
-  index: number;
-};
 
 const MINIMUM_BYTES_LENGTH = 16;
 const VALID_BYTES_MULTIPLE = 4;
@@ -33,18 +21,12 @@ const toValidSize = (label: string, bytesLength: number): number => {
   return validSize;
 };
 
-type WPKBufferMutable<T> = {
-  mutate: (data: ArrayBuffer, target: T) => void;
-};
-type WPKBufferResizeable = {
-  resize: (bytesLength: number) => void;
-};
-
-export type WPKTrackedBuffer = {
-  isNew: boolean;
-  buffer: GPUBuffer;
-  destroy: () => void;
-};
+enum WPKManagedBufferState {
+  Initialized,
+  New,
+  Reused,
+  Destroyed,
+}
 
 export const bufferFactory = {
   ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
@@ -203,7 +185,7 @@ export const bufferFactory = {
     const mutatedDataArray: WPKMutatedData[] = [];
     return {
       mutate(data, index) {
-        LOGGER.info(`Mutating data for mutable buffer ${label}`);
+        logFuncs.lazyInfo(LOGGER, () => `Mutating data for mutable buffer ${label}`);
         mutatedDataArray.push({ data, index });
       },
       get(device, queue, _encoder) {
@@ -253,7 +235,7 @@ export const bufferFactory = {
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
       mutate(data, target) {
-        LOGGER.info(`Mutating data for staged buffer ${label}`);
+        logFuncs.lazyInfo(LOGGER, () => `Mutating data for staged buffer ${label}`);
         mutatedSlices = {
           values: data,
           copySlices: target,

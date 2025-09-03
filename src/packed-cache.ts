@@ -1,27 +1,8 @@
-import { BidiMap } from './BidiMap';
-import { Random, randomFactory } from './random';
-import { setFuncs } from './set';
-import { sliceFuncs, ValueSlices } from './slice';
+import { logFactory } from './logging';
+import { IdGetter, PackedCache } from './types';
+import { BidiMap, logFuncs, Random, randomFactory, setFuncs, sliceFuncs } from './utils';
 
-export type IdGetter<T> = (element: T) => string;
-
-export type PackedCache<T, TMutable extends boolean> =
-  & {
-    isMutable: () => boolean;
-    isDirty: () => boolean;
-    count: () => number;
-    add: (instance: T) => string;
-    remove: (id: string) => void;
-    indexOf: (id: string) => number;
-    pack: () => ValueSlices<T[]>;
-  }
-  & (
-    TMutable extends true
-    ? {
-      mutate: (id: string, instance: T) => void;
-    }
-    : object
-  );
+const LOGGER = logFactory.getLogger('cache');
 
 export const packedCacheFactory = {
   of: <T, TMutable extends boolean>(
@@ -82,7 +63,7 @@ export const packedCacheFactory = {
                   .filter(entityId => !removed.has(entityId) && (added.has(entityId) || backing.has(entityId)))
               );
               if (setFuncs.equals(previousEntityIds, newEntityIds)) {
-                console.log(`Entity ids for ${id} are the same`);
+                logFuncs.lazyDebug(LOGGER, () => `Entity ids for ${id} are the same`);
               } else {
                 entityIdReferences.set(id, newEntityIds);
                 // mutated - remove previous links
@@ -210,7 +191,7 @@ export const packedCacheFactory = {
               if (movedId === undefined) {
                 throw Error(`Unable to replace with index ${movedIndex} no id found`);
               } else {
-                console.log(`Replacing entity at index ${replacedIndex} with ${movedId} moved from index ${movedIndex}`);
+                logFuncs.lazyDebug(LOGGER, () => `Replacing entity at index ${replacedIndex} with ${movedId} moved from index ${movedIndex}`);
                 changing.set(movedId, replacedIndex);
                 if (idGetters.length > 0) {
                   const referencedBy = entityIdsReferencedBy.get(movedId);
@@ -222,7 +203,7 @@ export const packedCacheFactory = {
                       if (referencingInstance === undefined) {
                         throw Error(`Unable to update referencing entity ${referencingId} no instance found`);
                       } else {
-                        console.log(`Ensuring entity referencing entity ${referencingId} is updated`);
+                        logFuncs.lazyDebug(LOGGER, () => `Ensuring entity referencing entity ${referencingId} is updated`);
                         mutated.set(referencingId, referencingInstance);
                       }
                     }
@@ -271,17 +252,17 @@ export const packedCacheFactory = {
         added.clear();
         removed.clear();
         mutated.clear();
-        console.log(`Calculated entity cache changes ${JSON.stringify(command)}`);
+        logFuncs.lazyDebug(LOGGER, () => `Calculated entity cache changes ${JSON.stringify(command)}`);
         return command;
       },
       add(entity) {
         const id = random.uuidV4Like();
-        console.log(`Add element with id ${id}`);
+        logFuncs.lazyDebug(LOGGER, () => `Add element with id ${id}`);
         added.set(id, entity);
         return id;
       },
       remove(id) {
-        console.log(`Remove element with id ${id}`);
+        logFuncs.lazyDebug(LOGGER, () => `Remove element with id ${id}`);
         if (backing.has(id)) {
           mutated.delete(id);
           removed.add(id);
@@ -296,15 +277,15 @@ export const packedCacheFactory = {
         const validIndex = (index === undefined)
           ? -1
           : index;
-        console.log(`Index of id ${id} is ${validIndex}`);
+        logFuncs.lazyDebug(LOGGER, () => `Index of id ${id} is ${validIndex}`);
         return validIndex;
       },
     };
     if (mutable) {
-      console.log('Making packed cache mutable');
+      logFuncs.lazyDebug(LOGGER, () => 'Making packed cache mutable');
       const typedCache = packedCache as PackedCache<T, true>;
       typedCache.mutate = (id, instance) => {
-        console.log(`Mutating instance with id ${id}`);
+        logFuncs.lazyDebug(LOGGER, () => `Mutating instance with id ${id}`);
         if (removed.has(id)) {
           throw Error(`Cannot mutate instance ${id} after it has been removed`);
         } else {

@@ -1,15 +1,11 @@
-import { WPKTrackedBuffer } from './buffer-factory';
-import { WPKBufferFormatKey, WPKBufferFormatMapEntity, WPKLayout, WPKUserFormat } from './buffer-formats';
-import { WPKMeshBufferResource } from './buffer-resources';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKComputePipelineDetail, WPKDrawCounts, WPKRenderPipelineDetail, WPKShaderModuleDetail, WPKVertexBufferDetail } from './detail-types';
-import { WPKInstanceFormat } from './instance';
+import { bufferResourcesFactory } from './buffer-resources';
 import { logFactory } from './logging';
-import { meshFuncs, WPKMesh } from './meshes';
-import { pipelineFuncs, WPKWorkGroupSize } from './pipeline-utils';
-import { resourceFactory, WPKResource } from './resources';
-import { WPKBufferLocationMesh, WPKBufferLocationUserDefined } from './shaders';
-import { strideFuncs } from './strides';
-import { logFuncs, NonEmptyArray } from './utils';
+import { meshFuncs } from './mesh-factories';
+import { pipelineFuncs } from './pipeline-utils';
+import { resourceFactory } from './resources';
+import { DISPATCH_MARSHALLER } from './shader-reserved';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferDetail } from './types';
+import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
 
@@ -76,7 +72,7 @@ export const pipelineResourceFactory = {
 
   // bind groups
   ofBindGroupEntry: (
-    binding: number,
+    binding: WPKBindingIndex,
     bufferResource: WPKResource<WPKTrackedBuffer>
   ): WPKResource<GPUBindGroupEntry> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating bind group entry resource binding ${binding}`);
@@ -95,7 +91,7 @@ export const pipelineResourceFactory = {
   },
   ofBindGroup: (
     name: string,
-    group: number,
+    group: WPKGroupIndex,
     bindGroupLayoutResource: WPKResource<GPUBindGroupLayout>,
     bindGroupEntriesResource: WPKResource<GPUBindGroupEntry[]>
   ): WPKResource<GPUBindGroup> => {
@@ -114,17 +110,17 @@ export const pipelineResourceFactory = {
     );
   },
   ofBindGroupDetail: (
-    index: number,
+    group: WPKGroupIndex,
     bindGroupResource: WPKResource<GPUBindGroup>,
   ): WPKResource<WPKBindGroupDetail> => {
-    logFuncs.lazyDebug(LOGGER, () => `Creating bind group detail resource index ${index}`);
+    logFuncs.lazyDebug(LOGGER, () => `Creating bind group detail group index ${group}`);
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupResource],
       (device, queue, encoder, values) => {
-        logFuncs.lazyTrace(LOGGER, () => `Creating bind group detail index ${index}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating bind group detail group index ${group}`);
         return {
           group: values[0],
-          index,
+          index: group,
         };
       },
     );
@@ -158,88 +154,58 @@ export const pipelineResourceFactory = {
   ofComputeDetail: (
     bindGroupsResource: WPKResource<WPKBindGroupsDetail>,
     computePipelineResource: WPKResource<GPUComputePipeline>,
-    workGroupSizeFunc: () => WPKWorkGroupSize
+    dispatchSizeResource: WPKResource<WPKDispatchSize>,
   ): WPKResource<WPKComputePipelineDetail> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating compute detail resource');
     return resourceFactory.ofCachedFromDependencies(
-      [bindGroupsResource, computePipelineResource] as const,
+      [bindGroupsResource, computePipelineResource, dispatchSizeResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating compute detail');
         return {
           bindGroups: values[0],
           pipeline: values[1],
-          workGroupSizeFunc,
+          dispatchSize: values[2],
         };
       },
     );
   },
+  ofDispatchSize: (
+    name: string,
+    dispatchParamsFunc: () => WPKDispatchParams,
+  ): WPKResource<WPKDispatchSize> => {
+    logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch buffer resource');
+    const dispatchBufferResource = bufferResourcesFactory.ofDispatch(name);
+    let previousInstanceCount = 0;
+    return {
+      get(device, queue, encoder) {
+        const dispatchParams = dispatchParamsFunc();
+        const { instanceCount } = dispatchParams;
+        if (previousInstanceCount !== instanceCount) {
+          previousInstanceCount = instanceCount;
+          const data = DISPATCH_MARSHALLER.encode([dispatchParams]);
+          dispatchBufferResource.mutate(data, 0);
+          // pull data through to buffer
+          dispatchBufferResource.get(device, queue, encoder);
+        }
+        return dispatchParams.dispatchSize;
+      },
+    };
+  },
 
   // render
   ofVertexBufferDetailMesh: (
-    meshBufferLocation: WPKBufferLocationMesh,
+    meshBufferLocation: number,
     meshBufferResource: WPKMeshBufferResource
   ): WPKResource<WPKVertexBufferDetail> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from mesh');
-    const { format, location, step } = meshBufferLocation;
+    const format: GPUVertexFormat = 'float32x3';
     const arrayStride = pipelineFuncs.toByteLength(format);
     const attributes: GPUVertexAttribute[] = [{
       format,
       offset: 0,
-      shaderLocation: location,
+      shaderLocation: meshBufferLocation,
     }];
-    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, meshBufferResource.vertices);
-  },
-  ofVertexBufferDetailBufferLocation: <TUniformFormat extends WPKInstanceFormat, TEntityFormat extends WPKInstanceFormat, TBufferFormats extends WPKBufferFormatMapEntity<TEntityFormat>,>(
-    bufferLocation: WPKBufferLocationUserDefined<TUniformFormat, TEntityFormat, TBufferFormats>,
-    bufferFormats: TBufferFormats,
-    trackedBufferResources: Record<WPKBufferFormatKey<TUniformFormat, TEntityFormat, TBufferFormats>, WPKResource<WPKTrackedBuffer>>
-  ): WPKResource<WPKVertexBufferDetail> => {
-    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from buffer location');
-    const { buffer, location, step } = bufferLocation;
-    const bufferFormat = bufferFormats[buffer];
-    const bufferResource = trackedBufferResources[buffer];
-    const { contentType } = bufferFormat;
-    const arrayStride = (contentType === 'layout')
-      ? strideFuncs.ofFormatLayout(bufferFormat.layout)
-      : strideFuncs.ofFormatMarshall(bufferFormat.marshall);
-    const attributes = (contentType === 'layout')
-      ? pipelineResourceFactory.ofVertexAttributes(location, bufferFormat.layout, pipelineResourceFactory.ofVertexFormatLayout, strideFuncs.ofLayout)
-      : pipelineResourceFactory.ofVertexAttributes(location, bufferFormat.marshall, pipelineResourceFactory.ofVertexFormatUserFormat, strideFuncs.ofUserFormat);
-    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, location, step, bufferResource);
-  },
-  ofVertexAttributes: <T>(shaderLocation: number, array: NonEmptyArray<T>, toFormat: (element: T) => GPUVertexFormat, toStride: (element: T) => number): GPUVertexAttribute[] => {
-    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex attributes');
-    let offset = 0;
-    return array.map((element): GPUVertexAttribute => {
-      const format = toFormat(element);
-      const stride = toStride(element);
-      const attribute: GPUVertexAttribute = {
-        format,
-        offset,
-        shaderLocation,
-      };
-      offset += stride;
-      return attribute;
-    });
-  },
-  ofVertexFormatLayout: (layout: WPKLayout): GPUVertexFormat => {
-    logFuncs.lazyDebug(LOGGER, () => `Calculating vertex format from layout ${JSON.stringify(layout)}`);
-    const { datumType, dimension } = layout;
-    switch (dimension) {
-      case 'boolean': return datumType;
-      case 'number': return datumType;
-      case 'vec2': return `${datumType}x2`;
-      case 'vec3': return `${datumType}x3`;
-      case 'vec4': return `${datumType}x4`;
-    }
-  },
-  ofVertexFormatUserFormat: <TFormat extends WPKInstanceFormat>(userFormat: WPKUserFormat<TFormat, any>): GPUVertexFormat => {
-    logFuncs.lazyDebug(LOGGER, () => `Calculating vertex format from user format ${JSON.stringify(userFormat)}`);
-    const { datumType } = userFormat;
-    const dimensionMultiple = strideFuncs.dimensionMultipleOfUserFormat(userFormat);
-    return (dimensionMultiple === 1)
-      ? datumType
-      : `${datumType}x${dimensionMultiple}` as GPUVertexFormat;
+    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, meshBufferLocation, 'vertex', meshBufferResource.vertices);
   },
   ofVertexBufferDetail: (
     arrayStride: number,

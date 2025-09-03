@@ -1,11 +1,6 @@
 import { logFactory } from './logging';
+import { WPKDispatchParams, WPKDispatchSize, WPKWorkGroupSize } from './types';
 import { logFuncs } from './utils';
-
-export type WPKWorkGroupSize = {
-  x: number;
-  y?: number;
-  z?: number;
-};
 
 const LOGGER = logFactory.getLogger('pipeline');
 
@@ -65,16 +60,15 @@ export const pipelineFuncs = {
     return totalByteLength;
   },
   toSampleCount: (isAntiAliased: boolean): number => isAntiAliased ? 4 : 1,
-  toWorkGroupSize: (size: WPKWorkGroupSize, instanceCount: number): WPKWorkGroupSize => {
+  toDispatchParams: (size: WPKWorkGroupSize, instanceCount: number): WPKDispatchParams => {
     const totalThreads = size.x * (size.y || 1) * (size.z || 1);
     const x = Math.ceil(instanceCount / totalThreads);
-    const workGroupSize: WPKWorkGroupSize = {
-      x,
-      y: 1,
-      z: 1,
+    const dispatchSize: WPKDispatchSize = [x, 1, 1]; // TODO test with y and z
+    logFuncs.lazyTrace(LOGGER, () => `Calculated dispatch size from ${JSON.stringify(size)} and instance count ${instanceCount} is ${JSON.stringify(dispatchSize)}`);
+    return {
+      dispatchSize,
+      instanceCount,
     };
-    logFuncs.lazyTrace(LOGGER, () => `Calculated work group size from ${JSON.stringify(size)} and instance count ${instanceCount} is ${JSON.stringify(workGroupSize)}`);
-    return workGroupSize;
   },
   getContext: (canvas: HTMLCanvasElement): GPUCanvasContext => {
     logFuncs.lazyTrace(LOGGER, () => 'Get webgpu context from canvas');

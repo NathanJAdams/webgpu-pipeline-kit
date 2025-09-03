@@ -1,25 +1,19 @@
-import { WPKFormatMarshall } from './buffer-formats';
-import { WPKEntityCache } from './cache';
-import { datumBridgeFactory, WPKDatumBridge } from './datum-bridge';
-import { WPKInstanceFormat, WPKInstanceOf } from './instance';
+import { datumBridgeFactory } from './datum-bridge';
 import { logFactory } from './logging';
+import { WPKBufferFormatMarshalled, WPKDatumBridge, WPKEntityCache, WPKMarshaller } from './types';
 import { logFuncs } from './utils';
-
-type WPKDatumBatchEncoder<TFormat extends WPKInstanceFormat> = {
-  encode: (instances: WPKInstanceOf<TFormat>[]) => ArrayBuffer;
-};
 
 const LOGGER = logFactory.getLogger('data');
 
-export const datumBatchEncoderFactory = {
-  of: <TFormat extends WPKInstanceFormat>(marshallFormats: WPKFormatMarshall<TFormat, any>, entityCache?: WPKEntityCache<TFormat, any, any>): WPKDatumBatchEncoder<TFormat> => {
+export const marshallerFactory = {
+  ofMarshalled: <T>(bufferFormatMarshalled: WPKBufferFormatMarshalled<T, any, any>, entityCache?: WPKEntityCache<T, any, any>): WPKMarshaller<T> => {
     logFuncs.lazyDebug(LOGGER, () => 'Create data extractor');
     let totalStride = 0;
-    const datumBridges: WPKDatumBridge<TFormat>[] = [];
-    for (const userFormat of marshallFormats) {
-      logFuncs.lazyTrace(LOGGER, () => `Create ref from user format ${JSON.stringify(userFormat)}`);
+    const datumBridges: WPKDatumBridge<T>[] = [];
+    for (const formatElement of bufferFormatMarshalled.marshall) {
+      logFuncs.lazyTrace(LOGGER, () => `Create ref from storage format ${JSON.stringify(formatElement)}`);
       const datumOffset = totalStride;
-      const datumBridge = datumBridgeFactory.of(userFormat, datumOffset, entityCache);
+      const datumBridge = datumBridgeFactory.of(formatElement, datumOffset, entityCache);
       datumBridges.push(datumBridge);
       totalStride += datumBridge.stride;
     }
