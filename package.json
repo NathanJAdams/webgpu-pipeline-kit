@@ -1,7 +1,7 @@
 {
   "name": "webgpu-pipeline-kit",
   "description": "A type-safe declarative way of creating WebGPU pipelines",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "author": {
     "name": "Nathan Adams",
     "url": "https://github.com/NathanJAdams"
@@ -66,13 +66,9 @@
     "vitest": "^3.2.4"
   },
   "optionalDependencies": {
-    "tree-sitter": "^0.25.0",
-    "tree-sitter-wgsl": "^0.0.6",
     "web-naga": "^1.0.1"
   },
   "peerDependencies": {
-    "tree-sitter": "^0.25.0",
-    "tree-sitter-wgsl": "^0.0.6",
     "web-naga": "^1.0.1"
   },
   "packageManager": "yarn@4.9.2"

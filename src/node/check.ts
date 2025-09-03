@@ -1,7 +1,6 @@
 import { logFactory } from '../logging';
-import { checkSemantics } from './semantics';
+import { getDiagnostics } from './diagnostics';
 import { toCodeShaderCompute, toCodeShaderRender } from '../shader-code';
-import { checkSyntax } from './syntax';
 import { WPKPipelineDefinition, WPKShaderModuleDetail } from '../types';
 import { WPKShaderCodeDiagnostic, WPKShaderCodeDiagnosticWithLocation, WPKShaderCodeResult, WPKShaderCodeStageResult } from './types';
 
@@ -61,11 +60,7 @@ const shaderCodeResult = async (definition: WPKPipelineDefinition<any, any, any,
 
 const shaderCodeStageResult = async (detail: WPKShaderModuleDetail): Promise<WPKShaderCodeStageResult> => {
   const { code } = detail;
-  const diagnostics: WPKShaderCodeDiagnostic[] = [];
-  const syntaxDiagnostics = await checkSyntax(code);
-  const semanticDiagnostics = await checkSemantics(code);
-  diagnostics.push(...syntaxDiagnostics);
-  diagnostics.push(...semanticDiagnostics);
+  const diagnostics = await getDiagnostics(code);
   return {
     diagnostics,
     isValid: (diagnostics.length === 0),
@@ -89,12 +84,6 @@ const diagnosticComparator = (a: WPKShaderCodeDiagnostic, b: WPKShaderCodeDiagno
   } else if (isLocatedB) {
     return -1;
   } else {
-    if (a.type !== b.type) {
-      return (a.type === 'syntax')
-        ? -1
-        : 1;
-    } else {
-      return (a.message.localeCompare(b.message));
-    }
+    return (a.message.localeCompare(b.message));
   }
 };

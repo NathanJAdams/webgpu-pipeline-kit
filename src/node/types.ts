@@ -1,5 +1,4 @@
 export type WPKShaderCodeDiagnosticNoLocation = {
-  type: 'syntax' | 'semantic';
   message: string;
 };
 export type WPKShaderCodeDiagnosticWithLocation = WPKShaderCodeDiagnosticNoLocation & {
