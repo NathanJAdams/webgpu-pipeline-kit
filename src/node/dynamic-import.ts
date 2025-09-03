@@ -1,4 +1,4 @@
-export type WPKDynamicallyImportedLibrary = 'tree-sitter' | 'tree-sitter-wgsl' | 'web-naga';
+export type WPKDynamicallyImportedLibrary = 'web-naga';
 
 export const dynamicImport = async<T = any>(library: WPKDynamicallyImportedLibrary, name?: string): Promise<T> => {
   try {
@@ -20,8 +20,6 @@ export const dynamicImport = async<T = any>(library: WPKDynamicallyImportedLibra
 
 const importLibrary = async (library: WPKDynamicallyImportedLibrary): Promise<any> => {
   switch (library) {
-    case 'tree-sitter': return await import('tree-sitter');
-    case 'tree-sitter-wgsl': return await import('tree-sitter-wgsl');
     case 'web-naga': return await import('web-naga');
   }
 };
