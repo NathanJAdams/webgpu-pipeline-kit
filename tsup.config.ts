@@ -2,9 +2,7 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   clean: true,
-  dts: {
-    entry: 'src/index.ts',
-  },
+  dts: true,
   entry: {
     'index': 'src/index.ts',
     'node':'src/node/index.ts'

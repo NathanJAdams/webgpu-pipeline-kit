@@ -1,7 +1,7 @@
 {
   "name": "webgpu-pipeline-kit",
   "description": "A type-safe declarative way of creating WebGPU pipelines",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "author": {
     "name": "Nathan Adams",
     "url": "https://github.com/NathanJAdams"
@@ -32,7 +32,7 @@
       "require": "./dist/index.cjs"
     },
     "./node": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/node.d.ts",
       "import": "./dist/node.js",
       "require": "./dist/node.cjs"
     },
