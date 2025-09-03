@@ -1,7 +1,3 @@
-import Parser from 'tree-sitter';
-import WGSL from 'tree-sitter-wgsl';
-import { WgslFrontend } from 'web-naga';
-
 import { logFactory } from './logging';
 import { DISPATCH_PARAMS_STRUCT_CODE } from './shader-reserved';
 import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBindings, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderCompute, WPKShaderModuleDetail, WPKShaderRender } from './types';
@@ -11,10 +7,10 @@ const LOGGER = logFactory.getLogger('shader');
 
 const WHITESPACE = '\n\n';
 
-export const toCodeShaderCompute = async <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
   shader: WPKShaderCompute<TUniform, TEntity, TBufferFormatMap>,
   bufferFormatMap: TBufferFormatMap
-): Promise<WPKShaderModuleDetail> => {
+): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating compute shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
   const structs = toCodeStructs(bufferFormatMap);
@@ -40,18 +36,16 @@ export const toCodeShaderCompute = async <TUniform, TEntity, TBufferFormatMap ex
     + (epilogue ?? '')
     + WHITESPACE
     ;
-  checkSyntax(code);
-  await checkSemantics(code);
   return {
     code,
     entryPoints,
   };
 };
 
-export const toCodeShaderRender = async <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
+export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
   shader: WPKShaderRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
   bufferFormatMap: TBufferFormatMap
-): Promise<WPKShaderModuleDetail> => {
+): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
   const structs = toCodeStructs(bufferFormatMap);
@@ -79,8 +73,6 @@ export const toCodeShaderRender = async <TUniform, TEntity, TBufferFormatMap ext
     + (epilogue ?? '')
     + WHITESPACE
     ;
-  checkSyntax(code);
-  await checkSemantics(code);
   return {
     code,
     entryPoints,
@@ -198,27 +190,4 @@ fn ${pass.entryPoint}(
 ) -> @location(0) vec4<f32> {
   ${pass.code(params)}
 }`;
-};
-
-export const checkSyntax = (code: string): boolean => {
-  const parser = new Parser();
-  parser.setLanguage(WGSL);
-  const tree = parser.parse(code);
-  if (tree.rootNode.hasError) {
-    throw Error();
-  }
-  return true;
-};
-
-export const checkSemantics = async (code: string): Promise<boolean> => {
-  try {
-    const wgsl = WgslFrontend.new();
-    const shaderModule = wgsl.parse(code);
-    shaderModule.free();
-    return true;
-  } catch (err) {
-    console.error('WGSL semantics error');
-    console.error(err);
-    return false;
-  }
 };

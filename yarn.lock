@@ -5016,7 +5016,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tree-sitter-wgsl@npm:0.0.6":
+"tree-sitter-wgsl@npm:^0.0.6":
   version: 0.0.6
   resolution: "tree-sitter-wgsl@npm:0.0.6"
   dependencies:
@@ -5486,10 +5486,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"web-naga@npm:1.0.0":
-  version: 1.0.0
-  resolution: "web-naga@npm:1.0.0"
-  checksum: 10c0/87ccb1c87b1b43c0d0d142febc38466aca8d30ce2c96f8804ffcc55ee907eb96ad39678dd80fc2f860f7491dffd17b18c2e20d92e7caa4e9f508782ef3df28d6
+"web-naga@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "web-naga@npm:1.0.1"
+  checksum: 10c0/ec35918262e6eb8dcac9352604c07e39d4e975c2c9476cf9199f84800ee68b827ec1764d3060724a739cd5f702325001266d086c3ce3103378b582317ca1226f
   languageName: node
   linkType: hard
 
@@ -5509,13 +5509,24 @@ __metadata:
     madge: "npm:^8.0.0"
     rimraf: "npm:^6.0.1"
     tree-sitter: "npm:^0.25.0"
-    tree-sitter-wgsl: "npm:0.0.6"
+    tree-sitter-wgsl: "npm:^0.0.6"
     ts-fluent-builder: "npm:^1.2.10"
     ts-node: "npm:^10.9.2"
     tsup: "npm:^8.5.0"
     typescript: "npm:^5.8.3"
     vitest: "npm:^3.2.4"
-    web-naga: "npm:1.0.0"
+    web-naga: "npm:^1.0.1"
+  peerDependencies:
+    tree-sitter: ^0.25.0
+    tree-sitter-wgsl: ^0.0.6
+    web-naga: ^1.0.1
+  dependenciesMeta:
+    tree-sitter:
+      optional: true
+    tree-sitter-wgsl:
+      optional: true
+    web-naga:
+      optional: true
   languageName: unknown
   linkType: soft
 

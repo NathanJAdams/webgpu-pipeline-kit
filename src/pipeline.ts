@@ -16,7 +16,7 @@ import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 const LOGGER = logFactory.getLogger('pipeline');
 
 export const pipelineFactory = {
-  ofDefinition: async <
+  ofDefinition: <
     TUniform,
     TEntity,
     TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
@@ -27,14 +27,14 @@ export const pipelineFactory = {
   >(
     definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
-  ): Promise<WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>> => {
+  ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
     const { name, bufferFormats } = definition;
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
     const textureFormatChangeDetector = changeDetectorFactory.ofTripleEquals<GPUTextureFormat>('rgba8unorm');
     const bufferResources = toBufferResources(uniformCache, entityCache, definition);
-    const pipelineDetailResource = await toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources);
+    const pipelineDetailResource = toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources);
     const pipeline: WPKPipeline<any, any, any, any, any> = {
       name,
       pipelineDetail(device, queue, encoder, options) {
@@ -123,22 +123,22 @@ const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFor
 const isBufferBound = (key: string, groupBindings?: WPKGroupBindingsInternal<any, any, any>): boolean =>
   (groupBindings !== undefined) && groupBindings.some(gb => gb.buffer === key);
 
-const toPipelineDetailResource = async <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
+const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
   definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
   bufferResources: WPKBufferResources<any, any, any>,
-): Promise<WPKResource<WPKPipelineDetail>> => {
+): WPKResource<WPKPipelineDetail> => {
   const { name, meshFactories, shader, bufferFormats } = definition;
   logFuncs.lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
   if (bufferResources === undefined) {
     throw Error('Error when creating pipeline, no buffer resources');
   }
   const computePipelineDetailsResource = shader.compute !== undefined
-    ? await toComputePipelineDetailsResource(name, shader.compute, () => bufferResources.instanceCount(), bufferFormats, bufferResources)
+    ? toComputePipelineDetailsResource(name, shader.compute, () => bufferResources.instanceCount(), bufferFormats, bufferResources)
     : undefined;
   const renderPipelineDetailResource = shader.render !== undefined
-    ? await toRenderPipelineDetailsResource(name, meshFactories, shader.render, () => bufferResources.instanceCount(), bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc)
+    ? toRenderPipelineDetailsResource(name, meshFactories, shader.render, () => bufferResources.instanceCount(), bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc)
     : undefined;
   logFuncs.lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
   return {
@@ -162,13 +162,13 @@ const toPipelineDetailResource = async <TUniform, TEntity, TBufferFormatMap exte
   };
 };
 
-const toComputePipelineDetailsResource = async <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
   name: string,
   computeShader: WPKShaderCompute<TUniform, TEntity, TBufferFormatMap>,
   instanceCountFunc: () => number,
   bufferFormats: TBufferFormatMap,
   bufferResources: WPKBufferResources<any, any, any>,
-): Promise<WPKResource<WPKComputePipelineDetail[]>> => {
+): WPKResource<WPKComputePipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating compute pipeline details resource ${name}`);
   const { groupBindings, passes } = computeShader;
   const groupBindingsInternal: WPKGroupBindingsInternal<TUniform, TEntity, TBufferFormatMap> = groupBindings;
@@ -176,7 +176,7 @@ const toComputePipelineDetailsResource = async <TUniform, TEntity, TBufferFormat
   const visibility = GPUShaderStage.COMPUTE;
   const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindingsInternal, bufferFormats);
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
-  const computeShaderModuleDetail = await toCodeShaderCompute(computeShader, bufferFormats);
+  const computeShaderModuleDetail = toCodeShaderCompute(computeShader, bufferFormats);
   const computeShaderModuleResource = pipelineResourceFactory.ofShaderModule(name, computeShaderModuleDetail, pipelineLayoutResource);
   const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindingsInternal, bufferFormats, bufferResources);
   const computePipelineDetailResources: WPKResource<WPKComputePipelineDetail>[] = [];
@@ -191,7 +191,7 @@ const toComputePipelineDetailsResource = async <TUniform, TEntity, TBufferFormat
   return resourceFactory.ofArray(computePipelineDetailResources);
 };
 
-const toRenderPipelineDetailsResource = async <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
+const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
   name: string,
   meshTemplateMap: TMeshTemplateMap,
   renderShader: WPKShaderRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
@@ -200,13 +200,13 @@ const toRenderPipelineDetailsResource = async <TUniform, TEntity, TBufferFormatM
   bufferResources: WPKBufferResources<any, any, any>,
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
-): Promise<WPKResource<WPKRenderPipelineDetail[]>> => {
+): WPKResource<WPKRenderPipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline details resource ${name}`);
   const { groupBindings, passes } = renderShader;
   const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindings, bufferFormats);
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
-  const renderShaderModuleDetail = await toCodeShaderRender(renderShader, bufferFormats);
+  const renderShaderModuleDetail = toCodeShaderRender(renderShader, bufferFormats);
   const renderShaderModuleResource = pipelineResourceFactory.ofShaderModule(name, renderShaderModuleDetail, pipelineLayoutResource);
   const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindings, bufferFormats, bufferResources);
   const renderPipelineDetailResources: WPKResource<WPKRenderPipelineDetail>[] = [];
