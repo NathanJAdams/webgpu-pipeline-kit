@@ -26,9 +26,7 @@ const littleEndian = true;
 export const datumBridgeFactory = {
   of: <T>(formatElement: WPKBufferFormatElement<T>, datumOffset: number, entityCache?: WPKEntityCache<T, any, any>): WPKDatumBridge<T> => {
     const { datumType } = formatElement;
-    const componentType = bufferFormatFuncs.isScalar(formatElement)
-      ? formatElement.datumType
-      : formatElement.componentType;
+    const componentType = toComponentType(formatElement);
     const datumSetter = datumSetters.get(componentType);
     if (datumSetter === undefined) {
       throw Error(`Cannot set datum of type ${datumType}`);
@@ -91,4 +89,15 @@ export const datumBridgeFactory = {
       setterFunc(dataView, offset + datumOffset, index, littleEndian);
     };
   },
+};
+
+const toComponentType = (formatElement: WPKBufferFormatElement<any>): WPKShaderScalar => {
+  if (bufferFormatFuncs.isScalar(formatElement)) {
+    return formatElement.datumType;
+  }
+  const componentTypeMatch = formatElement.datumType.match(/[^<]+<([fiu]32)>/);
+  if (componentTypeMatch) {
+    return componentTypeMatch[1] as WPKShaderScalar;
+  }
+  throw Error(`Cannot find component type of datum type ${formatElement.datumType}`);
 };

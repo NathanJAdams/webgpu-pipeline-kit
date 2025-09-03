@@ -2,10 +2,6 @@ import { WPKPathMat2x2, WPKPathMat2x3, WPKPathMat2x4, WPKPathMat3x2, WPKPathMat3
 import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKShaderStructEntry, WPKShaderVectorUntyped } from './structs';
 import { NonEmptyArray } from '../utils';
 
-export type WPKShaderHasComponentType<TComponentType extends WPKShaderScalar> = {
-  componentType: TComponentType;
-};
-
 export type WPKBufferFormatElementScalar<TScalar extends WPKShaderScalar, TPath> =
   & WPKShaderStructEntry<TScalar>
   & {
@@ -13,20 +9,16 @@ export type WPKBufferFormatElementScalar<TScalar extends WPKShaderScalar, TPath>
   };
 export type WPKBufferFormatElementVector<TVector extends WPKShaderVectorUntyped, TComponentType extends WPKShaderScalar, TPath> =
   & WPKShaderStructEntry<`${TVector}<${TComponentType}>`>
-  & WPKShaderHasComponentType<TComponentType>
   & {
     vector: TPath;
   };
 export type WPKBufferFormatElementMatrix<TMatrix extends WPKShaderMatrixUntyped, TPath> =
   & WPKShaderStructEntry<`${TMatrix}<${WPKShaderScalarFloat}>`>
-  & WPKShaderHasComponentType<WPKShaderScalarFloat>
   & {
     matrix: TPath;
   };
-
 export type WPKBufferFormatElementEntityIndex<T> =
-  & WPKShaderStructEntry<'i32'>
-  & WPKShaderHasComponentType<WPKShaderScalarSignedInt>
+  & WPKShaderStructEntry<WPKShaderScalarSignedInt>
   & {
     entityIdKey: WPKPathString<T>;
   };

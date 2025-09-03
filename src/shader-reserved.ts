@@ -27,7 +27,6 @@ export const DISPATCH_FORMAT: WPKBufferFormatUniform<WPKDispatchParams> = {
       scalar: 'instanceCount',
     }, {
       name: 'dispatch_size',
-      componentType: 'u32',
       datumType: 'vec3<u32>',
       vector: 'dispatchSize'
     }
