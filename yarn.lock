@@ -3662,15 +3662,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nan@npm:^2.15.0":
-  version: 2.23.0
-  resolution: "nan@npm:2.23.0"
-  dependencies:
-    node-gyp: "npm:latest"
-  checksum: 10c0/b986dd257dca53ab43a3b6ca6d0eafde697b69e1d63b242fa4aece50ce97eb169f9c4a5d8eb0eb5f58d118a9595fee11f3198fa210f023440053bb6f54109e73
-  languageName: node
-  linkType: hard
-
 "nanoid@npm:^3.3.11":
   version: 3.3.11
   resolution: "nanoid@npm:3.3.11"
@@ -3691,26 +3682,6 @@ __metadata:
   version: 1.0.0
   resolution: "negotiator@npm:1.0.0"
   checksum: 10c0/4c559dd52669ea48e1914f9d634227c561221dd54734070791f999c52ed0ff36e437b2e07d5c1f6e32909fc625fe46491c16e4a8f0572567d4dd15c3a4fda04b
-  languageName: node
-  linkType: hard
-
-"node-addon-api@npm:^8.3.0":
-  version: 8.5.0
-  resolution: "node-addon-api@npm:8.5.0"
-  dependencies:
-    node-gyp: "npm:latest"
-  checksum: 10c0/e4de0b4e70998fed7ef41933946f60565fc3a17cb83b7d626a0c0bb1f734cf7852e0e596f12681e7c8ed424163ee3cdbb4f0abaa9cc269d03f48834c263ba162
-  languageName: node
-  linkType: hard
-
-"node-gyp-build@npm:^4.8.4":
-  version: 4.8.4
-  resolution: "node-gyp-build@npm:4.8.4"
-  bin:
-    node-gyp-build: bin.js
-    node-gyp-build-optional: optional.js
-    node-gyp-build-test: build-test.js
-  checksum: 10c0/444e189907ece2081fe60e75368784f7782cfddb554b60123743dfb89509df89f1f29c03bbfa16b3a3e0be3f48799a4783f487da6203245fa5bed239ba7407e1
   languageName: node
   linkType: hard
 
@@ -5002,27 +4973,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tree-sitter-wgsl@npm:^0.0.6":
-  version: 0.0.6
-  resolution: "tree-sitter-wgsl@npm:0.0.6"
-  dependencies:
-    nan: "npm:^2.15.0"
-    node-gyp: "npm:latest"
-  checksum: 10c0/3eeabfa8a3e7c43f0349284a23ea9de520ced1b28983006c1665a4bb4b4a69ca8cb8ae930d2d166d8ef18c4905bfabada3a74911ffaccea0bd3c53c8e41d4892
-  languageName: node
-  linkType: hard
-
-"tree-sitter@npm:^0.25.0":
-  version: 0.25.0
-  resolution: "tree-sitter@npm:0.25.0"
-  dependencies:
-    node-addon-api: "npm:^8.3.0"
-    node-gyp: "npm:latest"
-    node-gyp-build: "npm:^4.8.4"
-  checksum: 10c0/ba994a4be081863e29f90e25658a8b63870193555245edbd3366cc5a4a2400492eea1e41dffaac961648f137274efb3ddb16f05c2896ce049749f0397e0319f4
-  languageName: node
-  linkType: hard
-
 "ts-api-utils@npm:^2.1.0":
   version: 2.1.0
   resolution: "ts-api-utils@npm:2.1.0"
@@ -5474,14 +5424,17 @@ __metadata:
     loglevel: "npm:^1.9.2"
     madge: "npm:^8.0.0"
     rimraf: "npm:^6.0.1"
-    tree-sitter: "npm:^0.25.0"
-    tree-sitter-wgsl: "npm:^0.0.6"
     ts-fluent-builder: "npm:^1.2.10"
     ts-node: "npm:^10.9.2"
     tsup: "npm:^8.5.0"
     typescript: "npm:^5.8.3"
     vitest: "npm:^3.2.4"
     web-naga: "npm:^1.0.1"
+  peerDependencies:
+    web-naga: ^1.0.1
+  dependenciesMeta:
+    web-naga:
+      optional: true
   languageName: unknown
   linkType: soft
 
