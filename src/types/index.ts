@@ -6,3 +6,4 @@ export * from './data-paths';
 export * from './mesh-template';
 export * from './pipeline';
 export * from './shaders';
+export * from './structs';
