@@ -3,10 +3,12 @@ import { getShaderCodeStageResult } from './diagnostics';
 import { toCodeShaderCompute, toCodeShaderRender } from '../shader-code';
 import { WPKPipelineDefinition, WPKShaderModuleDetail } from '../types';
 import { WPKShaderCodeResult, WPKShaderCodeStageResult } from './types';
+import { withReserved } from '../pipeline';
 
 const LOGGER = logFactory.getLogger('shader');
 
 export const checkShaderCode = async (definition: WPKPipelineDefinition<any, any, any, any>): Promise<void> => {
+  definition = withReserved(definition);
   const { compute, render } = await shaderCodeResult(definition);
   if (compute) {
     checkShaderCodeStage('compute', compute);
@@ -29,11 +31,11 @@ export const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeS
       const errorMarkIndex = toErrorMarkIndex(source, error.span.start);
       const introduction = `Error: ${error.message.replace(/\\"/g, '"')}`;
       const context = source.substring(startIndex, endIndex);
-      const explanation = `${'-'.repeat(errorMarkIndex - 1)}^`;
+      const marker = `${'-'.repeat(errorMarkIndex - 1)}^`;
       LOGGER.error('');
       LOGGER.error(introduction);
       LOGGER.error(context);
-      LOGGER.error(explanation);
+      LOGGER.error(marker);
       LOGGER.error('');
     }
     throw Error(`✘ Shader stage ${stage} is not valid`);

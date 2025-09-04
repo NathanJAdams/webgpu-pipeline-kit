@@ -1,5 +1,5 @@
 import { logFactory } from './logging';
-import { DISPATCH_PARAMS_BUFFER_NAME, DISPATCH_PARAMS_STRUCT_CODE } from './shader-reserved';
+import { DISPATCH_PARAMS_BUFFER_NAME } from './shader-reserved';
 import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBindings, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderCompute, WPKShaderModuleDetail, WPKShaderRender } from './types';
 import { logFuncs } from './utils';
 
@@ -26,8 +26,6 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
     structs
     + WHITESPACE
     + groupBindingsCode
-    + WHITESPACE
-    + DISPATCH_PARAMS_STRUCT_CODE
     + (prologue !== undefined ? WHITESPACE + prologue : '')
     + WHITESPACE
     + computePassesCode.join(WHITESPACE)

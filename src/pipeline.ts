@@ -9,7 +9,7 @@ import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
-import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_STRUCT_NAME, MAX_GROUP_INDEX } from './shader-reserved';
+import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_BUFFER_NAME, MAX_GROUP_INDEX } from './shader-reserved';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResources, WPKComputePipelineDetail, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupBindingsInternal, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderCompute, WPKShaderRender, WPKUniformCache, WPKVertexBufferDetail } from './types';
 import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 
@@ -28,26 +28,8 @@ export const pipelineFactory = {
     definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
-    const { name, bufferFormats, shader } = definition;
-    if (shader.compute !== undefined) {
-      definition = {
-        ...definition,
-        bufferFormats: {
-          ...definition.bufferFormats,
-          [DISPATCH_PARAMS_STRUCT_NAME]: DISPATCH_FORMAT,
-        },
-        shader: {
-          ...shader,
-          compute: {
-            ...shader.compute,
-            groupBindings: [
-              ...shader.compute.groupBindings,
-              DISPATCH_GROUP_BINDING as WPKGroupBinding<TUniform, TEntity, TBufferFormatMap>,
-            ],
-          },
-        },
-      };
-    }
+    definition = withReserved(definition);
+    const { name, bufferFormats } = definition;
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
@@ -80,6 +62,34 @@ export const pipelineFactory = {
     }
     return pipeline as WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>;
   },
+};
+
+export const withReserved = <
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+  TMeshTemplateMap extends WPKMeshTemplateMap,
+>(definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>): WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap> => {
+  if (definition.shader.compute === undefined) {
+    return definition;
+  }
+  return {
+    ...definition,
+    bufferFormats: {
+      ...definition.bufferFormats,
+      [DISPATCH_PARAMS_BUFFER_NAME]: DISPATCH_FORMAT,
+    },
+    shader: {
+      ...definition.shader,
+      compute: {
+        ...definition.shader.compute,
+        groupBindings: [
+          ...definition.shader.compute.groupBindings,
+          DISPATCH_GROUP_BINDING as WPKGroupBinding<TUniform, TEntity, TBufferFormatMap>,
+        ],
+      },
+    },
+  };
 };
 
 const toEntityCache = <
