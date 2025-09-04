@@ -1,5 +1,5 @@
 import { logFactory } from './logging';
-import { DISPATCH_PARAMS_STRUCT_CODE } from './shader-reserved';
+import { DISPATCH_PARAMS_BUFFER_NAME, DISPATCH_PARAMS_STRUCT_CODE } from './shader-reserved';
 import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBindings, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderCompute, WPKShaderModuleDetail, WPKShaderRender } from './types';
 import { logFuncs } from './utils';
 
@@ -130,9 +130,9 @@ fn ${pass.entryPoint}(
 ) {
   let instance_index: u32 =
   global_invocation_id.x
-  + (global_invocation_id.y * DispatchParams.dispatch_size.x)
-  + (global_invocation_id.z * DispatchParams.dispatch_size.x * DispatchParams.dispatch_size.y);
-  if (instance_index >= DispatchParams.instance_count) {
+  + (global_invocation_id.y * ${DISPATCH_PARAMS_BUFFER_NAME}.dispatch_size.x)
+  + (global_invocation_id.z * ${DISPATCH_PARAMS_BUFFER_NAME}.dispatch_size.x * ${DISPATCH_PARAMS_BUFFER_NAME}.dispatch_size.y);
+  if (instance_index >= ${DISPATCH_PARAMS_BUFFER_NAME}.instance_count) {
     return;
   }
 ${pass.code(params)}
