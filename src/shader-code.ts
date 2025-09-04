@@ -126,7 +126,6 @@ const toCodeComputePass = <
 @workgroup_size(${pass.workGroupSize.x}, ${pass.workGroupSize.y || 1}, ${pass.workGroupSize.z || 1})
 fn ${pass.entryPoint}(
   @builtin(global_invocation_id) global_invocation_id: vec3<u32>,
-  @builtin(local_invocation_index) local_invocation_index: u32,
 ) {
   let instance_index: u32 =
   global_invocation_id.x
