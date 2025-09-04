@@ -28,12 +28,10 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
     + groupBindingsCode
     + WHITESPACE
     + DISPATCH_PARAMS_STRUCT_CODE
-    + WHITESPACE
-    + (prologue ?? '')
+    + (prologue !== undefined ? WHITESPACE + prologue : '')
     + WHITESPACE
     + computePassesCode.join(WHITESPACE)
-    + WHITESPACE
-    + (epilogue ?? '')
+    + (epilogue !== undefined ? WHITESPACE + epilogue : '')
     + WHITESPACE
     ;
   return {
@@ -65,12 +63,10 @@ export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends W
     + structs
     + WHITESPACE
     + groupBindingsCode
-    + WHITESPACE
-    + (prologue ?? '')
+    + (prologue !== undefined ? WHITESPACE + prologue : '')
     + WHITESPACE
     + renderPassesCode.join(WHITESPACE)
-    + WHITESPACE
-    + (epilogue ?? '')
+    + (epilogue !== undefined ? WHITESPACE + epilogue : '')
     + WHITESPACE
     ;
   return {
@@ -188,6 +184,6 @@ const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBuffe
 fn ${pass.entryPoint}(
   @builtin(position) fragment_coordinate: vec4<f32>,
 ) -> @location(0) vec4<f32> {
-  ${pass.code(params)}
+${pass.code(params)}
 }`;
 };
