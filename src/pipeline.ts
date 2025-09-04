@@ -9,7 +9,7 @@ import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
-import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_BUFFER_NAME, MAX_GROUP_INDEX } from './shader-reserved';
+import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_STRUCT_NAME, MAX_GROUP_INDEX } from './shader-reserved';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResources, WPKComputePipelineDetail, WPKDrawCounts, WPKEntityCache, WPKGroupBindingsInternal, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderCompute, WPKShaderRender, WPKUniformCache, WPKVertexBufferDetail } from './types';
 import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 
@@ -132,7 +132,7 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
   const { name, meshFactories, shader, bufferFormats } = definition;
   const bufferFormatsWithDispatch = {
     ...bufferFormats,
-    [DISPATCH_PARAMS_BUFFER_NAME]: DISPATCH_FORMAT,
+    [DISPATCH_PARAMS_STRUCT_NAME]: DISPATCH_FORMAT,
   };
   logFuncs.lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
   if (bufferResources === undefined) {
