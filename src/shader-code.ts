@@ -32,7 +32,6 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
     + WHITESPACE
     + computePassesCode.join(WHITESPACE)
     + (epilogue !== undefined ? WHITESPACE + epilogue : '')
-    + WHITESPACE
     ;
   return {
     code,
@@ -67,7 +66,6 @@ export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends W
     + WHITESPACE
     + renderPassesCode.join(WHITESPACE)
     + (epilogue !== undefined ? WHITESPACE + epilogue : '')
-    + WHITESPACE
     ;
   return {
     code,
