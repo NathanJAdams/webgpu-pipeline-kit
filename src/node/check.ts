@@ -30,11 +30,11 @@ export const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeS
       const introduction = `Error: ${error.message.replace(/\\"/g, '"')}`;
       const context = source.substring(startIndex, endIndex);
       const explanation = `${'-'.repeat(errorMarkIndex - 1)}^`;
-      LOGGER.info('');
-      LOGGER.info(introduction);
-      LOGGER.info(context);
-      LOGGER.info(explanation);
-      LOGGER.info('');
+      LOGGER.error('');
+      LOGGER.error(introduction);
+      LOGGER.error(context);
+      LOGGER.error(explanation);
+      LOGGER.error('');
     }
     throw Error(`✘ Shader stage ${stage} is not valid`);
   }
