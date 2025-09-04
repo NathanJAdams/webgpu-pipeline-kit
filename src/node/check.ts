@@ -27,7 +27,7 @@ export const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeS
       const startIndex = toStartIndex(source, error.span.start);
       const endIndex = toEndIndex(source, error.span.end);
       const errorMarkIndex = toErrorMarkIndex(source, error.span.start);
-      const introduction = error.message.replace(/\\"/g, '"');
+      const introduction = `Error: ${error.message.replace(/\\"/g, '"')}`;
       const context = source.substring(startIndex, endIndex);
       const explanation = `${'-'.repeat(errorMarkIndex - 1)}^`;
       LOGGER.info('');
