@@ -253,6 +253,7 @@ const toBindGroupLayoutEntries = <TUniform, TEntity, TBufferFormatMap extends WP
     .map((groupBinding) => {
       const { binding, buffer } = groupBinding;
       const bufferFormat = bufferFormats[buffer];
+      logFuncs.lazyDebug(LOGGER, () => `Calculating buffer binding type for buffer format ${buffer}`);
       const type = toBufferBindingType(visibility, bufferFormat);
       return {
         binding,
@@ -265,7 +266,7 @@ const toBindGroupLayoutEntries = <TUniform, TEntity, TBufferFormatMap extends WP
 };
 
 const toBufferBindingType = <TBufferType extends WPKBufferFormatType>(visibility: GPUShaderStageFlags, bufferFormat: WPKHasBufferFormatType<TBufferType>): GPUBufferBindingType => {
-  logFuncs.lazyDebug(LOGGER, () => 'Calculating buffer binding type');
+  logFuncs.lazyDebug(LOGGER, () => `Calculating buffer binding type for buffer format ${JSON.stringify(bufferFormat)}`);
   const { bufferType } = bufferFormat;
   return bufferType === 'uniform'
     ? 'uniform'
