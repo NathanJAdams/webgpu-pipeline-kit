@@ -1,15 +1,8 @@
-export type WPKShaderCodeDiagnosticNoLocation = {
-  message: string;
-};
-export type WPKShaderCodeDiagnosticWithLocation = WPKShaderCodeDiagnosticNoLocation & {
-  line: number;
-  column: number;
-};
-export type WPKShaderCodeDiagnostic = WPKShaderCodeDiagnosticNoLocation | WPKShaderCodeDiagnosticWithLocation;
+export type WebNaga = typeof import('web-naga');
 export type WPKShaderCodeStageResult = {
   source: string;
   isValid: boolean;
-  diagnostics: WPKShaderCodeDiagnostic[];
+  error?: string;
 };
 export type WPKShaderCodeResult = {
   compute?: WPKShaderCodeStageResult;

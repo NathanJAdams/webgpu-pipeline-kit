@@ -1,27 +1,12 @@
-import { dynamicImport } from './dynamic-import';
-import { WPKShaderCodeDiagnostic } from './types';
+import { importWebNaga } from './init-web-naga';
 
-export const getDiagnostics = async (code: string): Promise<WPKShaderCodeDiagnostic[]> => {
-  const WgslFrontend = await dynamicImport('web-naga', 'WgslFrontend');
+export const getShaderCodeError = async (code: string): Promise<string | undefined> => {
+  const webNaga = await importWebNaga();
   try {
-    const wgsl = WgslFrontend.new();
+    const wgsl = webNaga.WgslFrontend.new();
     const shaderModule = wgsl.parse(code);
     shaderModule.free();
-    return [];
-  } catch (error: any) {
-    const errorMessage = error.message as string;
-    const match = errorMessage.match(/wgsl:(\d+):(\d+): error: (.+)/);
-    if (match) {
-      const [, line, column, message] = match;
-      return [{
-        message,
-        line: parseInt(line, 10),
-        column: parseInt(column, 10),
-      }];
-    } else {
-      return [{
-        message: errorMessage,
-      }];
-    }
+  } catch (error) {
+    return error as string;
   }
 };
