@@ -85,7 +85,7 @@ const toCodeStruct = (structName: string, bufferFormat: WPKBufferFormat<any, any
   const struct = (bufferFormat.bufferType === 'editable')
     ? bufferFormat.layout
     : bufferFormat.marshall;
-  const lines = struct.map((entry) => `  ${entry.name} : ${entry.datumType}`);
+  const lines = struct.map((entry) => `  ${entry.name} : ${entry.datumType};`);
   return `struct ${capitalize(structName)} {
 ${lines.join('\n')}
 }`;
