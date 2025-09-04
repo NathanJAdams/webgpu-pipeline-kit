@@ -88,7 +88,7 @@ const toCodeStruct = (structName: string, bufferFormat: WPKBufferFormat<any, any
   const lines = struct.map((entry) => `  ${entry.name} : ${entry.datumType},`);
   return `struct ${capitalize(structName)} {
 ${lines.join('\n')}
-}`;
+};`;
 };
 
 const toCodeGroupBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
