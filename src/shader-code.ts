@@ -23,7 +23,7 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
   const computePassesCode = passes.map(pass => toCodeComputePass(pass, bindings));
   const entryPoints = passes.map(pass => pass.entryPoint);
   const code =
-    + structs
+    structs
     + WHITESPACE
     + groupBindingsCode
     + WHITESPACE
@@ -60,7 +60,7 @@ export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends W
   entryPoints.push(...entryPointsVertex);
   entryPoints.push(...entryPointsFragment);
   const code =
-    + structs
+    structs
     + WHITESPACE
     + groupBindingsCode
     + (prologue !== undefined ? WHITESPACE + prologue : '')
@@ -86,7 +86,7 @@ const toCodeStruct = (structName: string, bufferFormat: WPKBufferFormat<any, any
     ? bufferFormat.layout
     : bufferFormat.marshall;
   const lines = struct.map((entry) => `  ${entry.name} : ${entry.datumType}`);
-  return `struct ${structName} {
+  return `struct ${capitalize(structName)} {
 ${lines.join('\n')}
 }`;
 };
@@ -105,9 +105,9 @@ const toCodeGroupBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
         ? ', read_write'
         : ', read';
     const dataType = (bufferFormat.bufferType === 'uniform')
-      ? buffer
-      : `array<${buffer}>`;
-    return `@group(${group})\n@binding(${binding})\nvar<${addressSpaceName}${accessMode}> : ${dataType};`;
+      ? capitalize(buffer)
+      : `array<${capitalize(buffer)}>`;
+    return `@group(${group})\n@binding(${binding})\nvar<${addressSpaceName}${accessMode}> ${buffer} : ${dataType};`;
   });
   return entries.join(WHITESPACE);
 };
@@ -163,8 +163,7 @@ const toCodeVertexPass = <
     vertex_position: 'vertex_position',
     bindings,
   };
-  return `
-@vertex
+  return `@vertex
 fn ${pass.entryPoint}(
   @builtin(instance_index) instance_index: u32,
   @builtin(vertex_index) vertex_index: u32,
@@ -179,11 +178,12 @@ const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBuffe
     bindings,
     fragment_coordinate: 'fragment_coordinate',
   };
-  return `
-@fragment
+  return `@fragment
 fn ${pass.entryPoint}(
   @builtin(position) fragment_coordinate: vec4<f32>,
 ) -> @location(0) vec4<f32> {
 ${pass.code(params)}
 }`;
 };
+
+const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.substring(1);
