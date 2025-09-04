@@ -3,7 +3,7 @@ import { WPKMeshParameters, WPKMeshTemplateMap } from './mesh-template';
 
 //#region render
 export type WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap>, string>;
+  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, false>, string>;
   fragment_coordinate: string;
 };
 export type WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
@@ -20,7 +20,7 @@ export type WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap extend
   instance_index: string,
   vertex_index: string,
   vertex_position: string;
-  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap>, string>;
+  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, false>, string>;
 };
 export type WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   entryPoint: string;
@@ -44,7 +44,7 @@ export type WPKWorkGroupSize = {
 };
 export type WPKComputeCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   instance_index: string;
-  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap>, string>;
+  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, true>, string>;
 };
 export type WPKComputePass<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   workGroupSize: WPKWorkGroupSize;
@@ -55,33 +55,58 @@ export type WPKComputePass<TUniform, TEntity, TBufferFormatMap extends WPKBuffer
 
 //#region group bindings
 export type WPKGroupIndex = 0 | 1 | 2;
-export type WPKGroupIndexInternal = WPKGroupIndex | 3;
 export type WPKBindingIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export type WPKGroupBinding<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+
+export type WPKGroupBinding<
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+  TIncludeStorage extends boolean
+> = {
   group: WPKGroupIndex;
   binding: WPKBindingIndex;
-  buffer: WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap>;
+  buffer: WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, TIncludeStorage>;
 };
-export type WPKGroupBindingInternal<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  group: WPKGroupIndexInternal;
-  binding: WPKBindingIndex;
-  buffer: WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap>;
-};
-export type WPKGroupBindings<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap>>;
-export type WPKGroupBindingsInternal<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Array<WPKGroupBindingInternal<TUniform, TEntity, TBufferFormatMap>>;
+export type WPKGroupBindingCompute<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, true>;
+export type WPKGroupBindingRender<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, false>;
 //#endregion
 
 //#region shader
-type WPKShaderBase<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TPass> = {
+type WPKShaderStage<
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+  TIncludeStorage extends boolean,
+  TPass
+> = {
   prologue?: string;
   epilogue?: string;
-  groupBindings: WPKGroupBindings<TUniform, TEntity, TBufferFormatMap>;
+  groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeStorage>>;
   passes: Array<TPass>;
 };
-export type WPKShaderCompute<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = WPKShaderBase<TUniform, TEntity, TBufferFormatMap, WPKComputePass<TUniform, TEntity, TBufferFormatMap>>;
-export type WPKShaderRender<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> = WPKShaderBase<TUniform, TEntity, TBufferFormatMap, WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>>;
-export type WPKShader<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> = {
-  compute?: WPKShaderCompute<TUniform, TEntity, TBufferFormatMap>;
-  render?: WPKShaderRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>;
+export type WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> =
+  WPKShaderStage<
+    TUniform,
+    TEntity,
+    TBufferFormatMap,
+    true,
+    WPKComputePass<TUniform, TEntity, TBufferFormatMap>
+  >;
+export type WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> =
+  WPKShaderStage<
+    TUniform,
+    TEntity,
+    TBufferFormatMap,
+    false,
+    WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>
+  >;
+export type WPKShader<
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+  TMeshTemplateMap extends WPKMeshTemplateMap
+> = {
+  compute?: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>;
+  render?: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>;
 };
 //#endregion

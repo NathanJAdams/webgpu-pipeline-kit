@@ -1,16 +1,17 @@
 import { logFactory } from './logging';
 import { DISPATCH_PARAMS_BUFFER_NAME } from './shader-reserved';
-import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBindings, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderCompute, WPKShaderModuleDetail, WPKShaderRender } from './types';
+import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('shader');
 
 const WHITESPACE = '\n\n';
 
-export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
-  shader: WPKShaderCompute<TUniform, TEntity, TBufferFormatMap>,
-  bufferFormatMap: TBufferFormatMap
-): WPKShaderModuleDetail => {
+export const toCodeShaderCompute = <
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+>(shader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>, bufferFormatMap: TBufferFormatMap): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating compute shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
   const structs = toCodeStructs(bufferFormatMap);
@@ -37,10 +38,12 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
   };
 };
 
-export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
-  shader: WPKShaderRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
-  bufferFormatMap: TBufferFormatMap
-): WPKShaderModuleDetail => {
+export const toCodeShaderRender = <
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+  TMeshTemplateMap extends WPKMeshTemplateMap
+>(shader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormatMap: TBufferFormatMap): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
   const structs = toCodeStructs(bufferFormatMap);
@@ -87,10 +90,11 @@ ${lines.join('\n')}
 };`;
 };
 
-const toCodeGroupBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
-  groupBindings: WPKGroupBindings<TUniform, TEntity, TBufferFormatMap>,
-  bufferFormatMap: TBufferFormatMap
-): string => {
+const toCodeGroupBindings = <
+  TUniform,
+  TEntity,
+  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+>(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, boolean>>, bufferFormatMap: TBufferFormatMap): string => {
   const entries = groupBindings.map((groupBinding) => {
     const { group, binding, buffer } = groupBinding;
     const bufferFormat = bufferFormatMap[buffer];
@@ -168,7 +172,7 @@ ${pass.code(params)}
 }`;
 };
 
-const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap>, bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap>, string>): string => {
+const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap>, bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, false>, string>): string => {
   const params: WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap> = {
     bindings,
     fragment_coordinate: 'fragment_coordinate',

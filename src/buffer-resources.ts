@@ -24,13 +24,13 @@ export const bufferResourcesFactory = {
       vertices,
     };
   },
-  ofUniformAndInstances: <TUniform, TEntity, TBufferFormats extends WPKBufferFormatMap<TUniform, TEntity>>(
+  ofUniformAndInstances: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
     name: string,
-    uniformCache: WPKUniformCache<TUniform, any>,
-    entityCache: WPKEntityCache<TEntity, any, any>,
-    bufferFormats: TBufferFormats,
-    bufferUsages: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormats>, GPUBufferUsageFlags>,
-  ): WPKBufferResources<TUniform, TEntity, TBufferFormats> => {
+    uniformCache: WPKUniformCache<TUniform, boolean>,
+    entityCache: WPKEntityCache<TEntity, boolean, boolean>,
+    bufferFormats: TBufferFormatMap,
+    bufferUsages: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>, GPUBufferUsageFlags>,
+  ): WPKBufferResources<TUniform, TEntity, TBufferFormatMap> => {
     const initialInstances = entityCache.calculateChanges().values;
     const uniformMutators: WPKMutator<TUniform>[] = [];
     const buffers: Record<string, WPKResource<WPKTrackedBuffer>> = {};
@@ -39,7 +39,7 @@ export const bufferResourcesFactory = {
     for (const [key, bufferFormat] of Object.entries(bufferFormats)) {
       logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key}`);
       const { bufferType } = bufferFormat;
-      const usage = bufferUsages[key];
+      const usage = bufferUsages[key as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>];
       const label = `${name}-buffer-${key}`;
       if (bufferType === 'uniform') {
         logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type uniform`);

@@ -86,4 +86,10 @@ export type WPKBufferFormat<TUniform, TEntity> =
   | WPKBufferFormatUniform<TUniform>
   | WPKBufferFormatEntity<TEntity>;
 export type WPKBufferFormatMap<TUniform, TEntity> = Record<string, WPKBufferFormat<TUniform, TEntity>>;
-export type WPKBufferFormatKey<TUniform, TEntity, TBufferFormats extends WPKBufferFormatMap<TUniform, TEntity>> = string & (keyof TBufferFormats);
+export type WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeStorage extends boolean> = string & {
+  [K in keyof TBufferFormatMap]: TIncludeStorage extends true
+  ? K
+  : TBufferFormatMap[K] extends WPKBufferFormatUniform<TUniform>
+  ? K
+  : never;
+}[keyof TBufferFormatMap];

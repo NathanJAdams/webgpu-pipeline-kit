@@ -1,11 +1,10 @@
 import { marshallerFactory } from './marshall';
-import { WPKBufferFormatUniform, WPKDispatchParams, WPKGroupBindingInternal, WPKGroupIndexInternal } from './types';
+import { WPKBufferFormatUniform, WPKDispatchParams, WPKGroupBinding, WPKGroupIndex } from './types';
 
 export const MAX_GROUP_INDEX = 3;
-export const RESERVED_GROUP_INDEX: WPKGroupIndexInternal = 3;
 export const DISPATCH_PARAMS_BUFFER_NAME = 'dispatch';
-export const DISPATCH_GROUP_BINDING: WPKGroupBindingInternal<any, any, any> = {
-  group: RESERVED_GROUP_INDEX,
+export const DISPATCH_GROUP_BINDING: WPKGroupBinding<any, any, any, any> = {
+  group: 3 as WPKGroupIndex,
   binding: 7,
   buffer: DISPATCH_PARAMS_BUFFER_NAME,
 };

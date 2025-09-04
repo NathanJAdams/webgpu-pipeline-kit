@@ -47,8 +47,8 @@ export type WPKMeshBufferResource = {
   indices: WPKResource<WPKTrackedBuffer>;
   vertices: WPKResource<WPKTrackedBuffer>;
 };
-export type WPKBufferResources<TUniform, TEntity, TBufferFormats extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  buffers: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormats>, WPKResource<WPKTrackedBuffer>>;
+export type WPKBufferResources<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+  buffers: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>, WPKResource<WPKTrackedBuffer>>;
   instanceCount: () => number;
   update: () => void;
 };
