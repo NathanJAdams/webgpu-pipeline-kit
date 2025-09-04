@@ -6,7 +6,7 @@ import { checkShaderCodeStage } from '../../src/node/check';
 
 setLogLevel('INFO');
 
-describe.skip('diagnostics', () => {
+describe('diagnostics', () => {
   test('can get shader code error', async () => {
     const error = await getShaderCodeStageResult('my code');
     expect(error).toBeDefined();

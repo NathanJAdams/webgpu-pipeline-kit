@@ -11,7 +11,7 @@ setLogLevel('WARN');
 
 const createCache = () => packedCacheFactory.of<Example, true>(true, []);
 
-describe.skip('packing', () => {
+describe('packing', () => {
   describe('adding', () => {
     test('no elements - no changes', () => {
       const packedCache = createCache();

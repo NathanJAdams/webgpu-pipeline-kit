@@ -16,7 +16,7 @@ describe('diagnostics', () => {
     expect(error?.span.start).toBe(905);
     expect(error?.span.end).toBe(906);
   });
-  test.only('can get shader code error', async () => {
+  test('can get shader code error', async () => {
     await checkShaderCode(pipelineDefinition);
   });
 });

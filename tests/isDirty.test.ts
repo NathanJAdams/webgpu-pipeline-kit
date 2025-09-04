@@ -10,7 +10,7 @@ setLogLevel('WARN');
 
 const createCache = () => packedCacheFactory.of<Example, true>(true, []);
 
-describe.skip('isDirty', () => {
+describe('isDirty', () => {
   test('adding makes it dirty until pack()', () => {
     const packedCache = createCache();
     expect(packedCache.isDirty()).toBe(false);
