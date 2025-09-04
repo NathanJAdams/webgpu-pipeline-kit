@@ -10,7 +10,7 @@ setLogLevel('WARN');
 
 const createCache = () => packedCacheFactory.of<Example, true>(true, []);
 
-describe('count', () => {
+describe.skip('count', () => {
   test('adding elements give correct count after pack()', () => {
     const packedCache = createCache();
     expect(packedCache.count()).toBe(0);

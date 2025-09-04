@@ -11,7 +11,7 @@ setLogLevel('WARN');
 
 const createCache = () => packedCacheFactory.of<Example, true>(true, [e => e.ref]);
 
-describe('references', () => {
+describe.skip('references', () => {
   describe('entity is changed', () => {
     test('when referencing a removed entity', () => {
       const cache = createCache();

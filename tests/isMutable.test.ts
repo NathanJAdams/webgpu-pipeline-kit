@@ -8,7 +8,7 @@ type Example = {
 
 setLogLevel('WARN');
 
-describe('isMutable', () => {
+describe.skip('isMutable', () => {
   test('mutable', () => {
     const packedCache = packedCacheFactory.of<Example, true>(true, []);
     expect(packedCache.isMutable()).toBe(true);

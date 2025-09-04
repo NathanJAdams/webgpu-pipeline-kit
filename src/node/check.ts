@@ -1,5 +1,5 @@
 import { logFactory } from '../logging';
-import { getShaderCodeError } from './diagnostics';
+import { getShaderCodeStageResult } from './diagnostics';
 import { toCodeShaderCompute, toCodeShaderRender } from '../shader-code';
 import { WPKPipelineDefinition, WPKShaderModuleDetail } from '../types';
 import { WPKShaderCodeResult, WPKShaderCodeStageResult } from './types';
@@ -16,7 +16,7 @@ export const checkShaderCode = async (definition: WPKPipelineDefinition<any, any
   }
 };
 
-const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeStageResult): Promise<void> => {
+export const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeStageResult): Promise<void> => {
   const { error, isValid, source } = result;
   LOGGER.info(source);
   LOGGER.info('\n');
@@ -24,10 +24,53 @@ const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeStageRes
     LOGGER.info(`✔ Shader stage ${stage} is valid`);
   } else {
     if (error !== undefined) {
-      LOGGER.info(`${error}`);
+      const startIndex = toStartIndex(source, error.span.start);
+      const endIndex = toEndIndex(source, error.span.end);
+      const errorMarkIndex = toErrorMarkIndex(source, error.span.start);
+      const introduction = error.message.replace(/\\"/g, '"');
+      const context = source.substring(startIndex, endIndex);
+      const explanation = `${'-'.repeat(errorMarkIndex - 1)}^`;
+      LOGGER.info('');
+      LOGGER.info(introduction);
+      LOGGER.info(context);
+      LOGGER.info(explanation);
+      LOGGER.info('');
     }
     throw Error(`✘ Shader stage ${stage} is not valid`);
   }
+};
+
+const toStartIndex = (source: string, spanStart: number): number => {
+  const lastWhitespaceBeforeStartIndex = source.lastIndexOf(' ', spanStart);
+  if (lastWhitespaceBeforeStartIndex === -1) {
+    return 0;
+  }
+  const lastNonWhitespaceBeforeStartMatch = source.substring(0, lastWhitespaceBeforeStartIndex).matchAll(/[\S]/g);
+  if (lastNonWhitespaceBeforeStartMatch === null) {
+    return 0;
+  }
+  const matches = [...lastNonWhitespaceBeforeStartMatch];
+  const lastNonWhitespaceBeforeStartIndex = matches[matches.length - 1].index;
+  if (lastNonWhitespaceBeforeStartIndex === -1) {
+    return 0;
+  }
+  const lastNewlineIndex = source.lastIndexOf('\n', lastNonWhitespaceBeforeStartIndex);
+  if (lastNewlineIndex === -1) {
+    return 0;
+  }
+  const penultimateNewlineIndex = source.lastIndexOf('\n', lastNewlineIndex - 1);
+  return (penultimateNewlineIndex === -1) ? 0 : penultimateNewlineIndex;
+};
+
+const toEndIndex = (source: string, spanEnd: number): number => {
+  const lastNewline = source.indexOf('\n', spanEnd);
+  const endIndex = (lastNewline === -1) ? source.length : lastNewline;
+  return endIndex;
+};
+
+const toErrorMarkIndex = (source: string, spanStart: number): number => {
+  const penultimateNewlineBeforeStart = source.lastIndexOf('\n', spanStart);
+  return spanStart - penultimateNewlineBeforeStart;
 };
 
 const shaderCodeResult = async (definition: WPKPipelineDefinition<any, any, any, any>): Promise<WPKShaderCodeResult> => {
@@ -46,10 +89,5 @@ const shaderCodeResult = async (definition: WPKPipelineDefinition<any, any, any,
 
 const shaderCodeStageResult = async (detail: WPKShaderModuleDetail): Promise<WPKShaderCodeStageResult> => {
   const { code } = detail;
-  const error = await getShaderCodeError(code);
-  return {
-    error,
-    isValid: (error === undefined),
-    source: code,
-  };
+  return await getShaderCodeStageResult(code);
 };

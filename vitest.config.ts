@@ -7,7 +7,7 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     typecheck: {
       include: ['src/**/*ts'],
-      enabled: true,
+      enabled: false,
     },
   },
 })

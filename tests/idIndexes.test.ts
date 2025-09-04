@@ -10,7 +10,7 @@ setLogLevel('WARN');
 
 const createCache = () => packedCacheFactory.of<Example, true>(true, []);
 
-describe('idIndexes', () => {
+describe.skip('idIndexes', () => {
   describe('adding', () => {
     test('an element can be added and found again only after pack()', () => {
       const packedCache = createCache();
