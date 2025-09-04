@@ -29,6 +29,13 @@ export const pipelineFactory = {
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
     const { name, bufferFormats } = definition;
+    definition = {
+      ...definition,
+      bufferFormats: {
+        ...definition.bufferFormats,
+        [DISPATCH_PARAMS_STRUCT_NAME]: DISPATCH_FORMAT,
+      },
+    };
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
@@ -82,9 +89,8 @@ const toEntityCache = <
 };
 
 const toBufferResources = (uniformCache: WPKUniformCache<any, any>, entityCache: WPKEntityCache<any, any, any>, definition: WPKPipelineDefinition<any, any, any, any>): WPKBufferResources<any, any, any> => {
-  const { name } = definition;
+  const { bufferFormats, name, shader } = definition;
   logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for definition ${name}`);
-  const { bufferFormats, shader } = definition;
   const bufferUsages = toBufferUsages(shader, bufferFormats);
   return bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages);
 };
@@ -130,19 +136,15 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
   bufferResources: WPKBufferResources<any, any, any>,
 ): WPKResource<WPKPipelineDetail> => {
   const { name, meshFactories, shader, bufferFormats } = definition;
-  const bufferFormatsWithDispatch = {
-    ...bufferFormats,
-    [DISPATCH_PARAMS_STRUCT_NAME]: DISPATCH_FORMAT,
-  };
   logFuncs.lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
   if (bufferResources === undefined) {
     throw Error('Error when creating pipeline, no buffer resources');
   }
   const computePipelineDetailsResource = shader.compute !== undefined
-    ? toComputePipelineDetailsResource(name, shader.compute, () => bufferResources.instanceCount(), bufferFormatsWithDispatch, bufferResources)
+    ? toComputePipelineDetailsResource(name, shader.compute, () => bufferResources.instanceCount(), bufferFormats, bufferResources)
     : undefined;
   const renderPipelineDetailResource = shader.render !== undefined
-    ? toRenderPipelineDetailsResource(name, meshFactories, shader.render, () => bufferResources.instanceCount(), bufferFormatsWithDispatch, bufferResources, isAntiAliasedFunc, textureFormatFunc)
+    ? toRenderPipelineDetailsResource(name, meshFactories, shader.render, () => bufferResources.instanceCount(), bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc)
     : undefined;
   logFuncs.lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
   return {
