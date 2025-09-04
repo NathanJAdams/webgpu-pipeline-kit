@@ -179,6 +179,7 @@ export const bufferFactory = {
   },
   ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating mutable buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
+    usage |= GPUBufferUsage.COPY_DST;
     const size = toValidSize(label, bytesLength);
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
