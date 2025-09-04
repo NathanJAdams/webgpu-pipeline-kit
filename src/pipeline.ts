@@ -10,7 +10,7 @@ import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
 import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_STRUCT_NAME, MAX_GROUP_INDEX } from './shader-reserved';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResources, WPKComputePipelineDetail, WPKDrawCounts, WPKEntityCache, WPKGroupBindingsInternal, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderCompute, WPKShaderRender, WPKUniformCache, WPKVertexBufferDetail } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResources, WPKComputePipelineDetail, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupBindingsInternal, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderCompute, WPKShaderRender, WPKUniformCache, WPKVertexBufferDetail } from './types';
 import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -28,14 +28,26 @@ export const pipelineFactory = {
     definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
-    const { name, bufferFormats } = definition;
-    definition = {
-      ...definition,
-      bufferFormats: {
-        ...definition.bufferFormats,
-        [DISPATCH_PARAMS_STRUCT_NAME]: DISPATCH_FORMAT,
-      },
-    };
+    const { name, bufferFormats, shader } = definition;
+    if (shader.compute !== undefined) {
+      definition = {
+        ...definition,
+        bufferFormats: {
+          ...definition.bufferFormats,
+          [DISPATCH_PARAMS_STRUCT_NAME]: DISPATCH_FORMAT,
+        },
+        shader: {
+          ...shader,
+          compute: {
+            ...shader.compute,
+            groupBindings: [
+              ...shader.compute.groupBindings,
+              DISPATCH_GROUP_BINDING as WPKGroupBinding<TUniform, TEntity, TBufferFormatMap>,
+            ],
+          },
+        },
+      };
+    }
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
@@ -177,14 +189,12 @@ const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ex
 ): WPKResource<WPKComputePipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating compute pipeline details resource ${name}`);
   const { groupBindings, passes } = computeShader;
-  const groupBindingsInternal: WPKGroupBindingsInternal<TUniform, TEntity, TBufferFormatMap> = groupBindings;
-  groupBindingsInternal.push(DISPATCH_GROUP_BINDING);
   const visibility = GPUShaderStage.COMPUTE;
-  const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindingsInternal, bufferFormats);
+  const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindings, bufferFormats);
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
   const computeShaderModuleDetail = toCodeShaderCompute(computeShader, bufferFormats);
   const computeShaderModuleResource = pipelineResourceFactory.ofShaderModule(name, computeShaderModuleDetail, pipelineLayoutResource);
-  const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindingsInternal, bufferFormats, bufferResources);
+  const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindings, bufferFormats, bufferResources);
   const computePipelineDetailResources: WPKResource<WPKComputePipelineDetail>[] = [];
   for (const [index, computePass] of passes.entries()) {
     const { entryPoint, workGroupSize } = computePass;
