@@ -29,6 +29,9 @@ export const pipelineFactory = {
     definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
+    if (Object.keys(definition.bufferFormats).includes(DISPATCH_PARAMS_BUFFER_NAME)) {
+      throw Error(`Cannot use reserved buffer format name ${DISPATCH_PARAMS_BUFFER_NAME}`);
+    }
     definition = withReserved(definition);
     const { name, bufferFormats } = definition;
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);

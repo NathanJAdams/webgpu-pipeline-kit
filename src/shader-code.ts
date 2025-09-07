@@ -15,7 +15,7 @@ export const toCodeShaderCompute = <
 >(shader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>, bufferFormats: TBufferFormatMap): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating compute shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
-  const structs = toCodeStructs(bufferFormats);
+  const structs = toCodeStructs(bufferFormats, true);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferFormats);
   const bindings = Object.keys(bufferFormats)
     .reduce((acc, key) => {
@@ -47,7 +47,7 @@ export const toCodeShaderRender = <
 >(shader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormats: TBufferFormatMap): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { prologue, epilogue, groupBindings, passes, vertexBuffers } = shader;
-  const structs = toCodeStructs(bufferFormats);
+  const structs = toCodeStructs(bufferFormats, false);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferFormats);
   const bindings = Object.keys(bufferFormats)
     .reduce((acc, key) => {
@@ -75,8 +75,9 @@ export const toCodeShaderRender = <
   };
 };
 
-const toCodeStructs = (bufferMap: WPKBufferFormatMap<any, any>): string => {
+const toCodeStructs = (bufferMap: WPKBufferFormatMap<any, any>, includeDispatchBuffer: boolean): string => {
   return Object.entries(bufferMap)
+    .filter(([name,]) => (includeDispatchBuffer || (name !== DISPATCH_PARAMS_BUFFER_NAME)))
     .map(([name, bufferFormat]) => toCodeStruct(name, bufferFormat))
     .join(WHITESPACE);
 };
