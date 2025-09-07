@@ -1,4 +1,5 @@
 export type {
+  WPKBufferFormat,
   WPKBufferFormatMap,
   WPKDisplay,
   WPKDisplayOptions,
