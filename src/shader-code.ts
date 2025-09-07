@@ -178,7 +178,7 @@ const toCodeVertexPass = <
   }
   const locations = vertexBufferAttributeData.flatMap(attributeData =>
     attributeData.locationAttributes.map(({ attribute: { shaderLocation }, locationName, type: { locationType } }) =>
-      `@location(${shaderLocation}) ${locationName} : ${locationType},`));
+      `  @location(${shaderLocation}) ${locationName} : ${locationType},`));
   const reconstitutedMatrices = vertexBufferAttributeData.flatMap(attributeData =>
     attributeData.reconstitutedMatrices.map(({ matrixName, matrixType, vectorLocationNames }) =>
       `  let ${matrixName} = ${matrixType}(${vectorLocationNames.join(', ')});`));
