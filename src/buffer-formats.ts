@@ -12,10 +12,10 @@ export const bufferFormatFuncs = {
   isMatrix: <T>(format: WPKBufferFormatElement<T>): format is WPKBufferFormatElementMatrix<WPKShaderMatrixUntyped, any> => {
     return (format as WPKBufferFormatElementMatrix<WPKShaderMatrixUntyped, any>).matrix !== undefined;
   },
-  findFormatEntityIndexes: <TEntity>(bufferFormatMap: WPKBufferFormatMap<any, TEntity>): WPKBufferFormatElementEntityIndex<TEntity>[] => {
+  findFormatEntityIndexes: <TEntity>(bufferFormats: WPKBufferFormatMap<any, TEntity>): WPKBufferFormatElementEntityIndex<TEntity>[] => {
     const userFormatEntityIndexes: WPKBufferFormatElementEntityIndex<TEntity>[] = [];
     const paths = new Set<string>();
-    for (const bufferFormat of Object.values(bufferFormatMap)) {
+    for (const bufferFormat of Object.values(bufferFormats)) {
       if (bufferFormat.bufferType === 'marshalled') {
         for (const userFormat of bufferFormat.marshall) {
           if (bufferFormatFuncs.isEntityIndex(userFormat)) {

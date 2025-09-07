@@ -4,7 +4,7 @@ import { meshFuncs } from './mesh-factories';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { DISPATCH_MARSHALLER } from './shader-reserved';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferDetail } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferDetail, WPKVertexBufferAttributeData } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -205,12 +205,31 @@ export const pipelineResourceFactory = {
       offset: 0,
       shaderLocation: meshBufferLocation,
     }];
-    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, meshBufferLocation, 'vertex', meshBufferResource.vertices);
+    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, 'vertex', meshBufferResource.vertices);
+  },
+  ofVertexBufferDetailBufferLocationFieldTypes: <
+    TUniform,
+    TEntity,
+    TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
+  >(
+    vertexBufferLocationFieldTypes: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>,
+    bufferFormats: TBufferFormatMap,
+    bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>
+  ): WPKResource<WPKVertexBufferDetail> => {
+    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from buffer location');
+    const { buffer, locationAttributes, stride } = vertexBufferLocationFieldTypes;
+    const bufferFormat = bufferFormats[buffer];
+    const bufferResource = bufferResources.buffers[buffer as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];
+    const { bufferType } = bufferFormat;
+    if (bufferType === 'uniform') {
+      throw Error(`Cannot create buffer location for uniform buffer ${buffer}`);
+    }
+    const attributes = locationAttributes.map(attribute => attribute.attribute);
+    return pipelineResourceFactory.ofVertexBufferDetail(stride, attributes, 'instance', bufferResource);
   },
   ofVertexBufferDetail: (
     arrayStride: number,
     attributes: GPUVertexAttribute[],
-    location: number,
     step: GPUVertexStepMode,
     bufferResource: WPKResource<WPKTrackedBuffer>
   ): WPKResource<WPKVertexBufferDetail> => {
@@ -226,7 +245,6 @@ export const pipelineResourceFactory = {
             attributes,
             stepMode: step,
           },
-          location,
         };
       },
     );

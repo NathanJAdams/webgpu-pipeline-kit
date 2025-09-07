@@ -37,7 +37,7 @@ const vertexShader = builders.vertexShader<TriangleUniform, Triangle, BufferForm
   .entryPoint('vertex_main')
   .returnType('builtin_position')
   .code((params) => `
-    return vec4<f32>(0.025 * ${params.vertex_position}.xy + ${params.bindings.offsets}[${params.instance_index}], 0.0, 1.0);
+    return vec4<f32>(0.025 * ${params.vertex_position}.xy + ${params.vertex_buffers.offsets.offset}[${params.instance_index}], 0.0, 1.0);
   `)
   .buildObject();
 
@@ -50,6 +50,9 @@ const fragmentShader = builders.fragmentShader<TriangleUniform, Triangle, Buffer
 
 const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
   .groupBindings(renderGroupBindings)
+  .vertexBuffersArray()
+  .pushObject().buffer('offsets').field('offset').buildElement()
+  .buildVertexBuffers()
   .passesArray()
   .pushObject()
   .mesh(meshTemplate)

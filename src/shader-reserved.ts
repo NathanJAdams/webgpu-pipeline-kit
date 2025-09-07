@@ -3,7 +3,7 @@ import { WPKBufferFormatUniform, WPKDispatchParams, WPKGroupBinding, WPKGroupInd
 
 export const MAX_GROUP_INDEX = 3;
 export const DISPATCH_PARAMS_BUFFER_NAME = 'dispatch';
-export const DISPATCH_GROUP_BINDING: WPKGroupBinding<any, any, any, any> = {
+export const DISPATCH_GROUP_BINDING: WPKGroupBinding<any, any, any, any, any> = {
   group: 3 as WPKGroupIndex,
   binding: 7,
   buffer: DISPATCH_PARAMS_BUFFER_NAME,

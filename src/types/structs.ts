@@ -19,7 +19,4 @@ export type WPKShaderStructEntry<TDatumType extends WPKShaderDatumType = WPKShad
   datumType: TDatumType;
 };
 export type WPKShaderStruct = NonEmptyArray<WPKShaderStructEntry>;
-export type WPKShaderStructMap = Record<string, WPKShaderStruct>;
-export type WPKShaderStorageAccessMode = 'read' | 'read_write';
-export type WPKShaderStructRef<TStructMap extends WPKShaderStructMap> = string & keyof TStructMap;
 //#endregion

@@ -77,19 +77,31 @@ export type WPKBufferFormatMarshalled<T, TBufferType extends WPKBufferFormatType
   marshall: NonEmptyArray<F>;
 };
 export type WPKBufferFormatUniform<T> = WPKBufferFormatMarshalled<T, 'uniform', WPKBufferFormatElementUniform<T>>;
-type WPKBufferFormatEntityLayout = WPKHasBufferFormatType<'editable'> & {
+export type WPKBufferFormatEntityLayout = WPKHasBufferFormatType<'editable'> & {
   layout: WPKShaderStruct;
 };
 export type WPKBufferFormatEntityMarshalled<T> = WPKBufferFormatMarshalled<T, 'marshalled', WPKBufferFormatElementStorage<T>>;
-type WPKBufferFormatEntity<T> = WPKBufferFormatEntityLayout | WPKBufferFormatEntityMarshalled<T>;
+export type WPKBufferFormatEntity<T> = WPKBufferFormatEntityLayout | WPKBufferFormatEntityMarshalled<T>;
 export type WPKBufferFormat<TUniform, TEntity> =
   | WPKBufferFormatUniform<TUniform>
   | WPKBufferFormatEntity<TEntity>;
 export type WPKBufferFormatMap<TUniform, TEntity> = Record<string, WPKBufferFormat<TUniform, TEntity>>;
-export type WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeStorage extends boolean> = string & {
-  [K in keyof TBufferFormatMap]: TIncludeStorage extends true
-  ? K
-  : TBufferFormatMap[K] extends WPKBufferFormatUniform<TUniform>
-  ? K
-  : never;
-}[keyof TBufferFormatMap];
+export type WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean> =
+  string
+  & {
+    [K in keyof TBufferFormatMap]:
+    | (
+      TIncludeUniform extends true
+      ? TBufferFormatMap[K] extends WPKBufferFormatUniform<TUniform>
+      ? K
+      : never
+      : never
+    )
+    | (
+      TIncludeEntity extends true
+      ? TBufferFormatMap[K] extends WPKBufferFormatEntity<TEntity>
+      ? K
+      : never
+      : never
+    )
+  }[keyof TBufferFormatMap];

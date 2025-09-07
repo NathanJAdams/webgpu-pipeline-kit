@@ -3,7 +3,7 @@ import { logFactory } from './logging';
 import { marshallerFactory } from './marshall';
 import { meshFuncs } from './mesh-factories';
 import { DISPATCH_FORMAT } from './shader-reserved';
-import { toStride } from './shader-utils';
+import { shaderFuncs } from './shader-utils';
 import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferMutable, WPKBufferResources, WPKEntityCache, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
 import { CopySlice, logFuncs, ValueSlices } from './utils';
 
@@ -12,7 +12,7 @@ const LOGGER = logFactory.getLogger('buffer');
 export const bufferResourcesFactory = {
   ofDispatch: (name: string): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating dispatch buffer ${name}`);
-    const stride = toStride(DISPATCH_FORMAT.marshall);
+    const stride = shaderFuncs.toStrideArray(DISPATCH_FORMAT.marshall);
     return bufferFactory.ofMutable(stride, `${name}-buffer-dispatch`, GPUBufferUsage.UNIFORM);
   },
   ofMesh: (name: string, mesh: WPKMesh): WPKMeshBufferResource => {
@@ -29,7 +29,7 @@ export const bufferResourcesFactory = {
     uniformCache: WPKUniformCache<TUniform, boolean>,
     entityCache: WPKEntityCache<TEntity, boolean, boolean>,
     bufferFormats: TBufferFormatMap,
-    bufferUsages: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>, GPUBufferUsageFlags>,
+    bufferUsages: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags>,
   ): WPKBufferResources<TUniform, TEntity, TBufferFormatMap> => {
     const initialInstances = entityCache.calculateChanges().values;
     const uniformMutators: WPKMutator<TUniform>[] = [];
@@ -39,14 +39,14 @@ export const bufferResourcesFactory = {
     for (const [key, bufferFormat] of Object.entries(bufferFormats)) {
       logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key}`);
       const { bufferType } = bufferFormat;
-      const usage = bufferUsages[key as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>];
+      const usage = bufferUsages[key as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>];
       const label = `${name}-buffer-${key}`;
       if (bufferType === 'uniform') {
         logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type uniform`);
         const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
         if (uniformCache.isMutable) {
           logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:uniform is mutable`);
-          const stride = toStride(bufferFormat.marshall);
+          const stride = shaderFuncs.toStrideArray(bufferFormat.marshall);
           const buffer = bufferFactory.ofMutable(stride, label, usage);
           const uniformMutator: WPKMutator<TUniform> = {
             mutate(input) {
@@ -65,7 +65,7 @@ export const bufferResourcesFactory = {
       } else if (bufferType === 'editable') {
         logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity layout`);
         if (entityCache.isResizeable) {
-          const stride = toStride(bufferFormat.layout);
+          const stride = shaderFuncs.toStrideArray(bufferFormat.layout);
           const buffer = bufferFactory.ofResizeable(false, label, usage);
           buffers[key] = buffer;
           let maxInstanceCount = 0;
@@ -79,7 +79,7 @@ export const bufferResourcesFactory = {
             },
           };
         } else {
-          const stride = toStride(bufferFormat.layout);
+          const stride = shaderFuncs.toStrideArray(bufferFormat.layout);
           buffers[key] = bufferFactory.ofSize(entityCache.count() * stride, label, usage);
         }
       } else if (bufferType === 'marshalled') {
@@ -88,7 +88,7 @@ export const bufferResourcesFactory = {
           logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is resizeable`);
           const buffer = bufferFactory.ofStaged(label, usage);
           buffers[key] = buffer;
-          const stride = toStride(bufferFormat.marshall);
+          const stride = shaderFuncs.toStrideArray(bufferFormat.marshall);
           const marshaller = marshallerFactory.ofMarshalled(bufferFormat, entityCache);
           instanceMutator = {
             mutate(input) {

@@ -1,7 +1,7 @@
 import { bufferFormatFuncs } from './buffer-formats';
 import { datumExtractorFactory } from './datum-extraction';
 import { logFactory } from './logging';
-import { DATUM_TYPE_BYTE_LENGTHS } from './shader-utils';
+import { shaderFuncs } from './shader-utils';
 import { WPKBufferFormatElement, WPKCacheResizeable, WPKDatumBridge, WPKDatumBridgeFunc, WPKDatumExtractor, WPKDatumSetter, WPKDatumSetterFunc, WPKEntityCache, WPKShaderScalar } from './types';
 import { callCreatorOf, logFuncs } from './utils';
 
@@ -26,13 +26,13 @@ const littleEndian = true;
 export const datumBridgeFactory = {
   of: <T>(formatElement: WPKBufferFormatElement<T>, datumOffset: number, entityCache?: WPKEntityCache<T, any, any>): WPKDatumBridge<T> => {
     const { datumType } = formatElement;
-    const componentType = toComponentType(formatElement);
+    const componentType = shaderFuncs.toComponentType(formatElement.datumType);
     const datumSetter = datumSetters.get(componentType);
     if (datumSetter === undefined) {
       throw Error(`Cannot set datum of type ${datumType}`);
     }
     const datumStride = datumSetter.stride;
-    const stride = DATUM_TYPE_BYTE_LENGTHS[datumType];
+    const stride = shaderFuncs.toStrideElement(formatElement);
     if (bufferFormatFuncs.isEntityIndex(formatElement) && entityCache !== undefined && entityCache.isResizeable) {
       return {
         stride,
@@ -89,15 +89,4 @@ export const datumBridgeFactory = {
       setterFunc(dataView, offset + datumOffset, index, littleEndian);
     };
   },
-};
-
-const toComponentType = (formatElement: WPKBufferFormatElement<any>): WPKShaderScalar => {
-  if (bufferFormatFuncs.isScalar(formatElement)) {
-    return formatElement.datumType;
-  }
-  const componentTypeMatch = formatElement.datumType.match(/[^<]+<([fiu]32)>/);
-  if (componentTypeMatch) {
-    return componentTypeMatch[1] as WPKShaderScalar;
-  }
-  throw Error(`Cannot find component type of datum type ${formatElement.datumType}`);
 };

@@ -10,6 +10,7 @@ import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
 import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_BUFFER_NAME, MAX_GROUP_INDEX } from './shader-reserved';
+import { shaderFuncs } from './shader-utils';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResources, WPKComputePipelineDetail, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupBindingCompute, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderStageCompute, WPKShaderStageRender, WPKUniformCache, WPKVertexBufferDetail } from './types';
 import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 
@@ -120,12 +121,12 @@ const toBufferResources = (uniformCache: WPKUniformCache<any, any>, entityCache:
 const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
   shader: WPKShader<TUniform, TEntity, TBufferFormatMap, any>,
   bufferFormats: TBufferFormatMap,
-): Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>, GPUBufferUsageFlags> => {
+): Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags> => {
   logFuncs.lazyDebug(LOGGER, () => `Calculate buffer usage from buffer formats ${JSON.stringify(Object.keys(bufferFormats))}`);
   return recordFuncs.mapRecord(bufferFormats, (bufferFormat, key) => {
     logFuncs.lazyTrace(LOGGER, () => `Calculate buffer usage from buffer format ${JSON.stringify(key)}`);
     const isBinding = isBufferBound(key, shader.compute?.groupBindings) || isBufferBound(key, shader.render?.groupBindings);
-    const isVertex = shader.render !== undefined;
+    const isVertex = shader.render !== undefined; // TODO check buffer locations instead of blanket use
     const { bufferType } = bufferFormat;
     let usage = 0;
     if (bufferType === 'uniform') {
@@ -145,10 +146,10 @@ const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFor
       logFuncs.lazyWarn(LOGGER, () => `Buffer ${key} isn't used`);
     }
     return usage;
-  }) as Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean>, GPUBufferUsageFlags>;
+  }) as Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags>;
 };
 
-const isBufferBound = (key: string, groupBindings?: Array<WPKGroupBinding<any, any, any, any>>): boolean =>
+const isBufferBound = (key: string, groupBindings?: Array<WPKGroupBinding<any, any, any, any, any>>): boolean =>
   (groupBindings !== undefined) && groupBindings.some(gb => gb.buffer === key);
 
 const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<any, any>, TMeshTemplateMap extends WPKMeshTemplateMap>(
@@ -195,7 +196,7 @@ const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ex
   computeShader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>,
   instanceCountFunc: () => number,
   bufferFormats: TBufferFormatMap,
-  bufferResources: WPKBufferResources<any, any, any>,
+  bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
 ): WPKResource<WPKComputePipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating compute pipeline details resource ${name}`);
   const { groupBindings, passes } = computeShader;
@@ -228,7 +229,7 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
   textureFormatFunc: () => GPUTextureFormat,
 ): WPKResource<WPKRenderPipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline details resource ${name}`);
-  const { groupBindings, passes } = renderShader;
+  const { groupBindings, passes, vertexBuffers } = renderShader;
   const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindings, bufferFormats);
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
@@ -251,9 +252,14 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
         return meshBufferResource.indices.get(device, queue, encoder).buffer;
       },
     };
-    const vertexBufferDetailResources: WPKResource<WPKVertexBufferDetail>[] = [
-      pipelineResourceFactory.ofVertexBufferDetailMesh(0, meshBufferResource),
-    ];
+    const vertexBufferDetailResources: WPKResource<WPKVertexBufferDetail>[] = [];
+    const detailMesh = pipelineResourceFactory.ofVertexBufferDetailMesh(0, meshBufferResource);
+    vertexBufferDetailResources.push(detailMesh);
+    const sortedVertexBufferLocationTypes = shaderFuncs.toVertexBufferAttributeData(vertexBuffers, bufferFormats);
+    sortedVertexBufferLocationTypes.forEach((vertexBufferLocationType) => {
+      const detailLocation = pipelineResourceFactory.ofVertexBufferDetailBufferLocationFieldTypes(vertexBufferLocationType, bufferFormats, bufferResources);
+      vertexBufferDetailResources.push(detailLocation);
+    });
     const vertexBufferDetailsResource = resourceFactory.ofArray(vertexBufferDetailResources);
     const vertexBufferLayoutsResource = pipelineResourceFactory.ofVertexBufferLayouts(vertexBufferDetailsResource);
     const vertexBuffersResource = pipelineResourceFactory.ofVertexBuffers(vertexBufferDetailResources);
@@ -268,7 +274,9 @@ const toBindGroupLayoutEntries = <
   TUniform,
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, boolean>>, group: WPKGroupIndex, visibility: GPUShaderStageFlags, bufferFormats: TBufferFormatMap,): GPUBindGroupLayoutEntry[] => {
+  TIncludeUniform extends boolean,
+  TIncludeEntity extends boolean,
+>(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, group: WPKGroupIndex, visibility: GPUShaderStageFlags, bufferFormats: TBufferFormatMap,): GPUBindGroupLayoutEntry[] => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating bind group layout entries');
   return groupBindings.filter((groupBinding) => groupBinding.group === group)
     .map((groupBinding) => {
@@ -300,7 +308,9 @@ const toBindGroupLayoutsResource = <
   TUniform,
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(name: string, visibility: GPUShaderStageFlags, groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, boolean>>, bufferFormats: TBufferFormatMap): WPKResource<GPUBindGroupLayout[]> => {
+  TIncludeUniform extends boolean,
+  TIncludeEntity extends boolean,
+>(name: string, visibility: GPUShaderStageFlags, groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, bufferFormats: TBufferFormatMap): WPKResource<GPUBindGroupLayout[]> => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating bind group layouts resource');
   const bindGroupLayoutResources: WPKResource<GPUBindGroupLayout>[] = [];
   for (let group = 0; group <= MAX_GROUP_INDEX; group++) {
@@ -316,7 +326,9 @@ const toBindGroupsDetailResource = <
   TUniform,
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(name: string, visibility: GPUShaderStageFlags, groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, boolean>>, bufferFormats: TBufferFormatMap, bufferResources: WPKBufferResources<any, any, any>): WPKResource<WPKBindGroupsDetail> => {
+  TIncludeUniform extends boolean,
+  TIncludeEntity extends boolean,
+>(name: string, visibility: GPUShaderStageFlags, groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, bufferFormats: TBufferFormatMap, bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>): WPKResource<WPKBindGroupsDetail> => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating bind groups detail resource');
   const bindGroupDetailResources: WPKResource<WPKBindGroupDetail>[] = [];
   for (let group = 0; group <= MAX_GROUP_INDEX; group++) {
@@ -336,12 +348,14 @@ const toBindGroupEntriesResources = <
   TUniform,
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, boolean>>, group: WPKGroupIndex, bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>): WPKResource<GPUBindGroupEntry>[] => {
+  TIncludeUniform extends boolean,
+  TIncludeEntity extends boolean,
+>(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, group: WPKGroupIndex, bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>): WPKResource<GPUBindGroupEntry>[] => {
   logFuncs.lazyDebug(LOGGER, () => `Creating bind group entries resources for group ${group}`);
   return groupBindings.filter(groupBinding => groupBinding.group === group)
     .map((groupBinding) => {
       const { binding, buffer } = groupBinding;
-      const bufferResource = bufferResources.buffers[buffer];
+      const bufferResource = bufferResources.buffers[buffer as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];
       return pipelineResourceFactory.ofBindGroupEntry(binding, bufferResource);
     });
 };

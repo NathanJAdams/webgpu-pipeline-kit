@@ -11,7 +11,6 @@ export type {
   WPKPipelineDefinition,
   WPKPipelineOptions,
   WPKShader,
-  WPKShaderStruct,
   WPKVertices,
 } from './types';
 export type { Vec3 } from './utils';

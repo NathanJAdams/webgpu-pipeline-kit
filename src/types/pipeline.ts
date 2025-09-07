@@ -78,7 +78,6 @@ export type WPKComputePipelineDetail = {
   dispatchSize: WPKDispatchSize;
 };
 export type WPKVertexBufferDetail = {
-  location: number;
   buffer: GPUBuffer;
   layout: GPUVertexBufferLayout;
 };
