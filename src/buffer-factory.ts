@@ -2,8 +2,8 @@ import { logFactory } from './logging';
 import { WPKBufferMutable, WPKBufferResizeable, WPKMutatedData, WPKResource, WPKTrackedBuffer } from './types';
 import { Capacity, CopySlice, logFuncs, mathFuncs, ValueSlices } from './utils';
 
-const MINIMUM_BYTES_LENGTH = 16;
-const VALID_BYTES_MULTIPLE = 4;
+const MINIMUM_BYTES_LENGTH = 32;
+const VALID_BYTES_MULTIPLE = 16;
 
 const LOGGER = logFactory.getLogger('buffer');
 
