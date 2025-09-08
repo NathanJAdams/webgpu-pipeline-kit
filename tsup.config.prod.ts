@@ -18,14 +18,14 @@ export default defineConfig([
   },
   {
     entry: {
-      'triangles/index': 'src/examples/triangles/index.ts'
+      index: 'src/index.ts'
     },
     bundle: true,
     clean: true,
     external: ['web-naga'],
     format: ['iife'],
     globalName: 'WebGPUPipelineKit',
-    outDir: 'dist/examples',
+    outDir: 'dist/bundle',
     shims: false,
     sourcemap: true,
     splitting: false,
