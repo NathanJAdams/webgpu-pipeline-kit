@@ -29,30 +29,23 @@ const meshTemplate = builders.meshTemplate<MeshTemplates>()
   .buildParameters()
   .buildObject();
 
-const renderGroupBindings = builders.renderGroupBindings<TriangleUniform, Triangle, BufferFormats>()
-  .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
-  .buildArray();
-
 const vertexShader = builders.vertexShader<TriangleUniform, Triangle, BufferFormats>()
   .entryPoint('vertex_main')
   .returnType('builtin_position')
-  .code((params) => `
-  return vec4<f32>(0.025 * ${params.vertex_position}.xy + ${params.vertex_buffers.offsets.offset}, 0.0, 1.0);
-  `)
+  .code((params) => `  return vec4<f32>((0.025 * ${params.vertex_position}.xy) + ${params.vertex_buffers.offsets.offset}.xy, 0.0, 1.0);`)
   .buildObject();
 
 const fragmentShader = builders.fragmentShader<TriangleUniform, Triangle, BufferFormats>()
   .entryPoint('fragment_main')
-  .code((_params) => `
-  return vec4<f32>(0.025, 0.0, 0.0, 1.0);
-  `)
+  .code((_params) => '  return vec4<f32>(1.0, 0.0, 0.0, 1.0);')
   .buildObject();
+
+const renderGroupBindings = builders.renderGroupBindings<TriangleUniform, Triangle, BufferFormats>()
+  .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
+  .buildArray();
 
 const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
   .groupBindings(renderGroupBindings)
-  .vertexBuffersArray()
-  .pushObject().buffer('offsets').field('offset').buildElement()
-  .buildVertexBuffers()
   .passesArray()
   .pushObject()
   .mesh(meshTemplate)
@@ -60,6 +53,9 @@ const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferForm
   .fragment(fragmentShader)
   .buildElement()
   .buildPasses()
+  .vertexBuffersArray()
+  .pushObject().buffer('offsets').field('offset').buildElement()
+  .buildVertexBuffers()
   .buildObject();
 
 export const shader = builders.shader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
