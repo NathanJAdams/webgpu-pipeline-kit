@@ -232,7 +232,7 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
   textureFormatFunc: () => GPUTextureFormat,
 ): WPKResource<WPKRenderPipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline details resource ${name}`);
-  const { groupBindings, passes, vertexBuffers } = renderShader;
+  const { groupBindings, passes } = renderShader;
   const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindings, bufferFormats);
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
@@ -258,7 +258,7 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
     const vertexBufferDetailResources: WPKResource<WPKVertexBufferDetail>[] = [];
     const detailMesh = pipelineResourceFactory.ofVertexBufferDetailMesh(0, meshBufferResource);
     vertexBufferDetailResources.push(detailMesh);
-    const sortedVertexBufferLocationTypes = shaderFuncs.toVertexBufferAttributeData(vertexBuffers, bufferFormats);
+    const sortedVertexBufferLocationTypes = shaderFuncs.toVertexBufferAttributeData(vertex.vertexBuffers, bufferFormats);
     sortedVertexBufferLocationTypes.forEach((vertexBufferLocationType) => {
       const detailLocation = pipelineResourceFactory.ofVertexBufferDetailBufferLocationFieldTypes(vertexBufferLocationType, bufferFormats, bufferResources);
       vertexBufferDetailResources.push(detailLocation);

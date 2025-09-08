@@ -1,7 +1,7 @@
 import { logFactory } from './logging';
 import { DISPATCH_PARAMS_BUFFER_NAME } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender, WPKVertexBufferLocation } from './types';
+import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('shader');
@@ -46,7 +46,7 @@ export const toCodeShaderRender = <
   TMeshTemplateMap extends WPKMeshTemplateMap
 >(shader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormats: TBufferFormatMap): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
-  const { prologue, epilogue, groupBindings, passes, vertexBuffers } = shader;
+  const { prologue, epilogue, groupBindings, passes } = shader;
   const structs = toCodeStructs(bufferFormats, false);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferFormats);
   const bindings = Object.keys(bufferFormats)
@@ -54,7 +54,7 @@ export const toCodeShaderRender = <
       acc[key as keyof TBufferFormatMap] = key;
       return acc;
     }, {} as Record<keyof TBufferFormatMap, string>);
-  const renderPassesCode = passes.map(pass => toCodeRenderPass(pass, bindings, vertexBuffers, bufferFormats));
+  const renderPassesCode = passes.map(pass => toCodeRenderPass(pass, bindings, bufferFormats));
   const entryPointsVertex = passes.map(pass => pass.vertex.entryPoint);
   const entryPointsFragment = passes.map(pass => pass.fragment.entryPoint);
   const entryPoints: string[] = [];
@@ -150,8 +150,8 @@ const toCodeRenderPass = <
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
   TMeshTemplateMap extends WPKMeshTemplateMap,
->(pass: WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bindings: Record<keyof TBufferFormatMap, string>, vertexBuffers: WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>[], bufferFormats: TBufferFormatMap): string => {
-  const vertexPass = toCodeVertexPass(pass.vertex, bindings, vertexBuffers, bufferFormats);
+>(pass: WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bindings: Record<keyof TBufferFormatMap, string>, bufferFormats: TBufferFormatMap): string => {
+  const vertexPass = toCodeVertexPass(pass.vertex, bindings, bufferFormats);
   const fragmentPass = toCodeFragmentPass(pass.fragment, bindings);
   return vertexPass
     + WHITESPACE
@@ -162,8 +162,8 @@ const toCodeVertexPass = <
   TUniform,
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap>, bindings: Record<keyof TBufferFormatMap, string>, vertexBuffers: WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>[], bufferFormats: TBufferFormatMap): string => {
-  const vertexBufferAttributeData = shaderFuncs.toVertexBufferAttributeData(vertexBuffers, bufferFormats);
+>(pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap>, bindings: Record<keyof TBufferFormatMap, string>, bufferFormats: TBufferFormatMap): string => {
+  const vertexBufferAttributeData = shaderFuncs.toVertexBufferAttributeData(pass.vertexBuffers, bufferFormats);
   const vertex_buffers: Record<string, Record<string, string>> = {};
   for (const attribute of vertexBufferAttributeData) {
     const { buffer } = attribute;

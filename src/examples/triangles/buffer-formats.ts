@@ -1,6 +1,5 @@
-import { builders } from '../..';
+import { builders, WPKBufferFormat } from '../..';
 import { Triangle, TriangleUniform } from './instance-formats';
-import { WPKBufferFormat } from '../../types';
 
 const uniforms = builders.bufferFormat<TriangleUniform, Triangle>()
   .bufferType('uniform')
@@ -15,12 +14,10 @@ const uniforms = builders.bufferFormat<TriangleUniform, Triangle>()
 
 const offsets = {
   bufferType: 'editable',
-  layout: [
-    {
-      name: 'offset',
-      datumType: 'vec2<f32>',
-    },
-  ],
+  layout: [{
+    name: 'offset',
+    datumType: 'vec2<f32>',
+  }],
 } as const satisfies WPKBufferFormat<TriangleUniform, Triangle>;
 
 export const bufferFormats = {

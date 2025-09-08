@@ -38,6 +38,7 @@ export type WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap extend
   );
 export type WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   entryPoint: string;
+  vertexBuffers: Array<WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>>;
   returnType:
   | 'builtin_position'
   | (string & keyof TBufferFormatMap);
@@ -169,10 +170,7 @@ export type WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap extends WPK
     TBufferFormatMap,
     false,
     WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>
-  >
-  & {
-    vertexBuffers: Array<WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>>;
-  };
+  >;
 export type WPKShader<
   TUniform,
   TEntity,
