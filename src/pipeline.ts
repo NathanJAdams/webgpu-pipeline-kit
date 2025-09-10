@@ -1,17 +1,18 @@
-import { usageToString } from './buffer-factory';
+import { bufferFactory, usageToString } from './buffer-factory';
 import { bufferFormatFuncs } from './buffer-formats';
 import { bufferResourcesFactory } from './buffer-resources';
 import { cacheFactory } from './cache';
-import { datumExtractorFactory } from './datum-extraction';
+import { datumBridgeFactory } from './datum-bridge';
+import { datumExtractEmbedFactory } from './datum-extract-embed';
 import { logFactory } from './logging';
 import { meshFuncs } from './mesh-factories';
 import { pipelineResourceFactory } from './pipeline-resources';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
-import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_BUFFER_NAME, MAX_GROUP_INDEX } from './shader-reserved';
+import { DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_BUFFER_NAME, MAX_GROUP_INDEX } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResources, WPKComputePipelineDetail, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupBindingCompute, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderStageCompute, WPKShaderStageRender, WPKUniformCache, WPKVertexBufferDetail } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderStageCompute, WPKShaderStageRender, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchBuffer } from './types';
 import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -28,18 +29,19 @@ export const pipelineFactory = {
   >(
     definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
+    debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap> = {},
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
     if (Object.keys(definition.bufferFormats).includes(DISPATCH_PARAMS_BUFFER_NAME)) {
       throw Error(`Cannot use reserved buffer format name ${DISPATCH_PARAMS_BUFFER_NAME}`);
     }
-    definition = withReserved(definition);
     const { name, bufferFormats } = definition;
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
     const textureFormatChangeDetector = changeDetectorFactory.ofTripleEquals<GPUTextureFormat>('rgba8unorm');
-    const bufferResources = toBufferResources(uniformCache, entityCache, definition);
-    const pipelineDetailResource = toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources);
+    const bufferResources = toBufferResources(uniformCache, entityCache, definition, debug);
+    const dispatchBuffer = bufferResourcesFactory.ofDispatch(name, debug.onBufferContents !== undefined);
+    const pipelineDetailResource = toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources, dispatchBuffer, debug);
     const pipeline: WPKPipeline<any, any, any, any, any> = {
       name,
       pipelineDetail(device, queue, encoder, options) {
@@ -68,34 +70,6 @@ export const pipelineFactory = {
   },
 };
 
-export const withReserved = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TMeshTemplateMap extends WPKMeshTemplateMap,
->(definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>): WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap> => {
-  if (definition.shader.compute === undefined) {
-    return definition;
-  }
-  return {
-    ...definition,
-    bufferFormats: {
-      ...definition.bufferFormats,
-      [DISPATCH_PARAMS_BUFFER_NAME]: DISPATCH_FORMAT,
-    },
-    shader: {
-      ...definition.shader,
-      compute: {
-        ...definition.shader.compute,
-        groupBindings: [
-          ...definition.shader.compute.groupBindings,
-          DISPATCH_GROUP_BINDING as WPKGroupBindingCompute<TUniform, TEntity, TBufferFormatMap>,
-        ],
-      },
-    },
-  };
-};
-
 const toEntityCache = <
   TUniform,
   TEntity,
@@ -105,7 +79,7 @@ const toEntityCache = <
 >(options: WPKPipelineOptions<TUniform, TEntity, any, TMutableEntities, TResizeableEntities>, bufferFormats: TBufferFormatMap): WPKEntityCache<any, any, any> => {
   if (options.resizeableEntities) {
     const entityIndexes = bufferFormatFuncs.findFormatEntityIndexes(bufferFormats);
-    const entityIndexDatumExtractors = entityIndexes.map(userFormat => datumExtractorFactory.ofEntityId(userFormat));
+    const entityIndexDatumExtractors = entityIndexes.map(userFormat => datumExtractEmbedFactory.ofEntityId(userFormat.entityIdKey).extract);
     const entityCache = cacheFactory.ofEntitiesResizeable(options.mutableEntities, entityIndexDatumExtractors);
     options.initialEntities.forEach(entity => entityCache.add(entity));
     return entityCache;
@@ -114,11 +88,16 @@ const toEntityCache = <
   }
 };
 
-const toBufferResources = (uniformCache: WPKUniformCache<any, any>, entityCache: WPKEntityCache<any, any, any>, definition: WPKPipelineDefinition<any, any, any, any>): WPKBufferResources<any, any, any> => {
+const toBufferResources = (
+  uniformCache: WPKUniformCache<any, any>,
+  entityCache: WPKEntityCache<any, any, any>,
+  definition: WPKPipelineDefinition<any, any, any, any>,
+  debug: WPKDebugOptions<any, any, any>
+): WPKBufferResources<any, any, any> => {
   const { bufferFormats, name, shader } = definition;
   logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for definition ${name}`);
   const bufferUsages = toBufferUsages(shader, bufferFormats);
-  return bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages);
+  return bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages, debug.onBufferContents !== undefined);
 };
 
 const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
@@ -160,6 +139,8 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
   bufferResources: WPKBufferResources<any, any, any>,
+  dispatchBuffer: WPKDispatchBuffer,
+  debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
 ): WPKResource<WPKPipelineDetail> => {
   const { name, meshFactories, shader, bufferFormats } = definition;
   logFuncs.lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
@@ -167,12 +148,13 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
     throw Error('Error when creating pipeline, no buffer resources');
   }
   const computePipelineDetailsResource = shader.compute !== undefined
-    ? toComputePipelineDetailsResource(name, shader.compute, () => bufferResources.instanceCount(), bufferFormats, bufferResources)
+    ? toComputePipelineDetailsResource(name, shader.compute, () => bufferResources.instanceCount(), bufferFormats, bufferResources, dispatchBuffer)
     : undefined;
   const renderPipelineDetailResource = shader.render !== undefined
-    ? toRenderPipelineDetailsResource(name, meshFactories, shader.render, () => bufferResources.instanceCount(), bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc)
+    ? toRenderPipelineDetailsResource(name, meshFactories, shader.render, () => bufferResources.instanceCount(), bufferFormats, bufferResources, dispatchBuffer, isAntiAliasedFunc, textureFormatFunc, debug)
     : undefined;
   logFuncs.lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
+  // const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, debug);
   return {
     get(device, queue, encoder) {
       logFuncs.lazyTrace(LOGGER, () => `Creating pipeline detail ${name}`);
@@ -188,6 +170,9 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
         if (renderPipelineDetailResource !== undefined) {
           pipelineDetail.render = renderPipelineDetailResource.get(device, queue, encoder);
         }
+        if (debug.onBufferContents !== undefined) {
+          // pipelineDetail.debugFunc = debugFuncResource.get(device, queue, encoder);
+        }
       }
       return pipelineDetail;
     },
@@ -200,21 +185,25 @@ const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ex
   instanceCountFunc: () => number,
   bufferFormats: TBufferFormatMap,
   bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
+  dispatchBuffer: WPKDispatchBuffer,
 ): WPKResource<WPKComputePipelineDetail[]> => {
+  name = `${name}-compute`;
   logFuncs.lazyDebug(LOGGER, () => `Creating compute pipeline details resource ${name}`);
   const { groupBindings, passes } = computeShader;
   const visibility = GPUShaderStage.COMPUTE;
-  const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindings, bufferFormats);
+  logFuncs.lazyDebug(LOGGER, () => `Group bindings: ${JSON.stringify(groupBindings)}`);
+  const groupBindingsWithDispatch = [...groupBindings, DISPATCH_GROUP_BINDING];
+  const bindGroupLayoutsResource = toBindGroupLayoutsResource(name, visibility, groupBindingsWithDispatch, bufferFormats);
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
   const computeShaderModuleDetail = toCodeShaderCompute(computeShader, bufferFormats);
   const computeShaderModuleResource = pipelineResourceFactory.ofShaderModule(name, computeShaderModuleDetail, pipelineLayoutResource);
-  const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindings, bufferFormats, bufferResources);
+  const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindingsWithDispatch, bufferFormats, bufferResources, dispatchBuffer);
   const computePipelineDetailResources: WPKResource<WPKComputePipelineDetail>[] = [];
   for (const [index, computePass] of passes.entries()) {
     const { entryPoint, workGroupSize } = computePass;
     const computePipelineResource = pipelineResourceFactory.ofComputePipeline(name, index, pipelineLayoutResource, computeShaderModuleResource, entryPoint);
     const dispatchParamsFunc = () => pipelineFuncs.toDispatchParams(workGroupSize, instanceCountFunc());
-    const dispatchSizeResource = pipelineResourceFactory.ofDispatchSize(name, dispatchParamsFunc);
+    const dispatchSizeResource = pipelineResourceFactory.ofDispatchSize(dispatchParamsFunc, dispatchBuffer);
     const computeDetailResource = pipelineResourceFactory.ofComputeDetail(bindGroupsDetailResource, computePipelineResource, dispatchSizeResource);
     computePipelineDetailResources.push(computeDetailResource);
   }
@@ -228,9 +217,12 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
   instanceCountFunc: () => number,
   bufferFormats: TBufferFormatMap,
   bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
+  dispatchBuffer: WPKDispatchBuffer,
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
+  debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
 ): WPKResource<WPKRenderPipelineDetail[]> => {
+  name = `${name}-render`;
   logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline details resource ${name}`);
   const { groupBindings, passes } = renderShader;
   const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
@@ -238,7 +230,7 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
   const pipelineLayoutResource = pipelineResourceFactory.ofPipelineLayout(name, bindGroupLayoutsResource);
   const renderShaderModuleDetail = toCodeShaderRender(renderShader, bufferFormats);
   const renderShaderModuleResource = pipelineResourceFactory.ofShaderModule(name, renderShaderModuleDetail, pipelineLayoutResource);
-  const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindings, bufferFormats, bufferResources);
+  const bindGroupsDetailResource = toBindGroupsDetailResource(name, visibility, groupBindings, bufferFormats, bufferResources, dispatchBuffer);
   const renderPipelineDetailResources: WPKResource<WPKRenderPipelineDetail>[] = [];
   for (const [index, renderPass] of passes.entries()) {
     const { mesh: { key, parameters }, fragment, vertex } = renderPass;
@@ -249,7 +241,7 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
       indexCount: indicesCount,
       instanceCount: instanceCountFunc(),
     });
-    const meshBufferResource = bufferResourcesFactory.ofMesh(name, mesh);
+    const meshBufferResource = bufferResourcesFactory.ofMesh(name, mesh, debug.onBufferContents !== undefined);
     const indicesBufferResource: WPKResource<GPUBuffer> = {
       get(device, queue, encoder) {
         return meshBufferResource.indices.get(device, queue, encoder).buffer;
@@ -273,6 +265,116 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
   return resourceFactory.ofArray(renderPipelineDetailResources);
 };
 
+const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  bufferFormats: TBufferFormatMap,
+  bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
+  debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>
+): WPKResource<WPKDebugFunc> => {
+  const { onBufferContents } = debug;
+  if (onBufferContents === undefined) {
+    return {
+      get(_device, _queue, _encoder) {
+        return async () => { };
+      },
+    };
+  }
+  const debugTrackedBuffers = {} as Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>, WPKBufferResizeable & WPKResource<WPKTrackedBuffer>>;
+  for (const [name] of Object.entries(bufferResources.buffers)) {
+    const debugBufferResource = bufferFactory.ofResizeable(false, `${name}-debug`, GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, false);
+    debugTrackedBuffers[name as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>] = debugBufferResource;
+  }
+  return {
+    get(device, queue, encoder) {
+      const debugBuffers = {} as Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>, GPUBuffer>;
+      for (const [bufferName, bufferResourceObj] of Object.entries(bufferResources.buffers)) {
+        if (bufferName === DISPATCH_PARAMS_BUFFER_NAME) {
+          continue;
+        }
+        const bufferResource = bufferResourceObj as WPKResource<WPKTrackedBuffer>;
+        const sourceBuffer = bufferResource.get(device, queue, encoder);
+        const copyBytesLength = sourceBuffer.bytesLength;
+        const debugBufferResource = debugTrackedBuffers[bufferName as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];
+        debugBufferResource.resize(copyBytesLength);
+        const targetBuffer = debugBufferResource.get(device, queue, encoder);
+        encoder.copyBufferToBuffer(sourceBuffer.buffer, 0, targetBuffer.buffer, 0, copyBytesLength);
+        debugBuffers[bufferName as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>] = targetBuffer.buffer;
+      }
+      const debugFunc: WPKDebugFunc = async (): Promise<void> => {
+        const contentMap = {} as WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap>;
+        const promises = Object.entries(debugBuffers)
+          .map(([bufferName, bufferObj]) =>
+            addContents(
+              bufferName as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>,
+              bufferObj as GPUBuffer,
+              bufferFormats[bufferName],
+              contentMap));
+        await Promise.all(promises);
+        await onBufferContents(contentMap);
+      };
+      return debugFunc;
+    },
+  };
+};
+
+const addContents = async <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  bufferName: WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>,
+  buffer: GPUBuffer,
+  bufferFormat: WPKBufferFormat<TUniform, TEntity>,
+  contentMap: WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap>
+): Promise<void> => {
+  await buffer.mapAsync(GPUMapMode.READ);
+  const mappedRange = buffer.getMappedRange().slice(0);
+  buffer.unmap();
+  const dataView = new DataView(mappedRange);
+  logFuncs.lazyDebug(LOGGER, () => `${bufferName} contents: ${new Float32Array(mappedRange)}`);
+  const { bufferType } = bufferFormat;
+  if (bufferType === 'uniform') {
+    const { marshall } = bufferFormat;
+    const uniform = {} as TUniform;
+    let datumOffset = 0;
+    for (const entry of marshall) {
+      const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset);
+      bridge.dataViewToInstance(0, uniform, dataView);
+      datumOffset += bridge.stride;
+    }
+    contentMap[bufferName] = uniform as any;
+  } else if (bufferType === 'marshalled') {
+    const { marshall } = bufferFormat;
+    const formatStride = shaderFuncs.toStrideArray(marshall);
+    const entityCount = mappedRange.byteLength / formatStride;
+    const entities: Partial<TEntity>[] = [];
+    for (let i = 0; i < entityCount; i++) {
+      const dataViewOffset = i * formatStride;
+      const entity = {} as TEntity;
+      let datumOffset = 0;
+      for (const entry of marshall) {
+        const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset);
+        bridge.dataViewToInstance(dataViewOffset, entity, dataView);
+        datumOffset += bridge.stride;
+      }
+      entities.push(entity);
+    }
+    contentMap[bufferName] = entities as any;
+  } else if (bufferType === 'editable') {
+    const { layout } = bufferFormat;
+    const formatStride = shaderFuncs.toStrideArray(layout);
+    const entityCount = mappedRange.byteLength / formatStride;
+    const entities: Partial<TEntity>[] = [];
+    for (let i = 0; i < entityCount; i++) {
+      const dataViewOffset = i * formatStride;
+      const entity = {} as Partial<TEntity>;
+      let datumOffset = 0;
+      for (const entry of layout) {
+        const bridge = datumBridgeFactory.ofStructEntry(entry, datumOffset);
+        bridge.dataViewToInstance(dataViewOffset, entity, dataView);
+        datumOffset += bridge.stride;
+      }
+      entities.push(entity);
+    }
+    contentMap[bufferName] = entities as any;
+  }
+};
+
 const toBindGroupLayoutEntries = <
   TUniform,
   TEntity,
@@ -280,13 +382,13 @@ const toBindGroupLayoutEntries = <
   TIncludeUniform extends boolean,
   TIncludeEntity extends boolean,
 >(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, group: WPKGroupIndex, visibility: GPUShaderStageFlags, bufferFormats: TBufferFormatMap,): GPUBindGroupLayoutEntry[] => {
-  logFuncs.lazyDebug(LOGGER, () => 'Creating bind group layout entries');
-  return groupBindings.filter((groupBinding) => groupBinding.group === group)
+  const entries = groupBindings.filter((groupBinding) => groupBinding.group === group)
     .map((groupBinding) => {
       const { binding, buffer } = groupBinding;
-      const bufferFormat = bufferFormats[buffer];
-      logFuncs.lazyDebug(LOGGER, () => `Calculating buffer binding type for buffer format ${buffer}`);
-      const type = toBufferBindingType(visibility, bufferFormat);
+      const type = (buffer === DISPATCH_PARAMS_BUFFER_NAME)
+        ? 'uniform'
+        : toBufferBindingType(visibility, bufferFormats[buffer]);
+      logFuncs.lazyDebug(LOGGER, () => `Creating bind group layout entry for group ${group} binding ${binding}`);
       return {
         binding,
         visibility,
@@ -295,6 +397,7 @@ const toBindGroupLayoutEntries = <
         },
       };
     });
+  return entries;
 };
 
 const toBufferBindingType = <TBufferType extends WPKBufferFormatType>(visibility: GPUShaderStageFlags, bufferFormat: WPKHasBufferFormatType<TBufferType>): GPUBufferBindingType => {
@@ -319,46 +422,55 @@ const toBindGroupLayoutsResource = <
   for (let group = 0; group <= MAX_GROUP_INDEX; group++) {
     const groupName = `${name}-group-${group}`;
     const bindGroupLayoutEntries = toBindGroupLayoutEntries(groupBindings, group as WPKGroupIndex, visibility, bufferFormats);
-    const bindGroupLayoutResource = pipelineResourceFactory.ofBindGroupLayout(groupName, bindGroupLayoutEntries);
-    bindGroupLayoutResources.push(bindGroupLayoutResource);
+    if (bindGroupLayoutEntries.length > 0) {
+      logFuncs.lazyDebug(LOGGER, () => `${groupName} entries count: ${bindGroupLayoutEntries.length}`);
+      const bindGroupLayoutResource = pipelineResourceFactory.ofBindGroupLayout(groupName, bindGroupLayoutEntries);
+      bindGroupLayoutResources[group] = bindGroupLayoutResource;
+    }
   }
+  logFuncs.lazyDebug(LOGGER, () => `Creating array resource of ${bindGroupLayoutResources.length} bind group layout resources`);
   return resourceFactory.ofArray(bindGroupLayoutResources);
 };
 
-const toBindGroupsDetailResource = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TIncludeUniform extends boolean,
-  TIncludeEntity extends boolean,
->(name: string, visibility: GPUShaderStageFlags, groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, bufferFormats: TBufferFormatMap, bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>): WPKResource<WPKBindGroupsDetail> => {
+const toBindGroupsDetailResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean>(
+  name: string,
+  visibility: GPUShaderStageFlags,
+  groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>,
+  bufferFormats: TBufferFormatMap,
+  bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
+  dispatchBuffer: WPKDispatchBuffer
+): WPKResource<WPKBindGroupsDetail> => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating bind groups detail resource');
   const bindGroupDetailResources: WPKResource<WPKBindGroupDetail>[] = [];
   for (let group = 0; group <= MAX_GROUP_INDEX; group++) {
     const groupName = `${name}-group-${group}`;
     const bindGroupLayoutEntries = toBindGroupLayoutEntries(groupBindings, group as WPKGroupIndex, visibility, bufferFormats);
-    const bindGroupLayoutResource = pipelineResourceFactory.ofBindGroupLayout(groupName, bindGroupLayoutEntries);
-    const bindGroupEntriesResources = toBindGroupEntriesResources(groupBindings, group as WPKGroupIndex, bufferResources);
-    const bindGroupEntriesResource = resourceFactory.ofArray(bindGroupEntriesResources);
-    const bindGroupResource = pipelineResourceFactory.ofBindGroup(groupName, group as WPKGroupIndex, bindGroupLayoutResource, bindGroupEntriesResource);
-    const bindGroupDetailResource = pipelineResourceFactory.ofBindGroupDetail(group as WPKGroupIndex, bindGroupResource);
-    bindGroupDetailResources.push(bindGroupDetailResource);
+    if (bindGroupLayoutEntries.length > 0) {
+      logFuncs.lazyDebug(LOGGER, () => `${groupName} entries count: ${bindGroupLayoutEntries.length}`);
+      const bindGroupLayoutResource = pipelineResourceFactory.ofBindGroupLayout(groupName, bindGroupLayoutEntries);
+      const bindGroupEntriesResources = toBindGroupEntriesResources(groupBindings, group as WPKGroupIndex, bufferResources, dispatchBuffer);
+      const bindGroupEntriesResource = resourceFactory.ofArray(bindGroupEntriesResources);
+      const bindGroupResource = pipelineResourceFactory.ofBindGroup(groupName, bindGroupLayoutResource, bindGroupEntriesResource);
+      const bindGroupDetailResource = pipelineResourceFactory.ofBindGroupDetail(group as WPKGroupIndex, bindGroupResource);
+      bindGroupDetailResources.push(bindGroupDetailResource);
+    }
   }
   return resourceFactory.ofArray(bindGroupDetailResources);
 };
 
-const toBindGroupEntriesResources = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TIncludeUniform extends boolean,
-  TIncludeEntity extends boolean,
->(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, group: WPKGroupIndex, bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>): WPKResource<GPUBindGroupEntry>[] => {
+const toBindGroupEntriesResources = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean>(
+  groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>,
+  group: WPKGroupIndex,
+  bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
+  dispatchBuffer: WPKDispatchBuffer
+): WPKResource<GPUBindGroupEntry>[] => {
   logFuncs.lazyDebug(LOGGER, () => `Creating bind group entries resources for group ${group}`);
   return groupBindings.filter(groupBinding => groupBinding.group === group)
     .map((groupBinding) => {
       const { binding, buffer } = groupBinding;
-      const bufferResource = bufferResources.buffers[buffer as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];
+      const bufferResource = (buffer === DISPATCH_PARAMS_BUFFER_NAME)
+        ? dispatchBuffer
+        : bufferResources.buffers[buffer as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];
       return pipelineResourceFactory.ofBindGroupEntry(binding, bufferResource);
     });
 };

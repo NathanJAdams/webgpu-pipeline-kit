@@ -7,6 +7,7 @@ export type WPKCacheMutable<T, TKey> = {
 export type WPKCacheResizeable<T> = {
   add: (element: T) => string;
   remove: (id: string) => void;
+  idOf: (index: number) => string | undefined;
   indexOf: (id: string) => number;
 };
 export type WPKUniformCache<TUniform, TMutable extends boolean> =
@@ -50,6 +51,7 @@ export type PackedCache<T, TMutable extends boolean> =
     count: () => number;
     add: (instance: T) => string;
     remove: (id: string) => void;
+    idOf: (index: number) => string | undefined;
     indexOf: (id: string) => number;
     pack: () => ValueSlices<T[]>;
   }

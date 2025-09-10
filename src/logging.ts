@@ -2,7 +2,7 @@ import { LogLevelDesc } from 'loglevel';
 
 import { LogFactory } from './utils';
 
-const namespaces = ['buffer', 'cache', 'data', 'mesh', 'pipeline', 'shader'];
+const namespaces = ['buffer', 'cache', 'data', 'mesh', 'pipeline', 'shader', 'resources'];
 
 const prefix = 'webgpu-pipeline-kit';
 

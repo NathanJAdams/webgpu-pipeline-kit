@@ -1,5 +1,5 @@
 import { logFactory } from './logging';
-import { DISPATCH_PARAMS_BUFFER_NAME } from './shader-reserved';
+import { DISPATCH_FORMAT, DISPATCH_GROUP_BINDING, DISPATCH_PARAMS_BUFFER_NAME } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
 import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender } from './types';
 import { logFuncs } from './utils';
@@ -27,12 +27,17 @@ export const toCodeShaderCompute = <
   const code =
     structs
     + WHITESPACE
+    + toCodeStruct(DISPATCH_PARAMS_BUFFER_NAME, DISPATCH_FORMAT)
+    + WHITESPACE
     + groupBindingsCode
+    + WHITESPACE
+    + toCodeGroupBinding(DISPATCH_GROUP_BINDING, DISPATCH_FORMAT)
     + (prologue !== undefined ? WHITESPACE + prologue : '')
     + WHITESPACE
     + computePassesCode.join(WHITESPACE)
     + (epilogue !== undefined ? WHITESPACE + epilogue : '')
     ;
+  logFuncs.lazyInfo(LOGGER, () => `Compute shader code:\n${code}`);
   return {
     code,
     entryPoints,
@@ -69,6 +74,7 @@ export const toCodeShaderRender = <
     + renderPassesCode.join(WHITESPACE)
     + (epilogue !== undefined ? WHITESPACE + epilogue : '')
     ;
+  logFuncs.lazyInfo(LOGGER, () => `Render shader code:\n${code}`);
   return {
     code,
     entryPoints,
@@ -100,23 +106,28 @@ const toCodeGroupBindings = <
   TIncludeEntity extends boolean,
 >(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, bufferFormats: TBufferFormatMap): string => {
   const entries = groupBindings.map((groupBinding) => {
-    const { group, binding, buffer } = groupBinding;
+    const { buffer } = groupBinding;
     const bufferFormat = bufferFormats[buffer];
     if (bufferFormat === undefined) {
       throw Error(`Cannot create group binding for buffer ${buffer} due to missing buffer format. Available buffer formats: [${Object.keys(bufferFormats).join(', ')}]`);
     }
-    const addressSpaceName = (bufferFormat.bufferType === 'uniform') ? 'uniform' : 'storage';
-    const accessMode = (addressSpaceName === 'uniform')
-      ? ''
-      : (bufferFormat.bufferType === 'editable')
-        ? ', read_write'
-        : ', read';
-    const dataType = (bufferFormat.bufferType === 'uniform')
-      ? capitalize(buffer)
-      : `array<${capitalize(buffer)}>`;
-    return `@group(${group})\n@binding(${binding})\nvar<${addressSpaceName}${accessMode}> ${buffer} : ${dataType};`;
+    return toCodeGroupBinding(groupBinding, bufferFormat);
   });
   return entries.join(WHITESPACE);
+};
+
+const toCodeGroupBinding = (groupBinding: WPKGroupBinding<any, any, any, any, any>, bufferFormat: WPKBufferFormat<any, any>): string => {
+  const { group, binding, buffer } = groupBinding;
+  const addressSpaceName = (bufferFormat.bufferType === 'uniform') ? 'uniform' : 'storage';
+  const accessMode = (addressSpaceName === 'uniform')
+    ? ''
+    : (bufferFormat.bufferType === 'editable')
+      ? ', read_write'
+      : ', read';
+  const dataType = (bufferFormat.bufferType === 'uniform')
+    ? capitalize(buffer)
+    : `array<${capitalize(buffer)}>`;
+  return `@group(${group})\n@binding(${binding})\nvar<${addressSpaceName}${accessMode}> ${buffer} : ${dataType};`;
 };
 
 const toCodeComputePass = <

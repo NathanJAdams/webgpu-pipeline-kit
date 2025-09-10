@@ -29,7 +29,7 @@ enum WPKManagedBufferState {
 }
 
 export const bufferFactory = {
-  ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
+  ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${data.byteLength}`);
     const size = toValidSize(label, data.byteLength);
     if (size > data.byteLength) {
@@ -39,6 +39,9 @@ export const bufferFactory = {
       data = alignedBuffer;
     }
     usage |= GPUBufferUsage.COPY_DST;
+    if (debuggable) {
+      usage |= GPUBufferUsage.COPY_SRC;
+    }
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
     return {
@@ -56,6 +59,7 @@ export const bufferFactory = {
           state = WPKManagedBufferState.New;
           trackedBuffer = {
             isNew: true,
+            bytesLength: size,
             buffer,
             destroy() {
               state = WPKManagedBufferState.Destroyed;
@@ -76,8 +80,11 @@ export const bufferFactory = {
       },
     };
   },
-  ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKResource<WPKTrackedBuffer> => {
+  ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} of byte length ${bytesLength}`);
+    if (debuggable) {
+      usage |= GPUBufferUsage.COPY_SRC;
+    }
     const size = toValidSize(label, bytesLength);
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
@@ -94,6 +101,7 @@ export const bufferFactory = {
           state = WPKManagedBufferState.New;
           trackedBuffer = {
             buffer,
+            bytesLength: size,
             isNew: true,
             destroy() {
               state = WPKManagedBufferState.Destroyed;
@@ -114,7 +122,7 @@ export const bufferFactory = {
       },
     };
   },
-  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
+  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating resizeable buffer '${label}' of usage ${usageToString(usage)}`);
     let previousBuffer: GPUBuffer | undefined;
     let currentBuffer: GPUBuffer | undefined;
@@ -126,9 +134,12 @@ export const bufferFactory = {
     if (copyDataOnResize) {
       usage |= GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
     }
+    if (debuggable) {
+      usage |= GPUBufferUsage.COPY_SRC;
+    }
     return {
       resize(bytesLength) {
-        logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${label} to desired size ${desiredBytesLength}`);
+        logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${label} to desired size ${bytesLength}`);
         desiredBytesLength = bytesLength;
       },
       get(device, queue, encoder) {
@@ -151,6 +162,7 @@ export const bufferFactory = {
           });
           state = WPKManagedBufferState.New;
           trackedBuffer = {
+            bytesLength: capacity.capacity,
             buffer: currentBuffer,
             isNew: true,
             destroy() {
@@ -177,10 +189,13 @@ export const bufferFactory = {
       },
     };
   },
-  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
+  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating mutable buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
-    usage |= GPUBufferUsage.COPY_DST;
     const size = toValidSize(label, bytesLength);
+    usage |= GPUBufferUsage.COPY_DST;
+    if (debuggable) {
+      usage |= GPUBufferUsage.COPY_SRC;
+    }
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
     const mutatedDataArray: WPKMutatedData[] = [];
@@ -200,6 +215,7 @@ export const bufferFactory = {
           });
           state = WPKManagedBufferState.New;
           trackedBuffer = {
+            bytesLength: size,
             buffer,
             isNew: true,
             destroy() {
@@ -227,12 +243,12 @@ export const bufferFactory = {
       },
     };
   },
-  ofStaged: (label: string, usage: GPUBufferUsageFlags): WPKBufferMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
+  ofStaged: (label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating staged buffer '${label}' of usage ${usageToString(usage)}`);
     const stagingLabel = `${label}-staging`;
     const backingLabel = `${label}-backing`;
-    const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC);
-    const backing = bufferFactory.ofResizeable(true, backingLabel, usage | GPUBufferUsage.COPY_DST);
+    const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC, debuggable);
+    const backing = bufferFactory.ofResizeable(true, backingLabel, usage | GPUBufferUsage.COPY_DST, debuggable);
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
       mutate(data, target) {

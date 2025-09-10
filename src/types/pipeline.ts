@@ -1,4 +1,4 @@
-import { WPKBufferFormatMap } from './buffer-formats';
+import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
 import { WPKMeshTemplateMap } from './mesh-template';
 import { WPKShader } from './shaders';
 import { Color } from '../utils';
@@ -95,11 +95,13 @@ export type WPKRenderPipelineDetail = {
   vertexBuffers: GPUBuffer[];
   drawCountsFunc: () => WPKDrawCounts;
 };
+export type WPKDebugFunc = () => Promise<void>;
 export type WPKPipelineDetail = {
   name: string;
   instanceCount: number;
   compute?: WPKComputePipelineDetail[];
   render?: WPKRenderPipelineDetail[];
+  debugFunc?: WPKDebugFunc;
 };
 //#endregion
 
@@ -139,4 +141,23 @@ export type WPKViews = {
   resolveTarget?: GPUTextureView;
 };
 export type WPKViewsFunc = (isAntiAliased: boolean) => WPKViews;
+//#endregion
+
+//#region debug
+export type WPKDebugOptions<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Partial<{
+  onBufferContents: (contents: WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap>) => Promise<void>;
+}>;
+export type WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+  [K in WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>]:
+  TBufferFormatMap[K] extends WPKBufferFormatUniform<TUniform>
+  ? Partial<TUniform>
+  : TBufferFormatMap[K] extends WPKBufferFormatEntityMarshalled<TEntity>
+  ? Array<Partial<TEntity>>
+  : TBufferFormatMap[K] extends WPKBufferFormatEntityLayout
+  ? Array<{
+    [F in TBufferFormatMap[K]['layout'][number]['name']]: number | number[] | string;
+  }>
+  : never
+  ;
+};
 //#endregion

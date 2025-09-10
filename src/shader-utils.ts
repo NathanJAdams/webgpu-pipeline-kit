@@ -61,9 +61,9 @@ export const shaderFuncs = {
       case 'f32': return 'float32';
     }
   },
-  toStrideArray: <T extends WPKShaderStructEntry>(datumTyped: T[]): number => datumTyped.reduce((acc, datumTyped) => acc + DATUM_TYPE_BYTE_LENGTHS[datumTyped.datumType], 0),
-  toStrideElement: <T extends WPKShaderStructEntry>(datumTyped: T): number => DATUM_TYPE_BYTE_LENGTHS[datumTyped.datumType],
-  toStrideDatum: (datumType: WPKShaderDatumType): number => DATUM_TYPE_BYTE_LENGTHS[datumType],
+  toStrideArray: <T extends WPKShaderStructEntry>(datumTyped: T[]): number => datumTyped.reduce((acc, datumTyped) => acc + shaderFuncs.toByteLength(datumTyped.datumType), 0),
+  toByteLength: (datumType: WPKShaderDatumType): number => shaderFuncs.toDatumLength(datumType) * 4,
+  toDatumLength: (datumType: WPKShaderDatumType): number => DATUM_TYPE_LENGTHS[datumType],
   toVertexBufferLocationType: (datumType: WPKShaderDatumType): WPKVertexBufferLocationType => {
     if (shaderFuncs.isScalar(datumType)) {
       return {
@@ -155,7 +155,7 @@ export const shaderFuncs = {
           }
           shaderLocation++;
         }
-        offset += shaderFuncs.toStrideDatum(datumType);
+        offset += shaderFuncs.toByteLength(datumType);
       }
       const attributeData: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap> = {
         buffer,
@@ -169,26 +169,26 @@ export const shaderFuncs = {
   },
 };
 
-const DATUM_TYPE_BYTE_LENGTHS: Record<WPKShaderDatumType, number> = {
-  f32: 1 * 4,
-  i32: 1 * 4,
-  u32: 1 * 4,
-  'vec2<i32>': 2 * 4,
-  'vec2<u32>': 2 * 4,
-  'vec2<f32>': 2 * 4,
-  'vec3<i32>': 3 * 4,
-  'vec3<u32>': 3 * 4,
-  'vec3<f32>': 3 * 4,
-  'vec4<i32>': 4 * 4,
-  'vec4<u32>': 4 * 4,
-  'vec4<f32>': 4 * 4,
-  'mat2x2<f32>': 4 * 4,
-  'mat2x3<f32>': 6 * 4,
-  'mat2x4<f32>': 8 * 4,
-  'mat3x2<f32>': 6 * 4,
-  'mat3x3<f32>': 9 * 4,
-  'mat3x4<f32>': 12 * 4,
-  'mat4x2<f32>': 8 * 4,
-  'mat4x3<f32>': 12 * 4,
-  'mat4x4<f32>': 16 * 4,
+const DATUM_TYPE_LENGTHS: Record<WPKShaderDatumType, number> = {
+  f32: 1,
+  i32: 1,
+  u32: 1,
+  'vec2<i32>': 2,
+  'vec2<u32>': 2,
+  'vec2<f32>': 2,
+  'vec3<i32>': 3,
+  'vec3<u32>': 3,
+  'vec3<f32>': 3,
+  'vec4<i32>': 4,
+  'vec4<u32>': 4,
+  'vec4<f32>': 4,
+  'mat2x2<f32>': 4,
+  'mat2x3<f32>': 6,
+  'mat2x4<f32>': 8,
+  'mat3x2<f32>': 6,
+  'mat3x3<f32>': 9,
+  'mat3x4<f32>': 12,
+  'mat4x2<f32>': 8,
+  'mat4x3<f32>': 12,
+  'mat4x4<f32>': 16,
 };

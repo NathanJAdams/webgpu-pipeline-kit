@@ -1,6 +1,6 @@
 import { logFactory } from './logging';
 import { pipelineFuncs } from './pipeline-utils';
-import { WPKPipeline, WPKPipelineDetailOptions, WPKViews, WPKViewsFunc } from './types';
+import { WPKPipeline, WPKPipelineDetail, WPKPipelineDetailOptions, WPKViews, WPKViewsFunc } from './types';
 import { WPKDisplay, WPKDisplayAddPipelineOptions, WPKDisplayAddPipelineOptionsAddAfter, WPKDisplayAddPipelineOptionsAddBefore } from './types';
 import { logFuncs } from './utils';
 
@@ -67,62 +67,77 @@ export const displayFactory = {
         const validPipelines = pipelineDetails.filter((pipelineDetail) => pipelineDetail.instanceCount > 0);
         logFuncs.lazyDebug(LOGGER, () => `Invoking ${validPipelines.length} valid pipelines`);
         for (const [pipelineIndex, pipelineDetail] of validPipelines.entries()) {
-          logFuncs.lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(pipelineDetail)}`);
-          const { compute } = pipelineDetail;
-          if (compute !== undefined) {
-            logFuncs.lazyTrace(LOGGER, () => `Compute shader of pipeline[${pipelineIndex}]`);
-            const computePass = encoder.beginComputePass();
-            for (const [computeEntryIndex, computeEntry] of compute.entries()) {
-              logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}]`);
-              const { bindGroups, pipeline, dispatchSize } = computeEntry;
-              computePass.setPipeline(pipeline);
-              for (const bindGroup of bindGroups) {
-                logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] set bind group ${JSON.stringify(bindGroup)}`);
-                computePass.setBindGroup(bindGroup.index, bindGroup.group);
-              }
-              logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch size ${JSON.stringify(dispatchSize)}`);
-              computePass.dispatchWorkgroups(dispatchSize[0], dispatchSize[1], dispatchSize[2]);
-            }
-            computePass.end();
-          }
-          const { render } = pipelineDetail;
-          if (render !== undefined) {
-            logFuncs.lazyTrace(LOGGER, () => `Render shader of pipeline[${pipelineIndex}]`);
-            const renderPass = encoder.beginRenderPass({
-              label: 'render-encoder',
-              colorAttachments: [{
-                ...views,
-                clearValue,
-                loadOp: 'clear',
-                storeOp: 'store'
-              }]
-            });
-            for (const [renderEntryIndex, renderEntry] of render.entries()) {
-              logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}]`);
-              const { bindGroups, pipeline, indices, vertexBuffers, drawCountsFunc } = renderEntry;
-              const drawCounts = drawCountsFunc();
-              renderPass.setPipeline(pipeline);
-              for (const bindGroup of bindGroups) {
-                logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set bind group ${JSON.stringify(bindGroup)}`);
-                renderPass.setBindGroup(bindGroup.index, bindGroup.group);
-              }
-              logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set indices buffer`);
-              renderPass.setIndexBuffer(indices.buffer, indices.format);
-              for (const [slot, vertexBuffer] of vertexBuffers.entries()) {
-                logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set vertex buffer in slot ${slot}`);
-                renderPass.setVertexBuffer(slot, vertexBuffer);
-              }
-              logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] draw indexed ${JSON.stringify(drawCounts)}`);
-              renderPass.drawIndexed(drawCounts.indexCount, drawCounts.instanceCount);
-            }
-            renderPass.end();
-          }
+          await invokePipeline(pipelineIndex, pipelineDetail, views, clearValue, encoder);
         }
         logFuncs.lazyTrace(LOGGER, () => `Submit encoder for ${validPipelines.length} pipelines`);
         device.queue.submit([encoder.finish()]);
       },
     };
   },
+};
+
+const invokePipeline = async (
+  pipelineIndex: number,
+  pipelineDetail: WPKPipelineDetail,
+  views: WPKViews,
+  clearValue: number[],
+  encoder: GPUCommandEncoder
+): Promise<void> => {
+  logFuncs.lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(pipelineDetail)}`);
+  const { compute } = pipelineDetail;
+  if (compute !== undefined) {
+    logFuncs.lazyTrace(LOGGER, () => `Compute shader of pipeline[${pipelineIndex}]`);
+    const computePass = encoder.beginComputePass();
+    for (const [computeEntryIndex, computeEntry] of compute.entries()) {
+      logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}]`);
+      const { bindGroups, pipeline, dispatchSize } = computeEntry;
+      computePass.setPipeline(pipeline);
+      for (const bindGroup of bindGroups) {
+        logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] set bind group at index ${bindGroup.index} to ${bindGroup.group.label}`);
+        computePass.setBindGroup(bindGroup.index, bindGroup.group);
+      }
+      logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch size ${JSON.stringify(dispatchSize)}`);
+      computePass.dispatchWorkgroups(dispatchSize[0], dispatchSize[1], dispatchSize[2]);
+    }
+    computePass.end();
+  }
+  const { render } = pipelineDetail;
+  if (render !== undefined) {
+    logFuncs.lazyTrace(LOGGER, () => `Render shader of pipeline[${pipelineIndex}]`);
+    const renderPass = encoder.beginRenderPass({
+      label: 'render-encoder',
+      colorAttachments: [{
+        ...views,
+        clearValue,
+        loadOp: 'clear',
+        storeOp: 'store'
+      }]
+    });
+    for (const [renderEntryIndex, renderEntry] of render.entries()) {
+      logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}]`);
+      const { bindGroups, pipeline, indices, vertexBuffers, drawCountsFunc } = renderEntry;
+      const drawCounts = drawCountsFunc();
+      renderPass.setPipeline(pipeline);
+      for (const bindGroup of bindGroups) {
+        logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set bind group at index ${bindGroup.index} to ${bindGroup.group.label}`);
+        renderPass.setBindGroup(bindGroup.index, bindGroup.group);
+      }
+      logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set indices buffer`);
+      renderPass.setIndexBuffer(indices.buffer, indices.format);
+      logFuncs.lazyTrace(LOGGER, () => `Setting ${vertexBuffers.length} vertex buffers`);
+      for (const [slot, vertexBuffer] of vertexBuffers.entries()) {
+        logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] set vertex buffer in slot ${slot} ${vertexBuffer.label}`);
+        renderPass.setVertexBuffer(slot, vertexBuffer);
+      }
+      logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] draw indexed ${JSON.stringify(drawCounts)}`);
+      renderPass.drawIndexed(drawCounts.indexCount, drawCounts.instanceCount);
+    }
+    renderPass.end();
+  }
+  const { debugFunc } = pipelineDetail;
+  if (debugFunc !== undefined) {
+    await debugFunc();
+  }
 };
 
 const createViewsFunc = (canvas: HTMLCanvasElement, context: GPUCanvasContext, device: GPUDevice, format: GPUTextureFormat): WPKViewsFunc => {

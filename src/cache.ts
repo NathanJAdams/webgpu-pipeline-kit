@@ -1,6 +1,6 @@
 import { logFactory } from './logging';
 import { packedCacheFactory } from './packed-cache';
-import { PackedCache, WPKDatumExtractor, WPKEntityCache, WPKUniformCache } from './types';
+import { PackedCache, WPKCacheResizeable, WPKDatumExtractor, WPKEntityCache, WPKUniformCache } from './types';
 import { logFuncs, sliceFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('cache');
@@ -63,7 +63,7 @@ export const cacheFactory = {
   ): WPKEntityCache<T, TMutable, true> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating resizeable entity cache');
     const packedCache = packedCacheFactory.of<T, TMutable>(mutable, entityIdExtractors);
-    const entityCache: WPKEntityCache<T, any, any> = {
+    const entityCache: WPKCacheResizeable<T> & WPKEntityCache<T, any, any> = {
       isMutable() {
         return mutable;
       },
@@ -81,6 +81,9 @@ export const cacheFactory = {
       },
       remove(id) {
         return packedCache.remove(id);
+      },
+      idOf(index) {
+        return packedCache.idOf(index);
       },
       indexOf(id) {
         return packedCache.indexOf(id);

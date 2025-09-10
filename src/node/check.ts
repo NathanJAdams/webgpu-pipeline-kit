@@ -3,12 +3,10 @@ import { getShaderCodeStageResult } from './diagnostics';
 import { toCodeShaderCompute, toCodeShaderRender } from '../shader-code';
 import { WPKPipelineDefinition, WPKShaderModuleDetail } from '../types';
 import { WPKShaderCodeResult, WPKShaderCodeStageResult } from './types';
-import { withReserved } from '../pipeline';
 
 const LOGGER = logFactory.getLogger('shader');
 
 export const checkShaderCode = async (definition: WPKPipelineDefinition<any, any, any, any>): Promise<void> => {
-  definition = withReserved(definition);
   const { compute, render } = await shaderCodeResult(definition);
   if (compute) {
     checkShaderCodeStage('compute', compute);

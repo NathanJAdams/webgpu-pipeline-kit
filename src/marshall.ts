@@ -13,7 +13,7 @@ export const marshallerFactory = {
     for (const formatElement of bufferFormatMarshalled.marshall) {
       logFuncs.lazyTrace(LOGGER, () => `Create ref from storage format ${JSON.stringify(formatElement)}`);
       const datumOffset = totalStride;
-      const datumBridge = datumBridgeFactory.of(formatElement, datumOffset, entityCache);
+      const datumBridge = datumBridgeFactory.ofFormatElement(formatElement, datumOffset, entityCache);
       datumBridges.push(datumBridge);
       totalStride += datumBridge.stride;
     }
@@ -26,7 +26,7 @@ export const marshallerFactory = {
         const dataView = new DataView(buffer);
         instances.forEach((instance, index) => {
           logFuncs.lazyTrace(LOGGER, () => `Extracting data from instance ${JSON.stringify(instance)}`);
-          datumBridges.forEach((datumBridge) => datumBridge.bridge(index * totalStride, instance, dataView));
+          datumBridges.forEach((datumBridge) => datumBridge.instanceToDataView(index * totalStride, instance, dataView));
         });
         return buffer;
       },

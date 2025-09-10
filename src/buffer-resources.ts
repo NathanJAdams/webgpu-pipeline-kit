@@ -4,21 +4,21 @@ import { marshallerFactory } from './marshall';
 import { meshFuncs } from './mesh-factories';
 import { DISPATCH_FORMAT } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferMutable, WPKBufferResources, WPKEntityCache, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
+import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKDispatchBuffer, WPKEntityCache, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
 import { CopySlice, logFuncs, ValueSlices } from './utils';
 
 const LOGGER = logFactory.getLogger('buffer');
 
 export const bufferResourcesFactory = {
-  ofDispatch: (name: string): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
+  ofDispatch: (name: string, debuggable: boolean): WPKDispatchBuffer => {
     logFuncs.lazyDebug(LOGGER, () => `Creating dispatch buffer ${name}`);
     const stride = shaderFuncs.toStrideArray(DISPATCH_FORMAT.marshall);
-    return bufferFactory.ofMutable(stride, `${name}-buffer-dispatch`, GPUBufferUsage.UNIFORM);
+    return bufferFactory.ofMutable(stride, `${name}-buffer-dispatch`, GPUBufferUsage.UNIFORM, debuggable);
   },
-  ofMesh: (name: string, mesh: WPKMesh): WPKMeshBufferResource => {
+  ofMesh: (name: string, mesh: WPKMesh, debuggable: boolean): WPKMeshBufferResource => {
     logFuncs.lazyDebug(LOGGER, () => `Creating mesh buffer ${name}`);
-    const indices = bufferFactory.ofData(meshFuncs.toIndicesData(mesh), `${name}-indices`, GPUBufferUsage.INDEX);
-    const vertices = bufferFactory.ofData(meshFuncs.toVerticesData(mesh), `${name}-vertices`, GPUBufferUsage.VERTEX);
+    const indices = bufferFactory.ofData(meshFuncs.toIndicesData(mesh), `${name}-indices`, GPUBufferUsage.INDEX, debuggable);
+    const vertices = bufferFactory.ofData(meshFuncs.toVerticesData(mesh), `${name}-vertices`, GPUBufferUsage.VERTEX, debuggable);
     return {
       indices,
       vertices,
@@ -30,44 +30,45 @@ export const bufferResourcesFactory = {
     entityCache: WPKEntityCache<TEntity, boolean, boolean>,
     bufferFormats: TBufferFormatMap,
     bufferUsages: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags>,
+    debuggable: boolean
   ): WPKBufferResources<TUniform, TEntity, TBufferFormatMap> => {
     const initialInstances = entityCache.calculateChanges().values;
     const uniformMutators: WPKMutator<TUniform>[] = [];
     const buffers: Record<string, WPKResource<WPKTrackedBuffer>> = {};
     let instanceMutator: WPKMutator<ValueSlices<TEntity[]>> | undefined;
     logFuncs.lazyDebug(LOGGER, () => `Create buffer resources for ${name}`);
-    for (const [key, bufferFormat] of Object.entries(bufferFormats)) {
-      logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key}`);
+    for (const [bufferName, bufferFormat] of Object.entries(bufferFormats)) {
+      logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${bufferName}`);
       const { bufferType } = bufferFormat;
-      const usage = bufferUsages[key as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>];
-      const label = `${name}-buffer-${key}`;
+      const usage = bufferUsages[bufferName as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>];
+      const label = `${name}-buffer-${bufferName}`;
       if (bufferType === 'uniform') {
-        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type uniform`);
+        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${bufferName} of type uniform`);
         const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
         if (uniformCache.isMutable) {
-          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:uniform is mutable`);
+          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${bufferName}:uniform is mutable`);
           const stride = shaderFuncs.toStrideArray(bufferFormat.marshall);
-          const buffer = bufferFactory.ofMutable(stride, label, usage);
+          const buffer = bufferFactory.ofMutable(stride, label, usage, debuggable);
           const uniformMutator: WPKMutator<TUniform> = {
             mutate(input) {
               const data = marshaller.encode([input]);
               buffer.mutate(data, 0);
             },
           };
-          buffers[key] = buffer;
+          buffers[bufferName] = buffer;
           uniformMutators.push(uniformMutator);
         } else {
-          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:uniform is not mutable`);
+          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${bufferName}:uniform is not mutable`);
           const data = marshaller.encode([uniformCache.get()]);
-          const buffer = bufferFactory.ofData(data, label, usage);
-          buffers[key] = buffer;
+          const buffer = bufferFactory.ofData(data, label, usage, debuggable);
+          buffers[bufferName] = buffer;
         }
       } else if (bufferType === 'editable') {
-        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity layout`);
+        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${bufferName} of type entity layout`);
         if (entityCache.isResizeable) {
           const stride = shaderFuncs.toStrideArray(bufferFormat.layout);
-          const buffer = bufferFactory.ofResizeable(false, label, usage);
-          buffers[key] = buffer;
+          const buffer = bufferFactory.ofResizeable(false, label, usage, debuggable);
+          buffers[bufferName] = buffer;
           let maxInstanceCount = 0;
           instanceMutator = {
             mutate(input) {
@@ -80,14 +81,14 @@ export const bufferResourcesFactory = {
           };
         } else {
           const stride = shaderFuncs.toStrideArray(bufferFormat.layout);
-          buffers[key] = bufferFactory.ofSize(entityCache.count() * stride, label, usage);
+          buffers[bufferName] = bufferFactory.ofSize(entityCache.count() * stride, label, usage, debuggable);
         }
       } else if (bufferType === 'marshalled') {
-        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${key} of type entity marshalled`);
+        logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for ${name} key ${bufferName} of type entity marshalled`);
         if (entityCache.isResizeable) {
-          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is resizeable`);
-          const buffer = bufferFactory.ofStaged(label, usage);
-          buffers[key] = buffer;
+          logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${bufferName}:entity:marshalled is resizeable`);
+          const buffer = bufferFactory.ofStaged(label, usage, debuggable);
+          buffers[bufferName] = buffer;
           const stride = shaderFuncs.toStrideArray(bufferFormat.marshall);
           const marshaller = marshallerFactory.ofMarshalled(bufferFormat, entityCache);
           instanceMutator = {
@@ -106,9 +107,9 @@ export const bufferResourcesFactory = {
           };
         } else {
           if (entityCache.isMutable) {
-            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is mutable`);
-            const buffer = bufferFactory.ofStaged(label, usage);
-            buffers[key] = buffer;
+            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${bufferName}:entity:marshalled is not resizeable is mutable`);
+            const buffer = bufferFactory.ofStaged(label, usage, debuggable);
+            buffers[bufferName] = buffer;
             const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
             instanceMutator = {
               mutate(input) {
@@ -118,10 +119,10 @@ export const bufferResourcesFactory = {
               },
             };
           } else {
-            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${key}:entity:marshalled is not resizeable is not mutable`);
+            logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${name}:${bufferName}:entity:marshalled is not resizeable is not mutable`);
             const marshaller = marshallerFactory.ofMarshalled(bufferFormat);
             const data = marshaller.encode(initialInstances);
-            buffers[key] = bufferFactory.ofData(data, label, usage);
+            buffers[bufferName] = bufferFactory.ofData(data, label, usage, debuggable);
           }
         }
       } else {

@@ -1,13 +1,12 @@
-import { bufferResourcesFactory } from './buffer-resources';
 import { logFactory } from './logging';
 import { meshFuncs } from './mesh-factories';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { DISPATCH_MARSHALLER } from './shader-reserved';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferDetail, WPKVertexBufferAttributeData } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePipelineDetail, WPKDispatchBuffer, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferDetail, WPKVertexBufferAttributeData } from './types';
 import { logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('pipeline');
+const LOGGER = logFactory.getLogger('resources');
 
 export const pipelineResourceFactory = {
   // layouts
@@ -36,7 +35,7 @@ export const pipelineResourceFactory = {
     return resourceFactory.ofCached({
       get(device, queue, encoder) {
         const bindGroupLayouts = bindGroupLayoutsResource.get(device, queue, encoder);
-        logFuncs.lazyTrace(LOGGER, () => `Creating pipeline layout ${label}`);
+        logFuncs.lazyTrace(LOGGER, () => `Creating pipeline layout ${label} from ${bindGroupLayouts.length} bind group layouts [${bindGroupLayouts.map(l => l.label).join(', ')}]`);
         return device.createPipelineLayout({
           label,
           bindGroupLayouts,
@@ -91,11 +90,10 @@ export const pipelineResourceFactory = {
   },
   ofBindGroup: (
     name: string,
-    group: WPKGroupIndex,
     bindGroupLayoutResource: WPKResource<GPUBindGroupLayout>,
     bindGroupEntriesResource: WPKResource<GPUBindGroupEntry[]>
   ): WPKResource<GPUBindGroup> => {
-    const label = `${name}-bind-group-${group}`;
+    const label = `${name}-bind-group`;
     logFuncs.lazyDebug(LOGGER, () => `Creating bind group resource ${label}`);
     return resourceFactory.ofCachedFromDependencies(
       [bindGroupLayoutResource, bindGroupEntriesResource] as const,
@@ -170,11 +168,10 @@ export const pipelineResourceFactory = {
     );
   },
   ofDispatchSize: (
-    name: string,
     dispatchParamsFunc: () => WPKDispatchParams,
+    dispatchBufferResource: WPKDispatchBuffer,
   ): WPKResource<WPKDispatchSize> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch buffer resource');
-    const dispatchBufferResource = bufferResourcesFactory.ofDispatch(name);
     let previousInstanceCount = 0;
     return {
       get(device, queue, encoder) {
@@ -216,7 +213,7 @@ export const pipelineResourceFactory = {
     bufferFormats: TBufferFormatMap,
     bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>
   ): WPKResource<WPKVertexBufferDetail> => {
-    logFuncs.lazyDebug(LOGGER, () => 'Creating vertex buffer detail resource from buffer location');
+    logFuncs.lazyDebug(LOGGER, () => `Creating vertex buffer detail resource from buffer location field types ${JSON.stringify(vertexBufferLocationFieldTypes)}`);
     const { buffer, locationAttributes, stride } = vertexBufferLocationFieldTypes;
     const bufferFormat = bufferFormats[buffer];
     const bufferResource = bufferResources.buffers[buffer as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];

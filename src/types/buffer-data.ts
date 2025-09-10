@@ -3,14 +3,21 @@ import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
 //#region bridge
 export type WPKRefPath = Array<(string | number)>;
 export type WPKDatumExtractor<T, TValue> = (instance: T) => TValue;
+export type WPKDatumExtractEmbedder<T, TValue> = {
+  extract: (instance: T) => TValue;
+  embed: (instance: T, value: TValue) => void;
+};
 export type WPKDatumBridge<T> = {
   stride: number;
-  bridge: WPKDatumBridgeFunc<T>;
+  instanceToDataView: WPKDatumBridgeFunc<T>;
+  dataViewToInstance: WPKDatumBridgeFunc<T>;
 };
 export type WPKDatumBridgeFunc<T> = (offset: number, instance: T, dataView: DataView) => void;
+export type WPKDatumGetterFunc = (target: DataView, offset: number, littleEndian: boolean) => number;
 export type WPKDatumSetterFunc = (target: DataView, offset: number, value: number, littleEndian: boolean) => void;
-export type WPKDatumSetter = {
+export type WPKDatumGetSetter = {
   stride: number;
+  get: WPKDatumGetterFunc;
   set: WPKDatumSetterFunc;
 };
 //#endregion
@@ -37,6 +44,7 @@ export type WPKBufferResizeable = {
 //#region resources
 export type WPKTrackedBuffer = {
   isNew: boolean;
+  bytesLength: number;
   buffer: GPUBuffer;
   destroy: () => void;
 };
@@ -47,6 +55,7 @@ export type WPKMeshBufferResource = {
   indices: WPKResource<WPKTrackedBuffer>;
   vertices: WPKResource<WPKTrackedBuffer>;
 };
+export type WPKDispatchBuffer = WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer>;
 export type WPKBufferResources<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   buffers: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>, WPKResource<WPKTrackedBuffer>>;
   instanceCount: () => number;

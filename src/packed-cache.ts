@@ -272,6 +272,9 @@ export const packedCacheFactory = {
           throw Error(`Cannot remove element ${id} before it has been added`);
         }
       },
+      idOf(index) {
+        return idIndexes.getKey(index);
+      },
       indexOf(id) {
         const index = idIndexes.get(id);
         const validIndex = (index === undefined)
