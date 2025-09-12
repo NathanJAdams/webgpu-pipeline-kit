@@ -2,8 +2,7 @@ import { logFactory } from './logging';
 import { meshFuncs } from './mesh-factories';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
-import { DISPATCH_MARSHALLER } from './shader-reserved';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePipelineDetail, WPKDispatchBuffer, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferDetail, WPKVertexBufferAttributeData } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePass, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferAttributeData, WPKVertexBufferDetail } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('resources');
@@ -167,26 +166,27 @@ export const pipelineResourceFactory = {
       },
     );
   },
+  ofDispatchParams: (
+    instanceCountResource: WPKResource<number>,
+    passes: WPKComputePass<any, any, any>[],
+  ): WPKResource<WPKDispatchParams<any>> => {
+    logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch params resource');
+    return resourceFactory.ofCachedFromDependencies(
+      [instanceCountResource] as const,
+      (_device, _queue, _encoder, values) =>
+        pipelineFuncs.toDispatchParams(passes, values[0])
+    );
+  },
   ofDispatchSize: (
-    dispatchParamsFunc: () => WPKDispatchParams,
-    dispatchBufferResource: WPKDispatchBuffer,
+    dispatchParamsResource: WPKResource<WPKDispatchParams<any>>,
+    entryPoint: string,
   ): WPKResource<WPKDispatchSize> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch buffer resource');
-    let previousInstanceCount = 0;
-    return {
-      get(device, queue, encoder) {
-        const dispatchParams = dispatchParamsFunc();
-        const { instanceCount } = dispatchParams;
-        if (previousInstanceCount !== instanceCount) {
-          previousInstanceCount = instanceCount;
-          const data = DISPATCH_MARSHALLER.encode([dispatchParams]);
-          dispatchBufferResource.mutate(data, 0);
-          // pull data through to buffer
-          dispatchBufferResource.get(device, queue, encoder);
-        }
-        return dispatchParams.dispatchSize;
-      },
-    };
+    return resourceFactory.ofCachedFromDependencies(
+      [dispatchParamsResource] as const,
+      (_device, _queue, _encoder, values) =>
+        values[0].dispatchSizes[entryPoint]
+    );
   },
 
   // render
@@ -204,11 +204,7 @@ export const pipelineResourceFactory = {
     }];
     return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, 'vertex', meshBufferResource.vertices);
   },
-  ofVertexBufferDetailBufferLocationFieldTypes: <
-    TUniform,
-    TEntity,
-    TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  >(
+  ofVertexBufferDetailBufferLocationFieldTypes: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
     vertexBufferLocationFieldTypes: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>,
     bufferFormats: TBufferFormatMap,
     bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>

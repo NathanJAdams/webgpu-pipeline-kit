@@ -67,22 +67,29 @@ export const displayFactory = {
         const validPipelines = pipelineDetails.filter((pipelineDetail) => pipelineDetail.instanceCount > 0);
         logFuncs.lazyDebug(LOGGER, () => `Invoking ${validPipelines.length} valid pipelines`);
         for (const [pipelineIndex, pipelineDetail] of validPipelines.entries()) {
-          await invokePipeline(pipelineIndex, pipelineDetail, views, clearValue, encoder);
+          invokePipeline(pipelineIndex, pipelineDetail, views, clearValue, encoder);
         }
         logFuncs.lazyTrace(LOGGER, () => `Submit encoder for ${validPipelines.length} pipelines`);
         device.queue.submit([encoder.finish()]);
+        logFuncs.lazyTrace(LOGGER, () => `Call debug function ${validPipelines.length} pipelines`);
+        for (const pipelineDetail of validPipelines.values()) {
+          const { debugFunc } = pipelineDetail;
+          if (debugFunc !== undefined) {
+            await debugFunc();
+          }
+        }
       },
     };
   },
 };
 
-const invokePipeline = async (
+const invokePipeline = (
   pipelineIndex: number,
   pipelineDetail: WPKPipelineDetail,
   views: WPKViews,
   clearValue: number[],
   encoder: GPUCommandEncoder
-): Promise<void> => {
+): void => {
   logFuncs.lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(pipelineDetail)}`);
   const { compute } = pipelineDetail;
   if (compute !== undefined) {
@@ -133,10 +140,6 @@ const invokePipeline = async (
       renderPass.drawIndexed(drawCounts.indexCount, drawCounts.instanceCount);
     }
     renderPass.end();
-  }
-  const { debugFunc } = pipelineDetail;
-  if (debugFunc !== undefined) {
-    await debugFunc();
   }
 };
 

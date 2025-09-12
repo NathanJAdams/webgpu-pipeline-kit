@@ -1,3 +1,4 @@
+import { DISPATCH_PARAMS_BUFFER_NAME, WPKDispatchParams, WPKDispatchSize } from './buffer-data';
 import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
 import { WPKMeshTemplateMap } from './mesh-template';
 import { WPKShader } from './shaders';
@@ -105,14 +106,6 @@ export type WPKPipelineDetail = {
 };
 //#endregion
 
-//#region dispatch
-export type WPKDispatchSize = [number, number, number];
-export type WPKDispatchParams = {
-  instanceCount: number;
-  dispatchSize: WPKDispatchSize;
-};
-//#endregion
-
 //#region display
 export type WPKDisplayAddPipelineOptionsAddBefore = {
   before: string;
@@ -159,5 +152,7 @@ export type WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap extends
   }>
   : never
   ;
+} & {
+  [DISPATCH_PARAMS_BUFFER_NAME]: WPKDispatchParams<any>;
 };
 //#endregion

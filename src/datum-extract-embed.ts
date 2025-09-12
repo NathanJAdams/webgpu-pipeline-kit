@@ -39,7 +39,7 @@ const ofNumberArray = <T>(numberArrayPath: string): WPKDatumExtractEmbedder<T, n
       setValueOnInstanceAtPath(instance, refPath, value);
     },
     extract(instance) {
-      const value = getValueAtPath(instance, refPath, 0);
+      const value = getValueAtPath(instance, refPath, 0, false);
       if (Array.isArray(value)) {
         if (value.some(element => typeof element !== 'number')) {
           throw Error(`Some elements in array [${value.join(', ')}] are not number`);
@@ -90,7 +90,7 @@ const toRefPath = (path: string): WPKRefPath => {
   return refPath;
 };
 const getValueOnInstanceAtPathOfType = <T, TType extends keyof WPKPrimitiveMap>(instance: T, refPath: WPKRefPath, type: TType): WPKPrimitiveMap[TType] => {
-  const value = getValueAtPath(instance, refPath, 0);
+  const value = getValueAtPath(instance, refPath, 0, false);
   if (typeof value === type) {
     logFuncs.lazyTrace(LOGGER, () => `Found value '${value}' at path '${refPath} of type ${type}'`);
     return value as WPKPrimitiveMap[TType];
@@ -100,14 +100,14 @@ const getValueOnInstanceAtPathOfType = <T, TType extends keyof WPKPrimitiveMap>(
 const setValueOnInstanceAtPath = (instance: any, refPath: WPKRefPath, value: any): void => {
   const parentPath = refPath.slice(0, -1);
   const fieldPath = refPath[refPath.length - 1];
-  const parent = getValueAtPath(instance, parentPath, 0);
+  const parent = getValueAtPath(instance, parentPath, 0, true);
   if (typeof parent !== 'object') {
     throw Error(`Cannot set value ${JSON.stringify(value)} on instance ${JSON.stringify(instance)} path ${parentPath} of type ${typeof parent}`);
   }
   logFuncs.lazyTrace(LOGGER, () => `Set value '${value}' at path '${refPath}'`);
   (parent as any)[fieldPath] = value;
 };
-const getValueAtPath = (input: any, refPath: WPKRefPath, pathIndex: number): unknown => {
+const getValueAtPath = (input: any, refPath: WPKRefPath, pathIndex: number, ensurePath: boolean): unknown => {
   if (pathIndex > refPath.length) {
     throw Error(`Cannot use index ${pathIndex} larger than reference path. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
   }
@@ -116,11 +116,29 @@ const getValueAtPath = (input: any, refPath: WPKRefPath, pathIndex: number): unk
     return input;
   }
   const indexValue = refPath[pathIndex];
-  if (typeof input !== 'object' || input === null) {
-    throw Error(`Cannot index field with index ${indexValue}. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
+  if (typeof indexValue === 'string') {
+    const object = getValueAtPath(input[indexValue], refPath, pathIndex + 1, ensurePath);
+    if (object !== undefined) {
+      return object;
+    } else if (ensurePath) {
+      const newObject = {};
+      input[indexValue] = newObject;
+      return newObject;
+    } else {
+      throw Error(`Failed to find value for ${JSON.stringify(input)} at path ${indexValue}`);
+    }
+  } else if (typeof indexValue === 'number') {
+    const array = getValueAtPath(input[indexValue], refPath, pathIndex + 1, ensurePath);
+    if (array !== undefined) {
+      return array;
+    } else if (ensurePath) {
+      const newArray: [] = [];
+      input[indexValue] = newArray;
+      return newArray;
+    } else {
+      throw Error(`Failed to find value for ${JSON.stringify(input)} at path ${indexValue}`);
+    }
+  } else {
+    throw Error(`Cannot index using non-integer or string field ${indexValue}. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
   }
-  if (typeof indexValue === 'string' || typeof indexValue === 'number') {
-    return getValueAtPath(input[indexValue], refPath, pathIndex + 1);
-  }
-  throw Error(`Cannot index using non-integer or string field ${indexValue}. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
 };

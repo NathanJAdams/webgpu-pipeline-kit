@@ -9,11 +9,7 @@ import { logFuncs } from '../../utils';
 const LOGGER = logFactory.getLogger('pipeline');
 
 export const run = async (): Promise<void> => {
-  setLogLevel('WARN');
-  setLogLevel('DEBUG', 'buffer');
-  setLogLevel('TRACE', 'pipeline');
-  setLogLevel('TRACE', 'shader');
-  setLogLevel('TRACE', 'resources');
+  setLogLevel('DEBUG');
   const canvas = document.getElementById('game-canvas') as (HTMLCanvasElement | null);
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');

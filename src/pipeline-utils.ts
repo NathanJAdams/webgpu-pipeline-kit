@@ -1,5 +1,5 @@
 import { logFactory } from './logging';
-import { WPKDispatchParams, WPKDispatchSize, WPKWorkGroupSize } from './types';
+import { WPKComputePass, WPKDispatchParams, WPKDispatchSize, WPKDispatchSizes, WPKWorkGroupSize } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -56,15 +56,19 @@ export const pipelineFuncs = {
     return formats.reduce((currentByteLength, format) => currentByteLength + pipelineFuncs.toByteLength(format), 0);
   },
   toSampleCount: (isAntiAliased: boolean): number => isAntiAliased ? 4 : 1,
-  toDispatchParams: (size: WPKWorkGroupSize, instanceCount: number): WPKDispatchParams => {
-    const totalThreads = size.x * (size.y || 1) * (size.z || 1);
-    const x = Math.ceil(instanceCount / totalThreads);
-    const dispatchSize: WPKDispatchSize = [x, 1, 1]; // TODO test with y and z
-    logFuncs.lazyTrace(LOGGER, () => `Calculated dispatch size from ${JSON.stringify(size)} and instance count ${instanceCount} is ${JSON.stringify(dispatchSize)}`);
+  toDispatchParams: (passes: WPKComputePass<any, any, any>[], instanceCount: number): WPKDispatchParams<any> => {
     return {
-      dispatchSize,
       instanceCount,
+      dispatchSizes: passes.reduce((acc, pass) => {
+        acc[pass.entryPoint] = pipelineFuncs.toDispatchSize(instanceCount, pass.workGroupSize);
+        return acc;
+      }, {} as WPKDispatchSizes<any>),
     };
+  },
+  toDispatchSize: (instanceCount: number, workGroupSize: WPKWorkGroupSize): WPKDispatchSize => {
+    const totalThreads = workGroupSize.x * (workGroupSize.y || 1) * (workGroupSize.z || 1);
+    const x = Math.ceil(instanceCount / totalThreads);
+    return [x, 1, 1]; // TODO test with y and z
   },
   getContext: (canvas: HTMLCanvasElement): GPUCanvasContext => {
     logFuncs.lazyTrace(LOGGER, () => 'Get webgpu context from canvas');

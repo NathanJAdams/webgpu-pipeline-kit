@@ -13,6 +13,17 @@ export const resourceFactory = {
       },
     };
   },
+  ofFunc: <T>(func: () => T, isDirty: () => boolean = () => true): WPKResource<T> => {
+    let object: T | undefined;
+    return {
+      get(_device, _queue, _encoder) {
+        if (object === undefined || isDirty()) {
+          object = func();
+        }
+        return object;
+      },
+    };
+  },
   ofArray: <T>(resources: WPKResource<T>[]): WPKResource<T[]> => {
     return {
       get(device, queue, encoder) {

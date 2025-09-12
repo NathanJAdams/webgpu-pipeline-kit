@@ -2,18 +2,32 @@ import { bufferFactory } from './buffer-factory';
 import { logFactory } from './logging';
 import { marshallerFactory } from './marshall';
 import { meshFuncs } from './mesh-factories';
-import { DISPATCH_FORMAT } from './shader-reserved';
+import { resourceFactory } from './resources';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKDispatchBuffer, WPKEntityCache, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
+import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform, WPKBufferResources, WPKDispatchParams, WPKEntityCache, WPKMarshaller, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
 import { CopySlice, logFuncs, ValueSlices } from './utils';
 
 const LOGGER = logFactory.getLogger('buffer');
 
 export const bufferResourcesFactory = {
-  ofDispatch: (name: string, debuggable: boolean): WPKDispatchBuffer => {
+  ofDispatch: <TEntryPoints extends string[]>(
+    name: string,
+    format: WPKBufferFormatUniform<WPKDispatchParams<TEntryPoints>>,
+    params: WPKResource<WPKDispatchParams<TEntryPoints>>,
+    marshaller: WPKMarshaller<WPKDispatchParams<TEntryPoints>>,
+    debuggable: boolean
+  ): WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating dispatch buffer ${name}`);
-    const stride = shaderFuncs.toStrideArray(DISPATCH_FORMAT.marshall);
-    return bufferFactory.ofMutable(stride, `${name}-buffer-dispatch`, GPUBufferUsage.UNIFORM, debuggable);
+    const stride = shaderFuncs.toStrideArray(format.marshall);
+    const dispatchBuffer = bufferFactory.ofMutable(stride, `${name}-buffer-dispatch`, GPUBufferUsage.UNIFORM, debuggable);
+    return resourceFactory.ofCachedFromDependencies(
+      [params] as const,
+      (device, queue, encoder, values) => {
+        const marshalledData = marshaller.encode([values[0]]);
+        dispatchBuffer.mutate(marshalledData, 0);
+        return dispatchBuffer.get(device, queue, encoder);
+      }
+    );
   },
   ofMesh: (name: string, mesh: WPKMesh, debuggable: boolean): WPKMeshBufferResource => {
     logFuncs.lazyDebug(LOGGER, () => `Creating mesh buffer ${name}`);

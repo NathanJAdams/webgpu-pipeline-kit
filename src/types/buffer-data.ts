@@ -1,4 +1,4 @@
-import { WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
+import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
 
 //#region bridge
 export type WPKRefPath = Array<(string | number)>;
@@ -55,10 +55,26 @@ export type WPKMeshBufferResource = {
   indices: WPKResource<WPKTrackedBuffer>;
   vertices: WPKResource<WPKTrackedBuffer>;
 };
-export type WPKDispatchBuffer = WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer>;
 export type WPKBufferResources<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   buffers: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>, WPKResource<WPKTrackedBuffer>>;
   instanceCount: () => number;
   update: () => void;
+};
+//#endregion
+
+//#region dispatch
+export const DISPATCH_PARAMS_BUFFER_NAME = 'dispatch';
+export type WPKDispatchSize = [number, number, number];
+export type WPKDispatchSizes<TEntryPoints extends string[]> = {
+  [K in TEntryPoints[number]]: WPKDispatchSize;
+};
+export type WPKDispatchParams<TEntryPoints extends string[]> = {
+  instanceCount: number;
+  dispatchSizes: WPKDispatchSizes<TEntryPoints>;
+};
+export type WPKDispatchResource<TEntryPoints extends string[]> = {
+  format: WPKBufferFormat<WPKDispatchParams<TEntryPoints>, any>;
+  buffer: WPKResource<WPKTrackedBuffer>;
+  params: WPKResource<WPKDispatchParams<TEntryPoints>>;
 };
 //#endregion
