@@ -88,6 +88,7 @@ export class Camera {
 
   flushChanges(): void {
     const vm = this._viewMatrix;
+    const updateViewProjectionMatrix = this.enableViewProjectionMatrix && (this.isDirtyPosition || this.isDirtyRotation || this.isDirtyAspectRatio || this.isDirtyFieldOfView || this.isDirtyNearFar);
     if (this.isDirtyPosition || this.isDirtyRotation) {
       const { x: px, y: py, z: pz } = this._position;
       const { x: qx, y: qy, z: qz, w: qw } = this._rotation;
@@ -156,7 +157,7 @@ export class Camera {
       // m[15] = 0;
       this.isDirtyNearFar = false;
     }
-    if (this.enableViewProjectionMatrix) {
+    if (updateViewProjectionMatrix) {
       const vpm = this._viewProjectionMatrix;
       const pm0 = pm[0];
       const pm5 = pm[5];
