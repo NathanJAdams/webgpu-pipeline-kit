@@ -4,7 +4,7 @@ import { Triangle, TriangleUniform } from './instance-formats';
 import { pipelineDefinition, pipelineOptions } from './pipeline-definition';
 import { logFactory } from '../../logging';
 import { WPKDebugOptions } from '../../types';
-import { logFuncs } from '../../utils';
+import { Color, logFuncs } from '../../utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
 
@@ -23,7 +23,7 @@ export const run = async (): Promise<void> => {
   const trianglePipeline = factories.pipeline.ofDefinition(pipelineDefinition, pipelineOptions, debugOptions);
   pipelineRunner.add(trianglePipeline);
   const options: WPKDisplayOptions = {
-    clear: factories.color.BLACK,
+    clear: Color.BLACK,
     isAntiAliased: true,
   };
   await pipelineRunner.display(options);
