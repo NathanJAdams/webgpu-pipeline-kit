@@ -1,5 +1,4 @@
 import { defineConfig } from 'tsup';
-import pkg from './package.json';
 
 export default defineConfig({
   entry: {
@@ -15,14 +14,4 @@ export default defineConfig({
   sourcemap: false,
   splitting: false,
   target: 'ES2020',
-
-
-  outExtension({ format, options, pkgType }) {
-    if (format === 'iife') {
-      return {
-        js: `.v${pkg.version}.js`
-      };
-    }
-    return { js: '.js' };
-  },
 });

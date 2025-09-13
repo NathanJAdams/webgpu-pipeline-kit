@@ -11,7 +11,6 @@
     "moduleResolution": "bundler",
     "module": "esnext",
     "removeComments": true,
-    "resolveJsonModule": true,
     "rootDir": "src",
     "skipLibCheck": true,
     "strict": true,
