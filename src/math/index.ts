@@ -1,3 +1,4 @@
+export * from './Camera';
 export * from './Color';
 export * from './Quaternion';
 export * from './Transformation';
