@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     typecheck: {
-      include: ['src/**/*ts'],
+      include: ['src/**/*ts', 'tests/**/*.ts'],
       enabled: true,
     },
   },

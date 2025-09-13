@@ -14,8 +14,8 @@ export type {
   WPKShader,
   WPKVertices,
 } from './types';
-export type { Vec3 } from './utils';
 
 export { builders } from './builders';
 export { factories } from './factories';
 export { setLogLevel } from './logging';
+export * from './math';

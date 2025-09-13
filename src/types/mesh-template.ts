@@ -1,8 +1,8 @@
-import { Vec3 } from '../utils';
+import { Vector3 } from '../math';
 
 //#region mesh
-export type WPKVertices = Vec3[];
-export type WPKIndices = Vec3[];
+export type WPKVertices = Vector3[];
+export type WPKIndices = Vector3[];
 export type WPKMesh = {
   vertices: WPKVertices;
   indices: WPKIndices;

@@ -1,6 +1,7 @@
 import { logFactory } from './logging';
+import { Vector3 } from './math';
 import { WPKIndices, WPKMesh, WPKMeshParametersDeclaration, WPKMeshTemplateCreator, WPKVertices } from './types';
-import { logFuncs, mathFuncs, Vec3, vec3Funcs } from './utils';
+import { logFuncs, mathFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('mesh');
 
@@ -23,7 +24,7 @@ export const meshFuncs = {
   },
   toIndicesData: (mesh: WPKMesh): ArrayBuffer => {
     const indicesType = meshFuncs.indicesType(mesh);
-    const flatIndices = mesh.indices.flat();
+    const flatIndices = mesh.indices.flatMap(indices => indices.toArray());
     const TypedArrayConstructor = (indicesType === 'uint16')
       ? Uint16Array
       : Uint32Array;
@@ -39,7 +40,7 @@ export const meshFuncs = {
     return buffer;
   },
   toVerticesData: (mesh: WPKMesh): ArrayBuffer => {
-    const flatVertices = mesh.vertices.flat();
+    const flatVertices = mesh.vertices.flatMap(indices => indices.toArray());
     const verticesArray = new Float32Array(flatVertices);
     return verticesArray.buffer;
   },
@@ -61,14 +62,14 @@ export const meshFactory = {
       winding,
     };
   },
-  triangle: (topProportion: number, axis: Vec3 = vec3Funcs.Z): WPKMesh => {
+  triangle: (topProportion: number, axis: Vector3 = Vector3.Z): WPKMesh => {
     logFuncs.lazyDebug(LOGGER, () => `Creating triangle mesh with top proportion ${topProportion}`);
-    const axisNormalized = vec3Funcs.normalize(axis);
+    const axisNormalized = axis.normalize();
 
     // Pick a non-parallel reference vector for tangent
-    const up: Vec3 = Math.abs(axisNormalized[1]) < 0.99 ? [0, 1, 0] : [1, 0, 0];
-    const tangent = vec3Funcs.normalize(vec3Funcs.cross(up, axisNormalized));
-    const bitangent = vec3Funcs.cross(axisNormalized, tangent); // already normalized due to orthogonality
+    const up: Vector3 = Math.abs(axisNormalized.y) < 0.99 ? Vector3.Y : Vector3.X;
+    const tangent = up.cross(axisNormalized).normalize();
+    const bitangent = axisNormalized.cross(tangent); // already normalized due to orthogonality
 
     // Define triangle in 2D: base at y = -1, top at y = 1
     const baseY = -1;
@@ -86,13 +87,13 @@ export const meshFactory = {
     // Project into 3D using tangent/bitangent vectors
     const vertices: WPKVertices = [];
     for (const [x, y] of localPoints) {
-      const vx = tangent[0] * x + bitangent[0] * y;
-      const vy = tangent[1] * x + bitangent[1] * y;
-      const vz = tangent[2] * x + bitangent[2] * y;
-      vertices.push([vx, vy, vz]);
+      const vx = tangent.x * x + bitangent.x * y;
+      const vy = tangent.y * x + bitangent.y * y;
+      const vz = tangent.z * x + bitangent.z * y;
+      vertices.push(new Vector3(vx, vy, vz));
     }
 
-    const indices: WPKIndices = [[0, 1, 2]];
+    const indices: WPKIndices = [new Vector3(0, 1, 2)];
     return {
       topology: 'triangle-list',
       vertices,
@@ -102,37 +103,37 @@ export const meshFactory = {
   },
   cube: (): WPKMesh => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating cube mesh');
-    const vertices: Vec3[] = [
+    const vertices: Vector3[] = [
       // Front face
-      [-1, -1, 1], // front bottom left
-      [1, -1, 1], // front bottom right
-      [1, 1, 1], // front top right
-      [-1, 1, 1], // front top left
+      new Vector3(-1, -1, 1), // front bottom left
+      new Vector3(1, -1, 1), // front bottom right
+      new Vector3(1, 1, 1), // front top right
+      new Vector3(-1, 1, 1), // front top left
       // Back face
-      [-1, -1, -1], // back bottom left
-      [-1, 1, -1], // back top left
-      [1, 1, -1], // back top right
-      [1, -1, -1], // back bottom right
+      new Vector3(-1, -1, -1), // back bottom left
+      new Vector3(-1, 1, -1), // back top left
+      new Vector3(1, 1, -1), // back top right
+      new Vector3(1, -1, -1), // back bottom right
     ];
-    const indices: Vec3[] = [
+    const indices: Vector3[] = [
       // Front
-      [0, 1, 2],
-      [0, 2, 3],
+      new Vector3(0, 1, 2),
+      new Vector3(0, 2, 3),
       // Top
-      [3, 2, 6],
-      [3, 6, 5],
+      new Vector3(3, 2, 6),
+      new Vector3(3, 6, 5),
       // Back
-      [5, 6, 7],
-      [5, 7, 4],
+      new Vector3(5, 6, 7),
+      new Vector3(5, 7, 4),
       // Bottom
-      [4, 7, 1],
-      [4, 1, 0],
+      new Vector3(4, 7, 1),
+      new Vector3(4, 1, 0),
       // Left
-      [4, 0, 3],
-      [4, 3, 5],
+      new Vector3(4, 0, 3),
+      new Vector3(4, 3, 5),
       // Right
-      [1, 7, 6],
-      [1, 6, 2],
+      new Vector3(1, 7, 6),
+      new Vector3(1, 6, 2),
     ];
     return {
       topology: 'triangle-list',
@@ -144,44 +145,44 @@ export const meshFactory = {
   sphere(subdivisions: number): WPKMesh {
     logFuncs.lazyDebug(LOGGER, () => `Creating sphere mesh with sub divisions ${subdivisions}`);
     const phi = (1 + Math.sqrt(5)) / 2;
-    const unnormalizedVertices: Vec3[] = [
-      [-1, phi, 0],
-      [1, phi, 0],
-      [-1, -phi, 0],
-      [1, -phi, 0],
-      [0, -1, phi],
-      [0, 1, phi],
-      [0, -1, -phi],
-      [0, 1, -phi],
-      [phi, 0, -1],
-      [phi, 0, 1],
-      [-phi, 0, -1],
-      [-phi, 0, 1],
+    const unnormalizedVertices: Vector3[] = [
+      new Vector3(-1, phi, 0),
+      new Vector3(1, phi, 0),
+      new Vector3(-1, -phi, 0),
+      new Vector3(1, -phi, 0),
+      new Vector3(0, -1, phi),
+      new Vector3(0, 1, phi),
+      new Vector3(0, -1, -phi),
+      new Vector3(0, 1, -phi),
+      new Vector3(phi, 0, -1),
+      new Vector3(phi, 0, 1),
+      new Vector3(-phi, 0, -1),
+      new Vector3(-phi, 0, 1),
     ];
-    const vertices = unnormalizedVertices.map(vec3Funcs.normalize);
-    const baseIndices: Vec3[] = [
-      [0, 11, 5],
-      [0, 5, 1],
-      [0, 1, 7],
-      [0, 7, 10],
-      [0, 10, 11],
-      [1, 5, 9],
-      [5, 11, 4],
-      [11, 10, 2],
-      [10, 7, 6],
-      [7, 1, 8],
-      [3, 9, 4],
-      [3, 4, 2],
-      [3, 2, 6],
-      [3, 6, 8],
-      [3, 8, 9],
-      [4, 9, 5],
-      [2, 4, 11],
-      [6, 2, 10],
-      [8, 6, 7],
-      [9, 8, 1],
+    const vertices = unnormalizedVertices.map(vec => vec.normalize());
+    const baseIndices: Vector3[] = [
+      new Vector3(0, 11, 5),
+      new Vector3(0, 5, 1),
+      new Vector3(0, 1, 7),
+      new Vector3(0, 7, 10),
+      new Vector3(0, 10, 11),
+      new Vector3(1, 5, 9),
+      new Vector3(5, 11, 4),
+      new Vector3(11, 10, 2),
+      new Vector3(10, 7, 6),
+      new Vector3(7, 1, 8),
+      new Vector3(3, 9, 4),
+      new Vector3(3, 4, 2),
+      new Vector3(3, 2, 6),
+      new Vector3(3, 6, 8),
+      new Vector3(3, 8, 9),
+      new Vector3(4, 9, 5),
+      new Vector3(2, 4, 11),
+      new Vector3(6, 2, 10),
+      new Vector3(8, 6, 7),
+      new Vector3(9, 8, 1),
     ];
-    const indices: Vec3[] = [];
+    const indices: Vector3[] = [];
     const cache = new Map<string, number>();
 
     const getOrCreateMidpoint = (a: number, b: number): number => {
@@ -189,7 +190,7 @@ export const meshFactory = {
       if (cache.has(key)) {
         return cache.get(key) as number;
       }
-      const midpoint = vec3Funcs.midpoint(vertices[a], vertices[b]);
+      const midpoint = vertices[a].midpoint(vertices[b]);
       const index = vertices.length;
       vertices.push(midpoint);
       cache.set(key, index);
@@ -198,7 +199,7 @@ export const meshFactory = {
 
     const subdivide = (a: number, b: number, c: number, depth: number) => {
       if (depth === 0) {
-        indices.push([a, b, c]);
+        indices.push(new Vector3(a, b, c));
       } else {
         const ab = getOrCreateMidpoint(a, b);
         const bc = getOrCreateMidpoint(b, c);
@@ -210,8 +211,8 @@ export const meshFactory = {
       }
     };
 
-    for (const [a, b, c] of baseIndices) {
-      subdivide(a, b, c, subdivisions);
+    for (const vec of baseIndices) {
+      subdivide(vec.x, vec.y, vec.z, subdivisions);
     }
 
     return {
