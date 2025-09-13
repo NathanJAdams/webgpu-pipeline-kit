@@ -247,7 +247,7 @@ export const bufferFactory = {
     logFuncs.lazyDebug(LOGGER, () => `Creating staged buffer '${label}' of usage ${usageToString(usage)}`);
     const stagingLabel = `${label}-staging`;
     const backingLabel = `${label}-backing`;
-    const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC, debuggable);
+    const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST, debuggable);
     const backing = bufferFactory.ofResizeable(true, backingLabel, usage | GPUBufferUsage.COPY_DST, debuggable);
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
@@ -259,7 +259,7 @@ export const bufferFactory = {
         };
       },
       get(device, queue, encoder) {
-        const backingTrackedBuffer = backing.get(device, queue, encoder);
+        let backingTrackedBuffer = backing.get(device, queue, encoder);
         if (mutatedSlices !== undefined) {
           logFuncs.lazyTrace(LOGGER, () => `Staging data to buffer ${stagingLabel}`);
           const { values, copySlices } = mutatedSlices;
@@ -268,6 +268,7 @@ export const bufferFactory = {
           logFuncs.lazyTrace(LOGGER, () => `Resizing buffer ${backingLabel} to ${backingSizeRequired}`);
           staging.resize(values.byteLength);
           backing.resize(backingSizeRequired);
+          backingTrackedBuffer = backing.get(device, queue, encoder);
           const stagingBuffer = staging.get(device, queue, encoder).buffer;
           const backingBuffer = backingTrackedBuffer.buffer;
           logFuncs.lazyTrace(LOGGER, () => `Writing staging data of length ${values.byteLength} to buffer ${stagingLabel} using queue`);
