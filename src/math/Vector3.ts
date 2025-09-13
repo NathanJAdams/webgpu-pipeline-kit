@@ -1,3 +1,5 @@
+export type Vector3Values = readonly [number, number, number];
+
 export class Vector3 {
   static readonly ZERO = new Vector3(0, 0, 0);
   static readonly ONE = new Vector3(1, 1, 1);
@@ -5,11 +7,15 @@ export class Vector3 {
   static readonly Y = new Vector3(0, 1, 0);
   static readonly Z = new Vector3(0, 0, 1);
 
+  readonly values: Vector3Values;
+
   constructor(
     readonly x: number,
     readonly y: number,
     readonly z: number
-  ) { }
+  ) {
+    this.values = [x, y, z];
+  }
 
   cross(other: Vector3): Vector3 {
     return new Vector3(
@@ -84,9 +90,5 @@ export class Vector3 {
 
   scale(scalar: number): Vector3 {
     return new Vector3(this.x * scalar, this.y * scalar, this.z * scalar);
-  }
-
-  toArray(): readonly [number, number, number] {
-    return [this.x, this.y, this.z];
   }
 }

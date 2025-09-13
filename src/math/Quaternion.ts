@@ -1,14 +1,20 @@
 import { Vector3 } from './Vector3';
 
+export type QuaternionValues = readonly [number, number, number, number];
+
 export class Quaternion {
   static readonly IDENTITY = new Quaternion(0, 0, 0, 1);
+
+  readonly values: QuaternionValues;
 
   constructor(
     readonly x: number,
     readonly y: number,
     readonly z: number,
     readonly w: number
-  ) { }
+  ) {
+    this.values = [x, y, z, w];
+  }
 
   static fromAxisAngle(axis: Vector3, radians: number): Quaternion {
     const halfAngle = radians * 0.5;

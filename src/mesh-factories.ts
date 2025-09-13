@@ -24,7 +24,7 @@ export const meshFuncs = {
   },
   toIndicesData: (mesh: WPKMesh): ArrayBuffer => {
     const indicesType = meshFuncs.indicesType(mesh);
-    const flatIndices = mesh.indices.flatMap(indices => indices.toArray());
+    const flatIndices = mesh.indices.flatMap(indices => indices.values);
     const TypedArrayConstructor = (indicesType === 'uint16')
       ? Uint16Array
       : Uint32Array;
@@ -40,7 +40,7 @@ export const meshFuncs = {
     return buffer;
   },
   toVerticesData: (mesh: WPKMesh): ArrayBuffer => {
-    const flatVertices = mesh.vertices.flatMap(indices => indices.toArray());
+    const flatVertices = mesh.vertices.flatMap(indices => indices.values);
     const verticesArray = new Float32Array(flatVertices);
     return verticesArray.buffer;
   },

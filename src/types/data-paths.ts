@@ -42,14 +42,38 @@ export type WPKMatchingPath<TType, TMatchingType> = _WPKMatchingPath<TType, TMat
 //#region matching paths
 export type WPKMatchingPathNumber<T> = WPKMatchingPath<T, number>;
 export type WPKMatchingPathString<T> = WPKMatchingPath<T, string>;
-export type WPKMatchingPathVec2<T> = WPKMatchingPath<T, [number, number]>;
-export type WPKMatchingPathVec3<T> = WPKMatchingPath<T, [number, number, number]>;
-export type WPKMatchingPathVec4<T> = WPKMatchingPath<T, [number, number, number, number]>;
-export type WPKMatchingPathVec6<T> = WPKMatchingPath<T, [number, number, number, number, number, number]>;
-export type WPKMatchingPathVec8<T> = WPKMatchingPath<T, [number, number, number, number, number, number, number, number]>;
-export type WPKMatchingPathVec9<T> = WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number]>;
-export type WPKMatchingPathVec12<T> = WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number, number, number, number]>;
-export type WPKMatchingPathVec16<T> = WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]>;
+export type WPKMatchingPathVec2<T> =
+  | WPKMatchingPath<T, [number, number]>
+  | WPKMatchingPath<T, readonly [number, number]>
+  ;
+export type WPKMatchingPathVec3<T> =
+  | WPKMatchingPath<T, [number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number]>
+  ;
+export type WPKMatchingPathVec4<T> =
+  WPKMatchingPath<T, [number, number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number, number]>
+  ;
+export type WPKMatchingPathVec6<T> =
+  WPKMatchingPath<T, [number, number, number, number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number, number, number, number]>
+  ;
+export type WPKMatchingPathVec8<T> =
+  WPKMatchingPath<T, [number, number, number, number, number, number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number]>
+  ;
+export type WPKMatchingPathVec9<T> =
+  WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number, number]>
+  ;
+export type WPKMatchingPathVec12<T> =
+  WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number, number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number, number, number, number, number]>
+  ;
+export type WPKMatchingPathVec16<T> =
+  WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]>
+  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]>
+  ;
 //#endregion
 
 //#region scalars

@@ -1,13 +1,19 @@
+export type Vector2Values = readonly [number, number];
+
 export class Vector2 {
   static readonly ZERO = new Vector2(0, 0);
   static readonly ONE = new Vector2(1, 1);
   static readonly X = new Vector2(1, 0);
   static readonly Y = new Vector2(0, 1);
 
+  readonly values: Vector2Values;
+
   constructor(
     readonly x: number,
     readonly y: number,
-  ) { }
+  ) {
+    this.values = [x, y];
+  }
 
   dot(other: Vector2): number {
     return this.x * other.x + this.y * other.y;
@@ -72,9 +78,5 @@ export class Vector2 {
 
   scale(scalar: number): Vector2 {
     return new Vector2(this.x * scalar, this.y * scalar);
-  }
-
-  toArray(): readonly [number, number] {
-    return [this.x, this.y];
   }
 }

@@ -1,6 +1,13 @@
 import { Quaternion } from './Quaternion';
 import { Vector3 } from './Vector3';
 
+export type CameraMatrixValues = [
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+];
+
 export class Camera {
   private _position = Vector3.ZERO;
   private _rotation = Quaternion.IDENTITY;
@@ -12,36 +19,36 @@ export class Camera {
   private isDirtyAspectRatio: boolean = true;
   private isDirtyFieldOfView: boolean = true;
   private isDirtyNearFar: boolean = true;
-  private _viewMatrix: Float32Array = new Float32Array([
+  private _viewMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1,
-  ]);
-  private _projectionMatrix: Float32Array = new Float32Array([
+  ];
+  private _projectionMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, -1,
     0, 0, 0, 0,
-  ]);
-  private _viewProjectionMatrix: Float32Array = new Float32Array([
+  ];
+  private _viewProjectionMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1,
-  ]);
+  ];
 
   constructor(
     private readonly enableViewProjectionMatrix: boolean
   ) { }
 
-  get viewMatrix(): Readonly<Float32Array> {
+  get viewMatrix(): Readonly<CameraMatrixValues> {
     return this._viewMatrix;
   }
-  get projectionMatrix(): Readonly<Float32Array> {
+  get projectionMatrix(): Readonly<CameraMatrixValues> {
     return this._projectionMatrix;
   }
-  get viewProjectionMatrix(): Readonly<Float32Array> {
+  get viewProjectionMatrix(): Readonly<CameraMatrixValues> {
     if (!this.enableViewProjectionMatrix) {
       throw Error('The `enableViewProjectionMatrix` flag in the constructor must be `true` to allow using it');
     }

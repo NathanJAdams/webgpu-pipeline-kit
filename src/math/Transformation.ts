@@ -1,6 +1,13 @@
 import { Quaternion } from './Quaternion';
 import { Vector3 } from './Vector3';
 
+export type TransformationValues = [
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+];
+
 export class Transformation {
   private _position = Vector3.ZERO;
   private _rotation = Quaternion.IDENTITY;
@@ -8,14 +15,14 @@ export class Transformation {
   private isDirtyPosition: boolean = true;
   private isDirtyRotation: boolean = true;
   private isDirtyScale: boolean = true;
-  private _matrix: Float32Array = new Float32Array([
+  private _matrix: TransformationValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1,
-  ]);
+  ];
 
-  get matrix(): Readonly<Float32Array> {
+  get matrix(): Readonly<TransformationValues> {
     return this._matrix;
   }
 

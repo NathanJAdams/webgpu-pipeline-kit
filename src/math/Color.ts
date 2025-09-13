@@ -1,3 +1,6 @@
+export type ColorRgbValues = readonly [number, number, number];
+export type ColorRgbaValues = readonly [number, number, number, number];
+
 export class Color {
   static readonly BLACK = new Color(0, 0, 0);
   static readonly RED = new Color(0, 0, 0);
@@ -8,12 +11,18 @@ export class Color {
   static readonly CYAN = new Color(0, 1, 1);
   static readonly WHITE = new Color(1, 1, 1);
 
+  readonly valuesRgb: ColorRgbValues;
+  readonly valuesRgba: ColorRgbaValues;
+
   constructor(
     readonly r: number,
     readonly g: number,
     readonly b: number,
     readonly a: number = 1,
-  ) { }
+  ) {
+    this.valuesRgb = [r, g, b];
+    this.valuesRgba = [r, g, b, a];
+  }
 
   equals(other: Color, epsilon = 1e-6): boolean {
     return (
