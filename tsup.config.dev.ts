@@ -9,7 +9,7 @@ export default defineConfig({
   external: ['web-naga'],
   format: ['iife'],
   globalName: 'WebGPUPipelineKit',
-  outDir: 'dist/examples',
+  outDir: 'dist/dev',
   shims: false,
   sourcemap: true,
   splitting: false,

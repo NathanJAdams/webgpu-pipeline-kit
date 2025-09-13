@@ -25,7 +25,11 @@ jobs:
         run: yarn lint
       - name: Test
         run: yarn test
-      - name: Build
+      - name: Build prod
         run: yarn build:prod
       - name: Publish
         run: npm publish
+      - name: Build bundle
+        run: yarn build:bundle
+      - name: TODO
+        run: echo "Publish dist/bundle/index.v${package.version}.js to a CDN"

@@ -22,30 +22,30 @@
     "README.md"
   ],
   "type": "module",
-  "main": "./dist/build/index.cjs",
-  "module": "./dist/build/index.js",
-  "types": "./dist/build/index.d.ts",
+  "main": "./dist/prod/index.cjs",
+  "module": "./dist/prod/index.js",
+  "types": "./dist/prod/index.d.ts",
   "exports": {
     ".": {
-      "browser": "./dist/bundle/index.global.js",
-      "types": "./dist/build/index.d.ts",
-      "import": "./dist/build/index.js",
-      "require": "./dist/build/index.cjs"
+      "types": "./dist/prod/index.d.ts",
+      "import": "./dist/prod/index.js",
+      "require": "./dist/prod/index.cjs"
     },
     "./node": {
-      "types": "./dist/build/node.d.ts",
-      "import": "./dist/build/node.js",
-      "require": "./dist/build/node.cjs"
+      "types": "./dist/prod/node.d.ts",
+      "import": "./dist/prod/node.js",
+      "require": "./dist/prod/node.cjs"
     },
     "./package.json": "./package.json"
   },
   "sideEffects": false,
   "scripts": {
+    "build:bundle": "tsup --config tsup.config.bundle.ts",
+    "build:dev": "tsup --config tsup.config.dev.ts && copyfiles -u 3 ./src/examples/triangles/index.html ./dist/dev/triangles/",
     "build:prod": "tsup --config tsup.config.prod.ts",
-    "build:dev": "tsup --config tsup.config.dev.ts && copyfiles -u 3 ./src/examples/triangles/index.html ./dist/examples/triangles/",
     "clean": "rimraf ./dist/",
     "lint": "eslint ./src --fix && madge --circular src/**/*",
-    "serve:triangles": "yarn clean && yarn build:dev && http-server ./dist/examples/triangles",
+    "serve:triangles": "yarn clean && yarn build:dev && http-server ./dist/dev/triangles",
     "test": "vitest --run"
   },
   "dependencies": {
