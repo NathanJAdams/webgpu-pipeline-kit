@@ -32,4 +32,4 @@ jobs:
       - name: Build bundle
         run: yarn build:bundle
       - name: TODO
-        run: echo "Publish dist/bundle/index.v${package.version}.js to a CDN"
+        run: echo 'Publish dist/bundle/index.v${package.version}.js to a CDN'
