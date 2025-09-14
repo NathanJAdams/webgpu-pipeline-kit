@@ -6,16 +6,16 @@ log.methodFactory = function (methodName, level, loggerName) {
   const raw = originalFactory(methodName, level, loggerName);
   return function (...args) {
     const { stack } = new Error();
-    if (stack === undefined) {
-      raw(args.join(' '));
-    } else {
+    if (stack !== undefined) {
       const stackEntry = stack.split('\n')[3] || '';
       const callerMatch = stackEntry.match(/\((.*):(\d+):(\d+)\)/) || stackEntry.match(/at (.*):(\d+):(\d+)/);
       const callerInfo = (callerMatch === null || callerMatch.length !== 4)
         ? ''
-        : `${callerMatch[1]}:${callerMatch[2]}:${callerMatch[3]} `;
-      raw(callerInfo + args.join(' '));
+        : `${callerMatch[1]}:${callerMatch[2]}:${callerMatch[3]}`;
+      args.splice(1, 0, callerInfo);
     }
+    args.splice(1, 0, String(loggerName));
+    raw(args.join(' '));
   };
 };
 
@@ -43,29 +43,29 @@ export class LogFactory<TNamespaces extends readonly string[]> {
 };
 
 export const logFuncs = {
-  lazyError: (logger: Logger, errorMessageFunc: () => any): void => {
+  lazyError: (logger: Logger, errorMessageFunc: () => string): void => {
     if (logger.getLevel() <= logger.levels.ERROR) {
-      logger.error('ERROR:', errorMessageFunc());
+      logger.error('ERROR', errorMessageFunc());
     }
   },
-  lazyWarn: (logger: Logger, warnMessageFunc: () => any): void => {
+  lazyWarn: (logger: Logger, warnMessageFunc: () => string): void => {
     if (logger.getLevel() <= logger.levels.WARN) {
-      logger.warn('WARN: ', warnMessageFunc());
+      logger.warn('WARN', warnMessageFunc());
     }
   },
-  lazyInfo: (logger: Logger, infoMessageFunc: () => any): void => {
+  lazyInfo: (logger: Logger, infoMessageFunc: () => string): void => {
     if (logger.getLevel() <= logger.levels.INFO) {
-      logger.info('INFO: ', infoMessageFunc());
+      logger.info('INFO', infoMessageFunc());
     }
   },
-  lazyDebug: (logger: Logger, debugMessageFunc: () => any): void => {
+  lazyDebug: (logger: Logger, debugMessageFunc: () => string): void => {
     if (logger.getLevel() <= logger.levels.DEBUG) {
-      logger.debug('DEBUG:', debugMessageFunc());
+      logger.debug('DEBUG', debugMessageFunc());
     }
   },
-  lazyTrace: (logger: Logger, traceMessageFunc: () => any): void => {
+  lazyTrace: (logger: Logger, traceMessageFunc: () => string): void => {
     if (logger.getLevel() <= logger.levels.TRACE) {
-      logger.log('TRACE:', traceMessageFunc());
+      logger.log('TRACE', traceMessageFunc());
     }
   },
 };
