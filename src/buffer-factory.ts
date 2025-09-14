@@ -252,7 +252,7 @@ export const bufferFactory = {
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
       mutate(data, target) {
-        logFuncs.lazyInfo(LOGGER, () => `Mutating data for staged buffer ${label}`);
+        logFuncs.lazyDebug(LOGGER, () => `Mutating data for staged buffer ${label}, target: ${JSON.stringify(target)}`);
         mutatedSlices = {
           values: data,
           copySlices: target,

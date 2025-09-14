@@ -7,7 +7,7 @@ const LOGGER = logFactory.getLogger('data');
 
 export const marshallerFactory = {
   ofMarshalled: <T>(bufferFormatMarshalled: WPKBufferFormatMarshalled<T, any, any>, entityCache?: WPKEntityCache<T, any, any>): WPKMarshaller<T> => {
-    logFuncs.lazyDebug(LOGGER, () => 'Create data extractor');
+    logFuncs.lazyDebug(LOGGER, () => 'Create marshaller');
     let totalStride = 0;
     const datumBridges: WPKDatumBridge<T>[] = [];
     for (const formatElement of bufferFormatMarshalled.marshall) {
@@ -17,9 +17,12 @@ export const marshallerFactory = {
       datumBridges.push(datumBridge);
       totalStride += datumBridge.stride;
     }
+    logFuncs.lazyTrace(LOGGER, () => `Creating marshaller with total stride ${totalStride}`);
+    logFuncs.lazyTrace(LOGGER, () => `Create: format ${bufferFormatMarshalled.marshall} totalStride ${totalStride}`);
     return {
       encode(instances) {
-        logFuncs.lazyDebug(LOGGER, () => `Extract data from ${instances.length} instances`);
+        logFuncs.lazyTrace(LOGGER, () => `Encode: format ${bufferFormatMarshalled.marshall} totalStride ${totalStride}`);
+        logFuncs.lazyDebug(LOGGER, () => `Extract data from ${instances.length} instances ${JSON.stringify(instances)}`);
         const totalSize = instances.length * totalStride;
         logFuncs.lazyTrace(LOGGER, () => `Creating data view to hold extracted instance data of size ${totalSize}`);
         const buffer = new ArrayBuffer(totalSize);

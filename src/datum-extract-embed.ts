@@ -92,7 +92,7 @@ const toRefPath = (path: string): WPKRefPath => {
 const getValueOnInstanceAtPathOfType = <T, TType extends keyof WPKPrimitiveMap>(instance: T, refPath: WPKRefPath, type: TType): WPKPrimitiveMap[TType] => {
   const value = getValueAtPath(instance, refPath, 0, false);
   if (typeof value === type) {
-    logFuncs.lazyTrace(LOGGER, () => `Found value '${value}' at path '${refPath} of type ${type}'`);
+    logFuncs.lazyTrace(LOGGER, () => `Found value ${JSON.stringify(value)} at path ${JSON.stringify(refPath)} of type '${type}'`);
     return value as WPKPrimitiveMap[TType];
   }
   throw Error(`Value ${JSON.stringify(value)} at path ${refPath} is not of type ${type}`);
@@ -112,7 +112,7 @@ const getValueAtPath = (input: any, refPath: WPKRefPath, pathIndex: number, ensu
     throw Error(`Cannot use index ${pathIndex} larger than reference path. Path: ${refPath}. Input: ${JSON.stringify(input)}`);
   }
   if (pathIndex === refPath.length) {
-    logFuncs.lazyTrace(LOGGER, () => `Found value ${input} at path ${JSON.stringify(refPath)}`);
+    logFuncs.lazyTrace(LOGGER, () => `Found value ${JSON.stringify(input)} at path ${JSON.stringify(refPath)}`);
     return input;
   }
   const indexValue = refPath[pathIndex];
