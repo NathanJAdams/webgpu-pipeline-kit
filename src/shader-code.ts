@@ -1,29 +1,23 @@
 import { logFactory } from './logging';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender, DISPATCH_PARAMS_BUFFER_NAME } from './types';
+import { WPKBufferFormat, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderStructEntry } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('shader');
 
 const WHITESPACE = '\n\n';
 
-export const toCodeShaderCompute = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(shader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>, bufferFormats: TBufferFormatMap): WPKShaderModuleDetail => {
+export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  shader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>, bufferFormats: TBufferFormatMap
+): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating compute shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
   const entryPoints = passes.map(pass => pass.entryPoint);
   const dispatchFormat = shaderReserved.createDispatchFormat(entryPoints);
   const structs = toCodeStructs(bufferFormats, true);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferFormats);
-  const bindings = Object.keys(bufferFormats)
-    .reduce((acc, key) => {
-      acc[key as keyof TBufferFormatMap] = key;
-      return acc;
-    }, {} as Record<keyof TBufferFormatMap, string>);
+  const bindings = toBindings<TUniform, TEntity, TBufferFormatMap, true>(bufferFormats, true);
   const computePassesCode = passes.map(pass => toCodeComputePass(pass, bindings));
   const code =
     structs
@@ -45,21 +39,14 @@ export const toCodeShaderCompute = <
   };
 };
 
-export const toCodeShaderRender = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TMeshTemplateMap extends WPKMeshTemplateMap
->(shader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormats: TBufferFormatMap): WPKShaderModuleDetail => {
+export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
+  shader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormats: TBufferFormatMap
+): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
   const structs = toCodeStructs(bufferFormats, false);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferFormats);
-  const bindings = Object.keys(bufferFormats)
-    .reduce((acc, key) => {
-      acc[key as keyof TBufferFormatMap] = key;
-      return acc;
-    }, {} as Record<keyof TBufferFormatMap, string>);
+  const bindings = toBindings<TUniform, TEntity, TBufferFormatMap, false>(bufferFormats, false);
   const renderPassesCode = passes.map(pass => toCodeRenderPass(pass, bindings, bufferFormats));
   const entryPointsVertex = passes.map(pass => pass.vertex.entryPoint);
   const entryPointsFragment = passes.map(pass => pass.fragment.entryPoint);
@@ -99,13 +86,10 @@ ${lines.join('\n')}
 };`;
 };
 
-const toCodeGroupBindings = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TIncludeUniform extends boolean,
-  TIncludeEntity extends boolean,
->(groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>, bufferFormats: TBufferFormatMap): string => {
+const toCodeGroupBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean>(
+  groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>,
+  bufferFormats: TBufferFormatMap
+): string => {
   const entries = groupBindings.map((groupBinding) => {
     const { buffer } = groupBinding;
     const bufferFormat = bufferFormats[buffer];
@@ -131,13 +115,53 @@ const toCodeGroupBinding = (groupBinding: WPKGroupBinding<any, any, any, any, an
   return `@group(${group})\n@binding(${binding})\nvar<${addressSpaceName}${accessMode}> ${buffer} : ${dataType};`;
 };
 
-const toCodeComputePass = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(pass: WPKComputePass<TUniform, TEntity, TBufferFormatMap>, bindings: Record<keyof TBufferFormatMap, string>): string => {
+const toBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeEntity extends boolean>(
+  bufferFormats: TBufferFormatMap,
+  includeEntity: TIncludeEntity,
+): WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, TIncludeEntity> => {
+  return Object.keys(bufferFormats)
+    .reduce((acc, bufferName) => {
+      const bufferFormat = bufferFormats[bufferName];
+      if (bufferFormat.bufferType === 'uniform' || includeEntity) {
+        const structEntries = (bufferFormat.bufferType === 'editable')
+          ? bufferFormat.layout
+          : bufferFormat.marshall;
+        const entityIndexable = (bufferFormat.bufferType !== 'uniform');
+        const bufferBindings = toBufferBindings(bufferName, structEntries, entityIndexable);
+        acc[bufferName] = bufferBindings;
+      }
+      return acc;
+    }, {} as Record<string, Record<string, WPKDatumTypeReference<any>>>) as WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, TIncludeEntity>;
+};
+
+const toBufferBindings = (
+  bufferName: string,
+  structEntries: WPKShaderStructEntry[],
+  entityIndexable: boolean
+): Record<string, WPKDatumTypeReference<any>> => {
+  const bufferBindings = Object.values(structEntries)
+    .reduce((acc, element) => {
+      const { name, datumType } = element;
+      acc[name] = toDatumTypeReference(`${bufferName}.${name}`, datumType);
+      return acc;
+    }, {} as Record<string, WPKDatumTypeReference<any>>);
+  if (entityIndexable) {
+    (bufferBindings as any)['atIndex'] = (index: number | WPKDatumTypeReference<WPKShaderScalarUnsignedInt>) => {
+      const indexString = (typeof index === 'number')
+        ? String(index)
+        : index.__reference;
+      return toBufferBindings(`${bufferName}[${indexString}]`, structEntries, false);
+    };
+  }
+  return bufferBindings;
+};
+
+const toCodeComputePass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  pass: WPKComputePass<TUniform, TEntity, TBufferFormatMap>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, true>
+): string => {
   const params: WPKComputeCodeParams<TUniform, TEntity, TBufferFormatMap> = {
-    instance_index: 'instance_index',
+    instance_index: toDatumTypeReference('instance_index', 'u32'),
     bindings,
   };
   const dispatchSize = `${DISPATCH_PARAMS_BUFFER_NAME}.${shaderReserved.dispatchSizeField(pass.entryPoint)}`;
@@ -154,16 +178,15 @@ fn ${pass.entryPoint}(
   if (instance_index >= ${DISPATCH_PARAMS_BUFFER_NAME}.instance_count) {
     return;
   }
-${pass.code(params)}
+${pass.code(params, wgslTaggedTemplate)}
 }`;
 };
 
-const toCodeRenderPass = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TMeshTemplateMap extends WPKMeshTemplateMap,
->(pass: WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bindings: Record<keyof TBufferFormatMap, string>, bufferFormats: TBufferFormatMap): string => {
+const toCodeRenderPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
+  pass: WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
+  bufferFormats: TBufferFormatMap
+): string => {
   const vertexPass = toCodeVertexPass(pass.vertex, bindings, bufferFormats);
   const fragmentPass = toCodeFragmentPass(pass.fragment, bindings);
   return vertexPass
@@ -171,25 +194,23 @@ const toCodeRenderPass = <
     + fragmentPass;
 };
 
-const toCodeVertexPass = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
->(pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap>, bindings: Record<keyof TBufferFormatMap, string>, bufferFormats: TBufferFormatMap): string => {
+const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
+  bufferFormats: TBufferFormatMap
+): string => {
   const vertexBufferAttributeData = shaderFuncs.toVertexBufferAttributeData(pass.vertexBuffers, bufferFormats);
-  const vertex_buffers: Record<string, Record<string, string>> = {};
-  for (const attribute of vertexBufferAttributeData) {
-    const { buffer } = attribute;
-    for (const locationAttribute of attribute.locationAttributes) {
-      const { fieldName, locationName } = locationAttribute;
-      let fields = vertex_buffers[buffer];
-      if (fields === undefined) {
-        fields = {};
-        vertex_buffers[buffer] = fields;
-      }
-      fields[fieldName] = locationName;
-    }
-  }
+  const vertex_buffers = Object.values(vertexBufferAttributeData)
+    .reduce((acc, attributeData) => {
+      const { buffer, locationAttributes } = attributeData;
+      acc[buffer] = Object.values(locationAttributes)
+        .reduce((acc, attribute) => {
+          const { fieldName, locationName } = attribute;
+          acc[fieldName] = locationName;
+          return acc;
+        }, {} as Record<string, string>) as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>[typeof buffer];
+      return acc;
+    }, {} as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>);
   const locations = vertexBufferAttributeData.flatMap(attributeData =>
     attributeData.locationAttributes.map(({ attribute: { shaderLocation }, locationName, type: { locationType } }) =>
       `  @location(${shaderLocation}) ${locationName} : ${locationType},`));
@@ -197,9 +218,9 @@ const toCodeVertexPass = <
     attributeData.reconstitutedMatrices.map(({ matrixName, matrixType, vectorLocationNames }) =>
       `  let ${matrixName} = ${matrixType}(${vectorLocationNames.join(', ')});`));
   const params: WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap> = {
-    instance_index: 'instance_index',
-    vertex_index: 'vertex_index',
-    vertex_position: 'vertex_position',
+    instance_index: toDatumTypeReference('instance_index', 'u32'),
+    vertex_index: toDatumTypeReference('vertex_index', 'u32'),
+    vertex_position: toDatumTypeReference('vertex_position', 'vec4<f32>'),
     bindings,
     vertex_buffers,
   };
@@ -211,21 +232,93 @@ fn ${pass.entryPoint}(
 ${locations.join('\n')}
 ) -> @builtin(position) vec4<f32> {
 ${reconstitutedMatrices.join('\n')}
-${pass.code(params)}
+${pass.code(params, wgslTaggedTemplate)}
 }`;
 };
 
-const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap>, bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, true, false>, string>): string => {
+const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>
+): string => {
   const params: WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap> = {
     bindings,
-    fragment_coordinate: 'fragment_coordinate',
+    fragment_coordinate: toDatumTypeReference('fragment_coordinate', 'vec2<f32>'),
   };
   return `@fragment
 fn ${pass.entryPoint}(
   @builtin(position) fragment_coordinate: vec4<f32>,
 ) -> @location(0) vec4<f32> {
-${pass.code(params)}
+${pass.code(params, wgslTaggedTemplate)}
 }`;
 };
 
+const toDatumTypeReference = <TDatumType extends WPKShaderDatumType>(prefix: string, datumType: TDatumType): WPKDatumTypeReference<TDatumType> => {
+  const reference: Record<string, string | WPKScalarReference<any>> = toDatumTypeReferenceHidden(prefix, datumType);
+  if (shaderFuncs.isVector(datumType)) {
+    const componentType = shaderFuncs.toComponentType(datumType);
+    const vectorLength = shaderFuncs.toDatumLength(datumType);
+    const colorComponents = ['r', 'g', 'b', 'a'];
+    const coordComponents = ['x', 'y', 'z', 'w'];
+    const colorSwizzle = '';
+    const coordSwizzle = '';
+    for (let component1 = 0; component1 < vectorLength; component1++) {
+      const colorSwizzle1 = colorSwizzle + colorComponents[0];
+      const coordSwizzle1 = coordSwizzle + coordComponents[0];
+      reference[colorSwizzle1] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle1}`, componentType);
+      reference[coordSwizzle1] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle1}`, componentType);
+      for (let component2 = 0; component2 < vectorLength; component2++) {
+        const colorSwizzle2 = colorSwizzle1 + colorComponents[1];
+        const coordSwizzle2 = coordSwizzle1 + coordComponents[1];
+        reference[colorSwizzle2] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle2}`, componentType);
+        reference[coordSwizzle2] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle2}`, componentType);
+        if (vectorLength >= 3) {
+          for (let component3 = 0; component3 < vectorLength; component3++) {
+            const colorSwizzle3 = colorSwizzle2 + colorComponents[2];
+            const coordSwizzle3 = coordSwizzle2 + coordComponents[2];
+            reference[colorSwizzle3] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle3}`, componentType);
+            reference[coordSwizzle3] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle3}`, componentType);
+            if (vectorLength >= 4) {
+              for (let component4 = 0; component4 < vectorLength; component4++) {
+                const colorSwizzle4 = colorSwizzle3 + colorComponents[3];
+                const coordSwizzle4 = coordSwizzle3 + coordComponents[3];
+                reference[colorSwizzle4] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle4}`, componentType);
+                reference[coordSwizzle4] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle4}`, componentType);
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (shaderFuncs.isMatrix(datumType)) {
+    const componentType = shaderFuncs.toComponentType(datumType);
+    const [columns, rows] = shaderFuncs.toMatrixDimensions(datumType);
+    for (let column = 0; column < columns; column++) {
+      for (let row = 0; row < rows; row++) {
+        const indices = `_${column}_${row}`;
+        reference[indices] = toDatumTypeReferenceHidden(`${prefix}.${indices}`, componentType);
+      }
+    }
+  }
+  return reference as WPKDatumTypeReference<typeof datumType>;
+};
+
+const toDatumTypeReferenceHidden = (prefix: string, datumType: WPKShaderDatumType): WPKDatumTypeReference<any> => {
+  return {
+    __brand: datumType,
+    __reference: prefix,
+  };
+};
+
 const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.substring(1);
+
+const wgslTaggedTemplate = (strings: TemplateStringsArray, ...references: (string | WPKDatumTypeReferenceBase<WPKShaderDatumType>)[]): string => {
+  let result = '';
+  for (let i = 0; i < references.length; i++) {
+    result += strings[i];
+    result += ((references[i] as WPKDatumTypeReference<any>).__reference !== undefined)
+      ? (references[i] as WPKDatumTypeReference<any>).__reference
+      : references[i];
+  }
+  result += strings[strings.length - 1];
+  return result;
+};

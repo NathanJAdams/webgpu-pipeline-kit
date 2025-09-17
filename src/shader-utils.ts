@@ -64,6 +64,14 @@ export const shaderFuncs = {
   toStrideArray: <T extends WPKShaderStructEntry>(datumTyped: T[]): number => datumTyped.reduce((acc, datumTyped) => acc + shaderFuncs.toByteLength(datumTyped.datumType), 0),
   toByteLength: (datumType: WPKShaderDatumType): number => shaderFuncs.toDatumLength(datumType) * 4,
   toDatumLength: (datumType: WPKShaderDatumType): number => DATUM_TYPE_LENGTHS[datumType],
+  toMatrixDimensions: (matrixType: WPKShaderMatrix): [WPKShaderDimension, WPKShaderDimension] => {
+    const match = matrixType.match(/^mat(2|3|4)x(2|3|4)<[fiu]32>$/);
+    if (match !== null && match.length === 3) {
+      const [, columns, rows] = match;
+      return [parseInt(columns, 10) as WPKShaderDimension, parseInt(rows, 10) as WPKShaderDimension];
+    }
+    throw Error(`Unrecognized matrix type ${matrixType}`);
+  },
   toVertexBufferLocationType: (datumType: WPKShaderDatumType): WPKVertexBufferLocationType => {
     if (shaderFuncs.isScalar(datumType)) {
       return {

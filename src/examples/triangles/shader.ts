@@ -14,8 +14,9 @@ const computeShader = builders.computeShader<TriangleUniform, Triangle, BufferFo
   .pushObject()
   .workGroupSize({ x: 64 })
   .entryPoint('compute_pass_1')
-  .code((params) => `  let angle = f32(${params.instance_index}) * 6.28318 / 60.0;
-  ${params.bindings.offsets}[${params.instance_index}].offset = vec2<f32>(cos(angle), sin(angle)) * 0.95;`)
+  .code((params, wgsl) => wgsl`  let angle = f32(${params.instance_index}) * 6.28318 / 60.0;
+  ${params.bindings.offsets.offset} = vec2<f32>(cos(angle), sin(angle)) * 0.95;`
+  )
   .build()
   .buildPasses()
   .buildObject();
@@ -33,12 +34,12 @@ const vertexShader = builders.vertexShader<TriangleUniform, Triangle, BufferForm
   .vertexBuffersArray()
   .pushObject().buffer('offsets').field('offset').buildElement()
   .buildVertexBuffers()
-  .code((params) => `  return vec4<f32>((0.025 * ${params.vertex_position}.xy) + ${params.vertex_buffers.offsets.offset}, 0.0, 1.0);`)
+  .code((params, wgsl) => wgsl`  return vec4<f32>((0.025 * ${params.vertex_position.xy}) + ${params.vertex_buffers.offsets.offset}, 0.0, 1.0);`)
   .buildObject();
 
 const fragmentShader = builders.fragmentShader<TriangleUniform, Triangle, BufferFormats>()
   .entryPoint('fragment_main')
-  .code((_params) => '  return vec4<f32>(1.0, 0.0, 0.0, 1.0);')
+  .code((_params, wgsl) => wgsl`  return vec4<f32>(1.0, 0.0, 0.0, 1.0);`)
   .buildObject();
 
 const renderGroupBindings = builders.renderGroupBindings<TriangleUniform, Triangle, BufferFormats>()
