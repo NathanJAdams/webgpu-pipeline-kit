@@ -42,38 +42,14 @@ export type WPKMatchingPath<TType, TMatchingType> = _WPKMatchingPath<TType, TMat
 //#region matching paths
 export type WPKMatchingPathNumber<T> = WPKMatchingPath<T, number>;
 export type WPKMatchingPathString<T> = WPKMatchingPath<T, string>;
-export type WPKMatchingPathVec2<T> =
-  | WPKMatchingPath<T, [number, number]>
-  | WPKMatchingPath<T, readonly [number, number]>
-  ;
-export type WPKMatchingPathVec3<T> =
-  | WPKMatchingPath<T, [number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number]>
-  ;
-export type WPKMatchingPathVec4<T> =
-  WPKMatchingPath<T, [number, number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number, number]>
-  ;
-export type WPKMatchingPathVec6<T> =
-  WPKMatchingPath<T, [number, number, number, number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number, number, number, number]>
-  ;
-export type WPKMatchingPathVec8<T> =
-  WPKMatchingPath<T, [number, number, number, number, number, number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number]>
-  ;
-export type WPKMatchingPathVec9<T> =
-  WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number, number]>
-  ;
-export type WPKMatchingPathVec12<T> =
-  WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number, number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number, number, number, number, number]>
-  ;
-export type WPKMatchingPathVec16<T> =
-  WPKMatchingPath<T, [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]>
-  | WPKMatchingPath<T, readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]>
-  ;
+export type WPKVec2 = [number, number];
+export type WPKVec3 = [number, number, number];
+export type WPKVec4 = [number, number, number, number];
+export type WPKVec6 = [number, number, number, number, number, number];
+export type WPKVec8 = [number, number, number, number, number, number, number, number];
+export type WPKVec9 = [number, number, number, number, number, number, number, number, number];
+export type WPKVec12 = [number, number, number, number, number, number, number, number, number];
+export type WPKVec16 = [number, number, number, number, number, number, number, number, number];
 //#endregion
 
 //#region scalars
@@ -83,14 +59,14 @@ export type WPKPathString<T> = WPKMatchingPathString<T>;
 
 //#region vectors
 export type WPKPathVec2<T> =
-  | WPKMatchingPathVec2<T>
+  | WPKMatchingPath<T, WPKVec2>
   | [
     WPKMatchingPathNumber<T>,
     WPKMatchingPathNumber<T>,
   ]
   ;
 export type WPKPathVec3<T> =
-  | WPKMatchingPathVec3<T>
+  | WPKMatchingPath<T, WPKVec3>
   | [
     WPKMatchingPathNumber<T>,
     WPKMatchingPathNumber<T>,
@@ -98,7 +74,7 @@ export type WPKPathVec3<T> =
   ]
   ;
 export type WPKPathVec4<T> =
-  | WPKMatchingPathVec4<T>
+  | WPKMatchingPath<T, WPKVec4>
   | [
     WPKMatchingPathNumber<T>,
     WPKMatchingPathNumber<T>,
@@ -110,10 +86,11 @@ export type WPKPathVec4<T> =
 
 //#region matrices 2xN
 export type WPKPathMat2x2<T> =
-  | WPKMatchingPathVec4<T>
+  | WPKMatchingPath<T, WPKVec4>
+  | WPKMatchingPath<T, [WPKVec2, WPKVec2]>
   | [
-    WPKMatchingPathVec2<T>,
-    WPKMatchingPathVec2<T>,
+    WPKMatchingPath<T, WPKVec2>,
+    WPKMatchingPath<T, WPKVec2>,
   ]
   | [
     [
@@ -126,10 +103,11 @@ export type WPKPathMat2x2<T> =
   ]
   ;
 export type WPKPathMat2x3<T> =
-  | WPKMatchingPathVec6<T>
+  | WPKMatchingPath<T, WPKVec6>
+  | WPKMatchingPath<T, [WPKVec3, WPKVec3]>
   | [
-    WPKMatchingPathVec3<T>,
-    WPKMatchingPathVec3<T>,
+    WPKMatchingPath<T, WPKVec3>,
+    WPKMatchingPath<T, WPKVec3>,
   ]
   | [
     [
@@ -144,10 +122,11 @@ export type WPKPathMat2x3<T> =
   ]
   ;
 export type WPKPathMat2x4<T> =
-  | WPKMatchingPathVec8<T>
+  | WPKMatchingPath<T, WPKVec8>
+  | WPKMatchingPath<T, [WPKVec4, WPKVec4]>
   | [
-    WPKMatchingPathVec4<T>,
-    WPKMatchingPathVec4<T>,
+    WPKMatchingPath<T, WPKVec4>,
+    WPKMatchingPath<T, WPKVec4>,
   ]
   | [
     [
@@ -167,11 +146,12 @@ export type WPKPathMat2x4<T> =
 
 //#region matrices 3xN
 export type WPKPathMat3x2<T> =
-  | WPKMatchingPathVec6<T>
+  | WPKMatchingPath<T, WPKVec6>
+  | WPKMatchingPath<T, [WPKVec2, WPKVec2, WPKVec2]>
   | [
-    WPKMatchingPathVec2<T>,
-    WPKMatchingPathVec2<T>,
-    WPKMatchingPathVec2<T>,
+    WPKMatchingPath<T, WPKVec2>,
+    WPKMatchingPath<T, WPKVec2>,
+    WPKMatchingPath<T, WPKVec2>,
   ]
   | [
     [
@@ -187,11 +167,12 @@ export type WPKPathMat3x2<T> =
   ]
   ;
 export type WPKPathMat3x3<T> =
-  | WPKMatchingPathVec9<T>
+  | WPKMatchingPath<T, WPKVec9>
+  | WPKMatchingPath<T, [WPKVec3, WPKVec3, WPKVec3]>
   | [
-    WPKMatchingPathVec3<T>,
-    WPKMatchingPathVec3<T>,
-    WPKMatchingPathVec3<T>,
+    WPKMatchingPath<T, WPKVec3>,
+    WPKMatchingPath<T, WPKVec3>,
+    WPKMatchingPath<T, WPKVec3>,
   ]
   | [
     [
@@ -210,11 +191,12 @@ export type WPKPathMat3x3<T> =
   ]
   ;
 export type WPKPathMat3x4<T> =
-  | WPKMatchingPathVec12<T>
+  | WPKMatchingPath<T, WPKVec12>
+  | WPKMatchingPath<T, [WPKVec4, WPKVec4, WPKVec4]>
   | [
-    WPKMatchingPathVec4<T>,
-    WPKMatchingPathVec4<T>,
-    WPKMatchingPathVec4<T>,
+    WPKMatchingPath<T, WPKVec4>,
+    WPKMatchingPath<T, WPKVec4>,
+    WPKMatchingPath<T, WPKVec4>,
   ]
   | [
     [
@@ -239,12 +221,13 @@ export type WPKPathMat3x4<T> =
 
 //#region matrices 4xN
 export type WPKPathMat4x2<T> =
-  | WPKMatchingPathVec8<T>
+  | WPKMatchingPath<T, WPKVec8>
+  | WPKMatchingPath<T, [WPKVec2, WPKVec2, WPKVec2, WPKVec2]>
   | [
-    WPKMatchingPathVec2<T>,
-    WPKMatchingPathVec2<T>,
-    WPKMatchingPathVec2<T>,
-    WPKMatchingPathVec2<T>,
+    WPKMatchingPath<T, WPKVec2>,
+    WPKMatchingPath<T, WPKVec2>,
+    WPKMatchingPath<T, WPKVec2>,
+    WPKMatchingPath<T, WPKVec2>,
   ]
   | [
     [
@@ -263,12 +246,13 @@ export type WPKPathMat4x2<T> =
   ]
   ;
 export type WPKPathMat4x3<T> =
-  | WPKMatchingPathVec12<T>
+  | WPKMatchingPath<T, WPKVec12>
+  | WPKMatchingPath<T, [WPKVec3, WPKVec3, WPKVec3, WPKVec3]>
   | [
-    WPKMatchingPathVec3<T>,
-    WPKMatchingPathVec3<T>,
-    WPKMatchingPathVec3<T>,
-    WPKMatchingPathVec3<T>,
+    WPKMatchingPath<T, WPKVec3>,
+    WPKMatchingPath<T, WPKVec3>,
+    WPKMatchingPath<T, WPKVec3>,
+    WPKMatchingPath<T, WPKVec3>,
   ]
   | [
     [
@@ -291,12 +275,13 @@ export type WPKPathMat4x3<T> =
   ]
   ;
 export type WPKPathMat4x4<T> =
-  | WPKMatchingPathVec16<T>
+  | WPKMatchingPath<T, WPKVec16>
+  | WPKMatchingPath<T, [WPKVec4, WPKVec4, WPKVec4, WPKVec4]>
   | [
-    WPKMatchingPathVec4<T>,
-    WPKMatchingPathVec4<T>,
-    WPKMatchingPathVec4<T>,
-    WPKMatchingPathVec4<T>,
+    WPKMatchingPath<T, WPKVec4>,
+    WPKMatchingPath<T, WPKVec4>,
+    WPKMatchingPath<T, WPKVec4>,
+    WPKMatchingPath<T, WPKVec4>,
   ]
   | [
     [

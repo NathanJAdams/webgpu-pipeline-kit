@@ -56,12 +56,7 @@ export type WPKBufferFormatElementUniform<T> =
   | WPKBufferFormatElementMat4x4<T>
   ;
 export type WPKBufferFormatElementStorage<T> =
-  | WPKBufferFormatElementFloat<T>
-  | WPKBufferFormatElementSint<T>
-  | WPKBufferFormatElementUint<T>
-  | WPKBufferFormatElementVec2<T>
-  | WPKBufferFormatElementVec3<T>
-  | WPKBufferFormatElementVec4<T>
+  | WPKBufferFormatElementUniform<T>
   | WPKBufferFormatElementEntityIndex<T>
   ;
 export type WPKBufferFormatElement<T> =

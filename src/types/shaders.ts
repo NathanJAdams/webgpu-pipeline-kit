@@ -1,10 +1,100 @@
-import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
+import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
+import { WPKMatrixIndices, WPKSwizzle } from './code';
 import { WPKMeshParameters, WPKMeshTemplateMap } from './mesh-template';
-import { WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderVector } from './structs';
+import { WPKShaderDatumType, WPKShaderDimension, WPKShaderDimensionMap, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarUnsignedInt, WPKShaderStruct, WPKShaderVector, WPKShaderVectorOfDimensionType } from './structs';
+
+//#region util
+type RemoveNeverKeys<T> = {
+  [K in keyof T as T[K] extends never ? never : K]: T[K];
+};
+//#endregion
+
+//#region references
+type WPKBufferBindingReferenceValue<TDatumType extends WPKShaderDatumType> = string & { __brand: TDatumType; };
+type WPKBufferBindingReferenceValuesVector<TVectorLength extends WPKShaderDimension, TComponentType extends WPKShaderScalar> =
+  & {
+    [TSwizzle in WPKSwizzle<TVectorLength, 1>]: WPKBufferBindingReferenceValue<TComponentType>
+  }
+  & {
+    [TSwizzle in WPKSwizzle<TVectorLength, 2>]: WPKBufferBindingReferenceValue<WPKShaderVectorOfDimensionType<2, TComponentType>>
+  }
+  & (TVectorLength extends (3 | 4)
+    ? {
+      [TSwizzle in WPKSwizzle<TVectorLength, 3>]: WPKBufferBindingReferenceValue<WPKShaderVectorOfDimensionType<3, TComponentType>>
+    }
+    : object
+  )
+  & (TVectorLength extends (4)
+    ? {
+      [TSwizzle in WPKSwizzle<TVectorLength, 4>]: WPKBufferBindingReferenceValue<WPKShaderVectorOfDimensionType<4, TComponentType>>
+    }
+    : object
+  )
+  ;
+type WPKBufferBindingReferenceValues<TShaderStruct extends WPKShaderStruct> = {
+  [TField in TShaderStruct[number]as string & TField['name']]:
+  TField['datumType'] extends WPKShaderScalar
+  ? WPKBufferBindingReferenceValue<TField['datumType']>
+  : TField['datumType'] extends `vec${infer TLengthName}<${infer TComponentType}>`
+  ? TLengthName extends keyof WPKShaderDimensionMap
+  ? TComponentType extends WPKShaderScalar
+  ? WPKBufferBindingReferenceValuesVector<WPKShaderDimensionMap[TLengthName], TComponentType>
+  : never
+  : never
+  : TField['datumType'] extends `mat${infer TColumnsName}x${infer TRowsName}<${infer TComponentType}>`
+  ? TColumnsName extends keyof WPKShaderDimensionMap
+  ? TRowsName extends keyof WPKShaderDimensionMap
+  ? TComponentType extends WPKShaderScalar
+  ? Record<WPKMatrixIndices<WPKShaderDimensionMap[TColumnsName], WPKShaderDimensionMap[TRowsName]>, WPKBufferBindingReferenceValue<TComponentType>>
+  : never
+  : never
+  : never
+  : never
+};
+export type WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBuffer extends keyof TBufferFormatMap> =
+  TBufferFormatMap[TBuffer] extends WPKBufferFormatEntityMarshalled<TEntity>
+  ? WPKBufferBindingReferenceValues<TBufferFormatMap[TBuffer]['marshall']>
+  : TBufferFormatMap[TBuffer] extends WPKBufferFormatEntityLayout
+  ? WPKBufferBindingReferenceValues<TBufferFormatMap[TBuffer]['layout']>
+  : never
+  ;
+export type WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean> =
+  RemoveNeverKeys<{
+    [TBuffer in string & keyof TBufferFormatMap]:
+    | (
+      TIncludeUniform extends true
+      ? TBufferFormatMap[TBuffer] extends WPKBufferFormatUniform<TUniform>
+      ? WPKBufferBindingReferenceValues<TBufferFormatMap[TBuffer]['marshall']>
+      : never
+      : never
+    )
+    | (
+      TIncludeEntity extends true
+      ? (
+        & WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap, TBuffer>
+        & {
+          atIndex: (index: number | WPKBufferBindingReferenceValue<WPKShaderScalarUnsignedInt>) => WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap, TBuffer>;
+        }
+      )
+      : never
+    )
+  }>;
+export type WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+  [TVertexBufferLocation in WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap> as TVertexBufferLocation['buffer']]: {
+    [
+    TField in TVertexBufferLocation['field']as string extends TField
+    ? 'error'
+    : TField
+    ]: string extends TField
+    ? `To use 'params.vertex_buffers.${TVertexBufferLocation['buffer']}...' ensure TypeScript is version 4.9+ and create the buffer format using 'const ${TVertexBufferLocation['buffer']} = { ... } as const satisifes WPKBufferFormat<MyUniform, MyEntity>;'`
+    : TField;
+  };
+};
+//#endregion
 
 //#region render
 export type WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, true, false>, string>;
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>;
   fragment_coordinate: string;
 };
 export type WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
@@ -21,21 +111,9 @@ export type WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap extend
   instance_index: string,
   vertex_index: string,
   vertex_position: string;
-  bindings: Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, true, false>, string>;
-}
-  & (
-    string extends WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>['field']
-    ? object
-    : {
-      vertex_buffers: Record<
-        `${WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>['buffer']}`,
-        Record<
-          `${WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>['field']}`,
-          string
-        >
-      >;
-    }
-  );
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>;
+  vertex_buffers: WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>;
+};
 export type WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   entryPoint: string;
   vertexBuffers: Array<WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>>;
