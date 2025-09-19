@@ -1,7 +1,7 @@
-import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
+import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatMarshalled, WPKBufferFormatUniform } from './buffer-formats';
 import { WPKDatumTypeReference, WPKDatumTypeReferenceBase, WPKScalarReference, WPKShaderStructReferences, WPKVectorReference } from './code';
 import { WPKMeshParameters, WPKMeshTemplateMap } from './mesh-template';
-import { WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarUnsignedInt, WPKShaderVector } from './structs';
+import { WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderVector } from './structs';
 
 type RemoveNever<T> = {
   [K in keyof T as T[K] extends never ? never : K]: T[K]
@@ -37,21 +37,31 @@ export type WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap exten
       : never
     )
   }>;
-
-
-// TODO make values into WPKDatumTypeReference<WPKShaderDatumType>
-// TODO how to get datum type from buffer format map
+type WPKStructEntriesDatumType<TStructEntries extends readonly WPKShaderStructEntry[], TStructEntryName> =
+  TStructEntries extends [infer Head, ...infer Tail]
+  ? Head extends WPKShaderStructEntry<infer TDatumType>
+  ? TDatumType
+  : WPKStructEntriesDatumType<Tail extends readonly WPKShaderStructEntry[] ? Tail : never, TStructEntryName>
+  : never;
+type WPKStructEntries<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBufferName extends keyof TBufferFormatMap> =
+  TBufferFormatMap[TBufferName] extends WPKBufferFormatMarshalled<any, any, any>
+  ? TBufferFormatMap[TBufferName]['marshall']
+  : TBufferFormatMap[TBufferName] extends WPKBufferFormatEntityLayout
+  ? TBufferFormatMap[TBufferName]['layout']
+  : never;
 export type WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   [TVertexBufferLocation in WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap> as TVertexBufferLocation['buffer']]: {
     [
     TField in TVertexBufferLocation['field']as string extends TField ? 'error' : TField]:
     string extends TField
     ? `To use 'params.vertex_buffers.${TVertexBufferLocation['buffer']}...' ensure TypeScript is version 4.9+ and create the buffer format using 'const ${TVertexBufferLocation['buffer']} = { ... } as const satisifes WPKBufferFormat<MyUniform, MyEntity>;'`
-    : TField;
+    : WPKStructEntriesDatumType<WPKStructEntries<TUniform, TEntity, TBufferFormatMap, TVertexBufferLocation['buffer']>, TField> extends infer TDatumType
+    ? TDatumType extends WPKShaderDatumType
+    ? WPKDatumTypeReference<TDatumType>
+    : never
+    : never
   };
 };
-
-
 //#endregion
 
 //#region wgsl tagged template

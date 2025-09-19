@@ -203,12 +203,21 @@ const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferF
   const vertex_buffers = Object.values(vertexBufferAttributeData)
     .reduce((acc, attributeData) => {
       const { buffer, locationAttributes } = attributeData;
+      const bufferFormat = bufferFormats[buffer];
+      const structEntries = bufferFormat.bufferType === 'editable'
+        ? bufferFormat.layout
+        : bufferFormat.marshall;
       acc[buffer] = Object.values(locationAttributes)
         .reduce((acc, attribute) => {
           const { fieldName, locationName } = attribute;
-          acc[fieldName] = locationName;
+          const structEntry = structEntries.find(entry => entry.name === fieldName);
+          if (structEntry === undefined) {
+            throw Error(`Cannot find struct entry with name ${fieldName}`);
+          }
+          const reference = toDatumTypeReference(locationName, structEntry.datumType);
+          acc[fieldName] = reference;
           return acc;
-        }, {} as Record<string, string>) as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>[typeof buffer];
+        }, {} as Record<string, WPKDatumTypeReference<any>>) as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>[typeof buffer];
       return acc;
     }, {} as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>);
   const locations = vertexBufferAttributeData.flatMap(attributeData =>
