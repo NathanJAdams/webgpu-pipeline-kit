@@ -31,6 +31,7 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
     + WHITESPACE
     + computePassesCode.join(WHITESPACE)
     + (epilogue !== undefined ? WHITESPACE + epilogue : '')
+    + WHITESPACE
     ;
   logFuncs.lazyInfo(LOGGER, () => `Compute shader code:\n${code}`);
   return {
@@ -61,6 +62,7 @@ export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends W
     + WHITESPACE
     + renderPassesCode.join(WHITESPACE)
     + (epilogue !== undefined ? WHITESPACE + epilogue : '')
+    + WHITESPACE
     ;
   logFuncs.lazyInfo(LOGGER, () => `Render shader code:\n${code}`);
   return {
@@ -142,7 +144,7 @@ const toBufferBindings = (
   const bufferBindings = Object.values(structEntries)
     .reduce((acc, element) => {
       const { name, datumType } = element;
-      acc[name] = toDatumTypeReference(`${bufferName}.${name}`, datumType);
+      acc[name] = toDatumTypeReference(`${bufferName}[instance_index].${name}`, datumType);
       return acc;
     }, {} as Record<string, WPKDatumTypeReference<any>>);
   if (entityIndexable) {
@@ -214,8 +216,7 @@ const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferF
           if (structEntry === undefined) {
             throw Error(`Cannot find struct entry with name ${fieldName}`);
           }
-          const reference = toDatumTypeReference(locationName, structEntry.datumType);
-          acc[fieldName] = reference;
+          acc[fieldName] = toDatumTypeReference(locationName, structEntry.datumType);
           return acc;
         }, {} as Record<string, WPKDatumTypeReference<any>>) as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>[typeof buffer];
       return acc;
