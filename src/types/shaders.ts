@@ -56,7 +56,9 @@ export type WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap extend
     string extends TField
     ? `To use 'params.vertex_buffers.${TVertexBufferLocation['buffer']}...' ensure TypeScript is version 4.9+ and create the buffer format using 'const ${TVertexBufferLocation['buffer']} = { ... } as const satisifes WPKBufferFormat<MyUniform, MyEntity>;'`
     : WPKStructEntriesDatumType<WPKStructEntries<TUniform, TEntity, TBufferFormatMap, TVertexBufferLocation['buffer']>, TField> extends infer TDatumType
-    ? TDatumType extends WPKShaderDatumType
+    ? never extends TDatumType
+    ? never
+    : TDatumType extends WPKShaderDatumType
     ? WPKDatumTypeReference<TDatumType>
     : never
     : never

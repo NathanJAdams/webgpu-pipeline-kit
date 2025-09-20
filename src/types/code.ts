@@ -78,7 +78,7 @@ export type WPKVectorReference<TVector extends WPKShaderVector> =
   : never
   ;
 export type WPKMatrixReference<TMatrix extends WPKShaderMatrix> =
-  TMatrix extends `mat${infer TColumnsName}x${infer TRowsName} <${infer TComponentType} > `
+  TMatrix extends `mat${infer TColumnsName}x${infer TRowsName}<${infer TComponentType}>`
   ? TColumnsName extends keyof WPKShaderDimensionMap
   ? TRowsName extends keyof WPKShaderDimensionMap
   ? TComponentType extends WPKShaderScalarFloat
@@ -93,7 +93,6 @@ export type WPKMatrixReference<TMatrix extends WPKShaderMatrix> =
   : never
   : never
   ;
-
 export type WPKDatumTypeReference<TDatumType extends WPKShaderDatumType> =
   TDatumType extends WPKShaderScalar
   ? WPKScalarReference<TDatumType>
