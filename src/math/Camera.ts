@@ -55,26 +55,26 @@ export class Camera {
     return this._viewProjectionMatrix;
   }
 
-  set position(position: Vector3) {
+  setPosition(position: Vector3) {
     this.isDirtyPosition = true;
     this._position = position;
   }
-  set rotation(rotation: Quaternion) {
+  setRotation(rotation: Quaternion) {
     this.isDirtyRotation = true;
     this._rotation = rotation;
   }
-  set fieldOfView(fieldOfView: number) {
+  setFieldOfView(fieldOfView: number) {
     if (fieldOfView <= 0 || fieldOfView >= 180) {
       throw new Error(`FOV must be between 0 and 180 degrees but is ${fieldOfView}`);
     }
     this.isDirtyFieldOfView = true;
     this._fieldOfViewDegrees = fieldOfView;
   }
-  set aspectRatio(aspectRatio: number) {
+  setAspectRatio(aspectRatio: number) {
     this.isDirtyAspectRatio = true;
     this._aspectRatio = aspectRatio;
   }
-  set nearFar(nearFar: [number, number]) {
+  setNearFar(nearFar: [number, number]) {
     if (nearFar[0] <= 0 || nearFar[1] <= 0) {
       throw new Error(`Both near and far bounds must be positive but are [${nearFar[0]}, ${nearFar[1]}]`);
     }
@@ -86,11 +86,11 @@ export class Camera {
   }
 
   translate(offset: Vector3): void {
-    this.position = this.position.plus(offset);
+    this.setPosition(this._position.plus(offset));
   }
 
   rotate(rotation: Quaternion): void {
-    this.rotation = this.rotation.multiply(rotation).normalize();
+    this.setRotation(this._rotation.multiply(rotation).normalize());
   }
 
   flushChanges(): void {

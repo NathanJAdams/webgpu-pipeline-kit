@@ -1,16 +1,14 @@
-import { builders, WPKBufferFormat } from '../..';
+import { WPKBufferFormat } from '../..';
 import { Triangle, TriangleUniform } from './instance-formats';
 
-const uniforms = builders.bufferFormat<TriangleUniform, Triangle>()
-  .bufferType('uniform')
-  .marshallArray()
-  .index0Object()
-  .name('gameTime')
-  .datumType('f32')
-  .scalar('gameTime')
-  .buildIndex0()
-  .buildMarshall()
-  .buildObject();
+export const uniforms = {
+  bufferType: 'uniform',
+  marshall: [{
+    name: 'gameTime',
+    datumType: 'f32',
+    scalar: 'gameTime'
+  }],
+} as const satisfies WPKBufferFormat<TriangleUniform, Triangle>;
 
 const offsets = {
   bufferType: 'editable',
