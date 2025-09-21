@@ -111,14 +111,14 @@ export const shaderFuncs = {
     bufferFields.sort((a, b) => a.buffer.localeCompare(b.buffer));
     let shaderLocation = 1; // 0 is reserved for mesh location
     const attributeDataArray: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>[] = [];
-    const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];
     for (const { buffer, fields } of bufferFields) {
       const bufferFormat = bufferFormats[buffer];
       const structEntries = (bufferFormat.bufferType === 'editable')
         ? bufferFormat.layout
         : bufferFormat.marshall;
-      const stride = shaderFuncs.toStrideArray(structEntries);
       const locationAttributes: WPKVertexBufferLocationAttribute[] = [];
+      const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];
+      const stride = shaderFuncs.toStrideArray(structEntries);
       let offset = 0;
       for (const structEntry of structEntries) {
         const { name, datumType } = structEntry;
