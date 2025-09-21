@@ -115,9 +115,8 @@ const vertexShader = builders.vertexShader<OrbiterUniform, Orbiter, OrbiterBuffe
   .pushObject().buffer('visual').field('radius').buildElement()
   .buildVertexBuffers()
   .code((wgsl, params) => wgsl`
-  let model_position = ${params.vertex_buffers.position.position} * vec4<f32>(${params.vertex_buffers.position.position}, 1.0);
-  return ${params.bindings.uniforms.camera} * model_position;
-  return ${params.vertex_position};
+  let model_position = ${params.vertex_buffers.position.position} + (${params.vertex_position} * visual_radius);
+  return ${params.bindings.uniforms.camera} * vec4<f32>(model_position, 1.0);
 `)
   .buildObject();
 

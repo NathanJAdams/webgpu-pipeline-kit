@@ -239,7 +239,7 @@ const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferF
   const params: WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap> = {
     instance_index: toDatumTypeReference('instance_index', 'u32'),
     vertex_index: toDatumTypeReference('vertex_index', 'u32'),
-    vertex_position: toDatumTypeReference('vertex_position', 'vec4<f32>'),
+    vertex_position: toDatumTypeReference('vertex_position', 'vec3<f32>'),
     bindings,
     vertex_buffers,
   };
@@ -247,7 +247,7 @@ const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferF
 fn ${pass.entryPoint}(
   @builtin(instance_index) instance_index: u32,
   @builtin(vertex_index) vertex_index: u32,
-  @location(0) vertex_position: vec4<f32>,
+  @location(0) vertex_position: vec3<f32>,
 ${locations.join('\n')}
 ) -> @builtin(position) vec4<f32> {
 ${reconstitutedMatrices.join('\n')}

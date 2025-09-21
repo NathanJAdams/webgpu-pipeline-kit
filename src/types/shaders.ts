@@ -91,7 +91,7 @@ export type WPKRenderPassMesh<TMeshTemplateMap extends WPKMeshTemplateMap> = {
 export type WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   instance_index: WPKScalarReference<'u32'>,
   vertex_index: WPKScalarReference<'u32'>,
-  vertex_position: WPKVectorReference<'vec4<f32>'>;
+  vertex_position: WPKVectorReference<'vec3<f32>'>;
   bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>;
   vertex_buffers: WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>;
 };
