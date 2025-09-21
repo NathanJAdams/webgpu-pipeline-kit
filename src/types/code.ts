@@ -1,3 +1,4 @@
+import { HasError } from '../utils';
 import { WPKShaderDatumType, WPKShaderDimension, WPKShaderDimensionMap, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderStruct, WPKShaderVector, WPKShaderVectorOfDimensionType } from './structs';
 
 //#region swizzles
@@ -73,9 +74,9 @@ export type WPKVectorReference<TVector extends WPKShaderVector> =
       : object
     )
   )
-  : never
-  : never
-  : never
+  : HasError<`Component type must be one of [f32, i32, u32] but is ${TComponentType}`>
+  : HasError<`Vector length must be one of [2, 3, 4] but is ${TLengthName}`>
+  : HasError<`Vector must be of the form 'vec[Length]<f32|i32|u32>' but is ${TVector}`>
   ;
 export type WPKMatrixReference<TMatrix extends WPKShaderMatrix> =
   TMatrix extends `mat${infer TColumnsName}x${infer TRowsName}<${infer TComponentType}>`
@@ -88,10 +89,10 @@ export type WPKMatrixReference<TMatrix extends WPKShaderMatrix> =
       [TMatrixIndex in WPKMatrixIndices<WPKShaderDimensionMap[TColumnsName], WPKShaderDimensionMap[TRowsName]>]: WPKDatumTypeReferenceBase<TComponentType>
     }
   )
-  : never
-  : never
-  : never
-  : never
+  : HasError<`Component type must be 'f32' but is ${TComponentType}`>
+  : HasError<`Rows must be one of [2, 3, 4] but is ${TRowsName}`>
+  : HasError<`Columns must be one of [2, 3, 4] but is ${TColumnsName}`>
+  : HasError<`Matrix must be of the form 'mat[Columns]x[Rows]<f32>' but is ${TMatrix}`>
   ;
 export type WPKDatumTypeReference<TDatumType extends WPKShaderDatumType> =
   TDatumType extends WPKShaderScalar
@@ -100,7 +101,7 @@ export type WPKDatumTypeReference<TDatumType extends WPKShaderDatumType> =
   ? WPKVectorReference<TDatumType>
   : TDatumType extends WPKShaderMatrix
   ? WPKMatrixReference<TDatumType>
-  : never
+  : HasError<`Invalid datum type ${TDatumType}`>
   ;
 export type WPKShaderStructReferences<TShaderStruct extends WPKShaderStruct> = {
   [TShaderStructEntry in TShaderStruct[number]as string & TShaderStructEntry['name']]: WPKDatumTypeReference<TShaderStructEntry['datumType']>

@@ -40,3 +40,11 @@ export type FunctionKeys<T> = {
   ? K
   : never
 }[keyof T];
+
+export type HasError<TError extends string> = {
+  error: TError;
+};
+
+export type RemoveNever<T> = {
+  [K in keyof T as T[K] extends never ? never : K]: T[K]
+};

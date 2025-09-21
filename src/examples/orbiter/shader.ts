@@ -45,25 +45,24 @@ const computeShader = builders.computeShader<OrbiterUniform, Orbiter, OrbiterBuf
   .pushObject()
   .workGroupSize({ x: 64 })
   .entryPoint('orbiter_kepler')
-  .code((params) => `
-  let orbitingIndex = ${params.bindings.kepler}[${params.instance_index}].primaryIndex;
-  if (orbitingIndex == -1) {
+  .code((wgsl, params) => wgsl`
+  if (${params.bindings.kepler.primaryIndex} == -1) {
     return;
   }
 
-  let semiMajorAxis = ${params.bindings.kepler}[${params.instance_index}].semiMajorAxis;
-  let eccentricity = ${params.bindings.kepler}[${params.instance_index}].eccentricity;
-  let meanAnomaly = ${params.bindings.kepler}[${params.instance_index}].meanAnomaly;
-  let meanMotion = ${params.bindings.kepler}[${params.instance_index}].meanMotion;
-  let sqrt_OnePlusEccentricityOverOneMinusEccentricity = ${params.bindings.kepler}[${params.instance_index}].sqrt_OnePlusEccentricityOverOneMinusEccentricity;
-  let cosInclination = ${params.bindings.kepler}[${params.instance_index}].inclination[0];
-  let sinInclination = ${params.bindings.kepler}[${params.instance_index}].inclination[1];
-  let cosArgumentOfPeriapsis = ${params.bindings.kepler}[${params.instance_index}].argumentOfPeriapsis[0];
-  let sinArgumentOfPeriapsis = ${params.bindings.kepler}[${params.instance_index}].argumentOfPeriapsis[1];
-  let cosLongitudeOfAscendingNode = ${params.bindings.kepler}[${params.instance_index}].longitudeOfAscendingNode[0];
-  let sinLongitudeOfAscendingNode = ${params.bindings.kepler}[${params.instance_index}].longitudeOfAscendingNode[1];
+  let semiMajorAxis = ${params.bindings.kepler.semiMajorAxis};
+  let eccentricity = ${params.bindings.kepler.eccentricity};
+  let meanAnomaly = ${params.bindings.kepler.meanAnomaly};
+  let meanMotion = ${params.bindings.kepler.meanMotion};
+  let sqrt_OnePlusEccentricityOverOneMinusEccentricity = ${params.bindings.kepler.sqrt_OnePlusEccentricityOverOneMinusEccentricity};
+  let cosInclination = ${params.bindings.kepler.inclination.x};
+  let sinInclination = ${params.bindings.kepler.inclination.y};
+  let cosArgumentOfPeriapsis = ${params.bindings.kepler.argumentOfPeriapsis.x};
+  let sinArgumentOfPeriapsis = ${params.bindings.kepler.argumentOfPeriapsis.y};
+  let cosLongitudeOfAscendingNode = ${params.bindings.kepler.longitudeOfAscendingNode.x};
+  let sinLongitudeOfAscendingNode = ${params.bindings.kepler.longitudeOfAscendingNode.y};
 
-  let meanAnomalyAtTime = meanAnomaly + meanMotion * ${params.bindings.uniforms}.gameTime;
+  let meanAnomalyAtTime = meanAnomaly + meanMotion * ${params.bindings.uniforms.gameTime};
   let eccentricAnomaly = calculateEccentricAnomaly(meanAnomalyAtTime, eccentricity);
 
   // true anomaly and orbital radius
@@ -94,7 +93,7 @@ const computeShader = builders.computeShader<OrbiterUniform, Orbiter, OrbiterBuf
   let zRelative = zInclined;
 
   // Write out orbiter position
-  ${params.bindings.position}[${params.instance_index}].position = ${params.bindings.position}[orbitingIndex].position + vec3<f32>(xRelative, yRelative, zRelative);
+  ${params.bindings.position.position} = ${params.bindings.position.atIndex(params.bindings.kepler.primaryIndex).position} + vec3<f32>(xRelative, yRelative, zRelative);
   `)
   .build()
   .buildPasses()
@@ -115,7 +114,7 @@ const vertexShader = builders.vertexShader<OrbiterUniform, Orbiter, OrbiterBuffe
   .pushObject().buffer('visual').field('color').buildElement()
   .pushObject().buffer('visual').field('radius').buildElement()
   .buildVertexBuffers()
-  .code((params, wgsl) => wgsl`
+  .code((wgsl, params) => wgsl`
   let model_position = ${params.vertex_buffers.position.position} * vec4<f32>(${params.vertex_buffers.position.position}, 1.0);
   return ${params.bindings.uniforms.camera} * model_position;
   return ${params.vertex_position};
@@ -124,7 +123,7 @@ const vertexShader = builders.vertexShader<OrbiterUniform, Orbiter, OrbiterBuffe
 
 const fragmentShader = builders.fragmentShader<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
   .entryPoint('orbiter_fragment')
-  .code((_params) => '  return vec4<f32>(0.9, 0.7, 0.5, 1.0);')
+  .code((wgsl, _params) => wgsl`  return vec4<f32>(0.9, 0.7, 0.5, 1.0);`)
   .buildObject();
 
 const renderGroupBindings = builders.renderGroupBindings<OrbiterUniform, Orbiter, OrbiterBufferFormats>()

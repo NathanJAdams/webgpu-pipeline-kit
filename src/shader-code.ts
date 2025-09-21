@@ -1,12 +1,13 @@
 import { logFactory } from './logging';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormat, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderStructEntry } from './types';
+import { WPKBufferFormat, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderScalarSignedInt } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('shader');
 
 const WHITESPACE = '\n\n';
+const BUFFER_INDEXING_VARIABLE = 'instance_index';
 
 export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
   shader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>, bufferFormats: TBufferFormatMap
@@ -128,8 +129,8 @@ const toBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatM
         const structEntries = (bufferFormat.bufferType === 'editable')
           ? bufferFormat.layout
           : bufferFormat.marshall;
-        const entityIndexable = (bufferFormat.bufferType !== 'uniform');
-        const bufferBindings = toBufferBindings(bufferName, structEntries, entityIndexable);
+        const allowIndexing = (bufferFormat.bufferType !== 'uniform');
+        const bufferBindings = toBufferBindings(bufferName, structEntries, allowIndexing, allowIndexing);
         acc[bufferName] = bufferBindings;
       }
       return acc;
@@ -139,20 +140,28 @@ const toBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatM
 const toBufferBindings = (
   bufferName: string,
   structEntries: WPKShaderStructEntry[],
-  entityIndexable: boolean
+  allowIndexing: boolean,
+  allowAlternativeIndexing: boolean,
+  indexingVariableOverride?: string,
 ): Record<string, WPKDatumTypeReference<any>> => {
+  const validIndexingVariableName = indexingVariableOverride ?? BUFFER_INDEXING_VARIABLE;
   const bufferBindings = Object.values(structEntries)
     .reduce((acc, element) => {
       const { name, datumType } = element;
-      acc[name] = toDatumTypeReference(`${bufferName}[instance_index].${name}`, datumType);
+      let prefix = bufferName;
+      if (allowIndexing) {
+        prefix += `[${validIndexingVariableName}]`;
+      }
+      prefix += `.${name}`;
+      acc[name] = toDatumTypeReference(prefix, datumType);
       return acc;
     }, {} as Record<string, WPKDatumTypeReference<any>>);
-  if (entityIndexable) {
-    (bufferBindings as any)['atIndex'] = (index: number | WPKDatumTypeReference<WPKShaderScalarUnsignedInt>) => {
-      const indexString = (typeof index === 'number')
-        ? String(index)
-        : index.__reference;
-      return toBufferBindings(`${bufferName}[${indexString}]`, structEntries, false);
+  if (allowAlternativeIndexing) {
+    (bufferBindings as any)['atIndex'] = (index: number | string | WPKDatumTypeReference<WPKShaderScalarSignedInt | WPKShaderScalarUnsignedInt>) => {
+      const indexString = shaderFuncs.isDatumTypeReferenceBase(index)
+        ? index.__reference
+        : String(index);
+      return toBufferBindings(bufferName, structEntries, allowIndexing, false, indexString);
     };
   }
   return bufferBindings;
@@ -180,7 +189,7 @@ fn ${pass.entryPoint}(
   if (instance_index >= ${DISPATCH_PARAMS_BUFFER_NAME}.instance_count) {
     return;
   }
-${pass.code(params, wgslTaggedTemplate)}
+${pass.code(wgslTaggedTemplate, params)}
 }`;
 };
 
@@ -242,7 +251,7 @@ fn ${pass.entryPoint}(
 ${locations.join('\n')}
 ) -> @builtin(position) vec4<f32> {
 ${reconstitutedMatrices.join('\n')}
-${pass.code(params, wgslTaggedTemplate)}
+${pass.code(wgslTaggedTemplate, params)}
 }`;
 };
 
@@ -258,7 +267,7 @@ const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBuffe
 fn ${pass.entryPoint}(
   @builtin(position) fragment_coordinate: vec4<f32>,
 ) -> @location(0) vec4<f32> {
-${pass.code(params, wgslTaggedTemplate)}
+${pass.code(wgslTaggedTemplate, params)}
 }`;
 };
 
@@ -272,25 +281,25 @@ const toDatumTypeReference = <TDatumType extends WPKShaderDatumType>(prefix: str
     const colorSwizzle = '';
     const coordSwizzle = '';
     for (let component1 = 0; component1 < vectorLength; component1++) {
-      const colorSwizzle1 = colorSwizzle + colorComponents[0];
-      const coordSwizzle1 = coordSwizzle + coordComponents[0];
+      const colorSwizzle1 = colorSwizzle + colorComponents[component1];
+      const coordSwizzle1 = coordSwizzle + coordComponents[component1];
       reference[colorSwizzle1] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle1}`, componentType);
       reference[coordSwizzle1] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle1}`, componentType);
       for (let component2 = 0; component2 < vectorLength; component2++) {
-        const colorSwizzle2 = colorSwizzle1 + colorComponents[1];
-        const coordSwizzle2 = coordSwizzle1 + coordComponents[1];
+        const colorSwizzle2 = colorSwizzle1 + colorComponents[component2];
+        const coordSwizzle2 = coordSwizzle1 + coordComponents[component2];
         reference[colorSwizzle2] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle2}`, componentType);
         reference[coordSwizzle2] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle2}`, componentType);
         if (vectorLength >= 3) {
           for (let component3 = 0; component3 < vectorLength; component3++) {
-            const colorSwizzle3 = colorSwizzle2 + colorComponents[2];
-            const coordSwizzle3 = coordSwizzle2 + coordComponents[2];
+            const colorSwizzle3 = colorSwizzle2 + colorComponents[component3];
+            const coordSwizzle3 = coordSwizzle2 + coordComponents[component3];
             reference[colorSwizzle3] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle3}`, componentType);
             reference[coordSwizzle3] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle3}`, componentType);
             if (vectorLength >= 4) {
               for (let component4 = 0; component4 < vectorLength; component4++) {
-                const colorSwizzle4 = colorSwizzle3 + colorComponents[3];
-                const coordSwizzle4 = coordSwizzle3 + coordComponents[3];
+                const colorSwizzle4 = colorSwizzle3 + colorComponents[component4];
+                const coordSwizzle4 = coordSwizzle3 + coordComponents[component4];
                 reference[colorSwizzle4] = toDatumTypeReferenceHidden(`${prefix}.${colorSwizzle4}`, componentType);
                 reference[coordSwizzle4] = toDatumTypeReferenceHidden(`${prefix}.${coordSwizzle4}`, componentType);
               }
@@ -312,7 +321,7 @@ const toDatumTypeReference = <TDatumType extends WPKShaderDatumType>(prefix: str
   return reference as WPKDatumTypeReference<typeof datumType>;
 };
 
-const toDatumTypeReferenceHidden = (prefix: string, datumType: WPKShaderDatumType): WPKDatumTypeReference<any> => {
+const toDatumTypeReferenceHidden = (prefix: string, datumType: WPKShaderDatumType): WPKDatumTypeReferenceBase<WPKShaderDatumType> => {
   return {
     __brand: datumType,
     __reference: prefix,
@@ -321,13 +330,16 @@ const toDatumTypeReferenceHidden = (prefix: string, datumType: WPKShaderDatumTyp
 
 const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.substring(1);
 
-const wgslTaggedTemplate = (strings: TemplateStringsArray, ...references: (string | WPKDatumTypeReferenceBase<WPKShaderDatumType>)[]): string => {
+const wgslTaggedTemplate = (strings: TemplateStringsArray, ...references: (number | string | WPKDatumTypeReferenceBase<WPKShaderDatumType>)[]): string => {
   let result = '';
   for (let i = 0; i < references.length; i++) {
     result += strings[i];
-    result += ((references[i] as WPKDatumTypeReference<any>).__reference !== undefined)
-      ? (references[i] as WPKDatumTypeReference<any>).__reference
-      : references[i];
+    const reference = references[i];
+    if (shaderFuncs.isDatumTypeReferenceBase(reference)) {
+      result += reference.__reference;
+    } else {
+      result += reference;
+    }
   }
   result += strings[strings.length - 1];
   return result;

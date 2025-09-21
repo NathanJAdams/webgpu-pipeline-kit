@@ -12,7 +12,7 @@ export const pipelineOptions = builders.pipelineOptions<TriangleUniform, Triangl
   .initialEntities([])
   .buildObject();
 
-export const pipelineDefinition = builders.pipelineDefinition<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
+export const trianglesPipelineDefinition = builders.pipelineDefinition<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
   .name('triangle')
   .bufferFormats(bufferFormats)
   .meshFactories(meshTemplates)

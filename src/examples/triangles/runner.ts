@@ -1,7 +1,7 @@
 import { factories, setLogLevel, WPKDisplayOptions } from '../..';
 import { BufferFormats } from './buffer-formats';
 import { Triangle, TriangleUniform } from './instance-formats';
-import { pipelineDefinition, pipelineOptions } from './pipeline-definition';
+import { trianglesPipelineDefinition, pipelineOptions } from './pipeline-definition';
 import { logFactory } from '../../logging';
 import { WPKDebugOptions } from '../../types';
 import { Color, logFuncs } from '../../utils';
@@ -20,7 +20,7 @@ export const run = async (): Promise<void> => {
       logFuncs.lazyInfo(LOGGER, () => `Buffer contents: ${JSON.stringify(contents)}`);
     },
   };
-  const trianglePipeline = factories.pipeline.ofDefinition(pipelineDefinition, pipelineOptions, debugOptions);
+  const trianglePipeline = factories.pipeline.ofDefinition(trianglesPipelineDefinition, pipelineOptions, debugOptions);
   pipelineRunner.add(trianglePipeline);
   const options: WPKDisplayOptions = {
     clear: Color.BLACK,

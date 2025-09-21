@@ -1,4 +1,4 @@
-import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderStructEntry, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferLocationType, WPKVertexBufferLocationTypeMatrix, WPKVertexBufferAttributeData, WPKVertexBufferEntryType, WPKVertexBufferReconstitutedMatrix } from './types';
+import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderStructEntry, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferLocationType, WPKVertexBufferLocationTypeMatrix, WPKVertexBufferAttributeData, WPKVertexBufferEntryType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase } from './types';
 
 export const shaderFuncs = {
   isScalar: (datumType: WPKShaderDatumType): datumType is WPKShaderScalar => {
@@ -12,6 +12,9 @@ export const shaderFuncs = {
   },
   isLocationTypeMatrix: (locationType: WPKVertexBufferLocationType): locationType is WPKVertexBufferLocationTypeMatrix => {
     return (locationType as WPKVertexBufferLocationTypeMatrix).count !== undefined;
+  },
+  isDatumTypeReferenceBase: (reference: number | string | WPKDatumTypeReferenceBase<WPKShaderDatumType>): reference is WPKDatumTypeReferenceBase<WPKShaderDatumType> => {
+    return (typeof reference === 'object') && (reference as WPKDatumTypeReferenceBase<WPKShaderDatumType>).__reference !== undefined;
   },
   toMatrixLocationType: (datumType: WPKShaderMatrix): WPKVertexBufferLocationTypeMatrix => {
     const componentType = shaderFuncs.toComponentType(datumType);
