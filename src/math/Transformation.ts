@@ -26,19 +26,19 @@ export class Transformation {
     return this._matrix;
   }
 
-  set position(position: Vector3) {
+  setPosition(position: Vector3) {
     this.isDirtyPosition = true;
-    this.position = position;
+    this._position = position;
   }
 
-  set rotation(rotation: Quaternion) {
+  setRotation(rotation: Quaternion) {
     this.isDirtyRotation = true;
-    this.rotation = rotation;
+    this._rotation = rotation;
   }
 
-  set scale(scale: Vector3) {
+  setScale(scale: Vector3) {
     this.isDirtyScale = true;
-    this.scale = scale;
+    this._scale = scale;
   }
 
   flushChanges(): void {
