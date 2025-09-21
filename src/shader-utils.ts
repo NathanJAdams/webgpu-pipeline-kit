@@ -114,13 +114,13 @@ export const shaderFuncs = {
     const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];
     for (const { buffer, fields } of bufferFields) {
       const bufferFormat = bufferFormats[buffer];
-      const array = (bufferFormat.bufferType === 'editable')
+      const structEntries = (bufferFormat.bufferType === 'editable')
         ? bufferFormat.layout
         : bufferFormat.marshall;
-      const stride = shaderFuncs.toStrideArray(array);
+      const stride = shaderFuncs.toStrideArray(structEntries);
       const locationAttributes: WPKVertexBufferLocationAttribute[] = [];
       let offset = 0;
-      for (const structEntry of array) {
+      for (const structEntry of structEntries) {
         const { name, datumType } = structEntry;
         if (fields.has(name)) {
           const locationName = `${buffer}_${name}`;
@@ -132,10 +132,11 @@ export const shaderFuncs = {
             }
             const vectorLocationNames: string[] = [];
             for (let i = 0; i < type.count; i++) {
-              vectorLocationNames.push(locationName);
+              const vectorLocationName = `${locationName}_${i}`;
+              vectorLocationNames.push(vectorLocationName);
               const data: WPKVertexBufferLocationAttribute = {
                 fieldName: name,
-                locationName: `${locationName}_${i}`,
+                locationName: vectorLocationName,
                 type,
                 attribute: {
                   format,
@@ -144,6 +145,7 @@ export const shaderFuncs = {
                 },
               };
               locationAttributes.push(data);
+              shaderLocation++;
             }
             const reconstitutedMatrix: WPKVertexBufferReconstitutedMatrix = {
               matrixName: locationName,
@@ -163,8 +165,8 @@ export const shaderFuncs = {
               },
             };
             locationAttributes.push(data);
+            shaderLocation++;
           }
-          shaderLocation++;
         }
         offset += shaderFuncs.toByteLength(datumType);
       }
