@@ -1,4 +1,4 @@
-import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderStructEntry, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferLocationType, WPKVertexBufferLocationTypeMatrix, WPKVertexBufferAttributeData, WPKVertexBufferEntryType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase } from './types';
+import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderStructEntry, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferAttributeData, WPKVertexBufferLocationType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase, WPKVertexBufferReference } from './types';
 
 export const shaderFuncs = {
   isScalar: (datumType: WPKShaderDatumType): datumType is WPKShaderScalar => {
@@ -10,25 +10,26 @@ export const shaderFuncs = {
   isMatrix: (datumType: WPKShaderDatumType): datumType is WPKShaderMatrix => {
     return datumType.match(/^mat[234]x[234]<[fiu]32>$/) !== null;
   },
-  isLocationTypeMatrix: (locationType: WPKVertexBufferLocationType): locationType is WPKVertexBufferLocationTypeMatrix => {
-    return (locationType as WPKVertexBufferLocationTypeMatrix).count !== undefined;
-  },
   isDatumTypeReferenceBase: (reference: number | string | WPKDatumTypeReferenceBase<WPKShaderDatumType>): reference is WPKDatumTypeReferenceBase<WPKShaderDatumType> => {
     return (typeof reference === 'object') && (reference as WPKDatumTypeReferenceBase<WPKShaderDatumType>).__reference !== undefined;
   },
-  toMatrixLocationType: (datumType: WPKShaderMatrix): WPKVertexBufferLocationTypeMatrix => {
+  toMatrixVectorDatumType: (datumType: WPKShaderMatrix): WPKVertexBufferLocationType => {
     const componentType = shaderFuncs.toComponentType(datumType);
-    const match = datumType.match(/^mat([234])x([234])<[fiu]32>$/);
-    if (match === null || match.length !== 3) {
+    const match = datumType.match(/^mat[234]x([234])<[fiu]32>$/);
+    if (match === null || match.length !== 2) {
       throw Error(`Invalid matrix datum type ${datumType}`);
     }
-    const [, column, row] = match;
-    const count = parseInt(column, 10) as WPKShaderDimension;
-    const vecDimension = parseInt(row, 10) as WPKShaderDimension;
-    return {
-      locationType: `vec${vecDimension}<${componentType}>`,
-      count,
-    };
+    const [, rows] = match;
+    const vecDimension = parseInt(rows, 10) as WPKShaderDimension;
+    return `vec${vecDimension}<${componentType}>`;
+  },
+  toMatrixColumnCount: (datumType: WPKShaderMatrix): WPKShaderDimension => {
+    const match = datumType.match(/^mat([234])x[234]<[fiu]32>$/);
+    if (match === null || match.length !== 2) {
+      throw Error(`Invalid matrix datum type ${datumType}`);
+    }
+    const [, columns] = match;
+    return parseInt(columns, 10) as WPKShaderDimension;
   },
   toComponentType: (datumType: WPKShaderDatumType): WPKShaderScalar => {
     if (shaderFuncs.isScalar(datumType)) {
@@ -40,7 +41,7 @@ export const shaderFuncs = {
     }
     throw Error(`Cannot find component type of datum type ${datumType}`);
   },
-  toGPUVertexFormat: (vertexBufferEntryType: WPKVertexBufferEntryType): GPUVertexFormat => {
+  toGPUVertexFormat: (vertexBufferEntryType: WPKVertexBufferLocationType): GPUVertexFormat => {
     const gpuScalar = shaderFuncs.toGPUScalar(vertexBufferEntryType);
     if (gpuScalar !== undefined) {
       return gpuScalar;
@@ -77,15 +78,11 @@ export const shaderFuncs = {
   },
   toVertexBufferLocationType: (datumType: WPKShaderDatumType): WPKVertexBufferLocationType => {
     if (shaderFuncs.isScalar(datumType)) {
-      return {
-        locationType: datumType,
-      };
+      return datumType;
     } else if (shaderFuncs.isVector(datumType)) {
-      return {
-        locationType: datumType,
-      };
+      return datumType;
     } else if (shaderFuncs.isMatrix(datumType)) {
-      return shaderFuncs.toMatrixLocationType(datumType);
+      return shaderFuncs.toMatrixVectorDatumType(datumType);
     } else {
       throw Error(`Unrecognised datum type ${datumType}`);
     }
@@ -118,29 +115,34 @@ export const shaderFuncs = {
         : bufferFormat.marshall;
       const locationAttributes: WPKVertexBufferLocationAttribute[] = [];
       const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];
+      const references: WPKVertexBufferReference[] = [];
       const stride = shaderFuncs.toStrideArray(structEntries);
       let offset = 0;
       for (const structEntry of structEntries) {
         const { name, datumType } = structEntry;
         if (fields.has(name)) {
           const locationName = `${buffer}_${name}`;
-          const type = shaderFuncs.toVertexBufferLocationType(datumType);
-          const format = shaderFuncs.toGPUVertexFormat(type.locationType);
+          const vertexBufferLocationDatumType = shaderFuncs.toVertexBufferLocationType(datumType);
+          const format = shaderFuncs.toGPUVertexFormat(vertexBufferLocationDatumType);
+          references.push({
+            datumType,
+            name,
+            reference: locationName,
+          });
           if (shaderFuncs.isMatrix(datumType)) {
-            if (!shaderFuncs.isLocationTypeMatrix(type)) {
-              throw Error('Mismatch between datum type and vertex buffer location type');
-            }
+            const vectorStride = shaderFuncs.toByteLength(vertexBufferLocationDatumType);
             const vectorLocationNames: string[] = [];
-            for (let i = 0; i < type.count; i++) {
+            const columnCount = shaderFuncs.toMatrixColumnCount(datumType);
+            for (let i = 0; i < columnCount; i++) {
               const vectorLocationName = `${locationName}_${i}`;
               vectorLocationNames.push(vectorLocationName);
               const data: WPKVertexBufferLocationAttribute = {
                 fieldName: name,
                 locationName: vectorLocationName,
-                type,
+                datumType: vertexBufferLocationDatumType,
                 attribute: {
                   format,
-                  offset,
+                  offset: offset + (i * vectorStride),
                   shaderLocation,
                 },
               };
@@ -157,7 +159,7 @@ export const shaderFuncs = {
             const data: WPKVertexBufferLocationAttribute = {
               fieldName: name,
               locationName,
-              type,
+              datumType: vertexBufferLocationDatumType,
               attribute: {
                 format,
                 offset,
@@ -174,6 +176,7 @@ export const shaderFuncs = {
         buffer,
         locationAttributes,
         reconstitutedMatrices,
+        references,
         stride,
       };
       attributeDataArray.push(attributeData);

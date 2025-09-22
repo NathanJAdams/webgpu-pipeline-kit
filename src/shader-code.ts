@@ -212,27 +212,18 @@ const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferF
 ): string => {
   const vertexBufferAttributeData = shaderFuncs.toVertexBufferAttributeData(pass.vertexBuffers, bufferFormats);
   const vertex_buffers = Object.values(vertexBufferAttributeData)
-    .reduce((acc, attributeData) => {
-      const { buffer, locationAttributes } = attributeData;
-      const bufferFormat = bufferFormats[buffer];
-      const structEntries = bufferFormat.bufferType === 'editable'
-        ? bufferFormat.layout
-        : bufferFormat.marshall;
-      acc[buffer] = Object.values(locationAttributes)
-        .reduce((acc, attribute) => {
-          const { fieldName, locationName } = attribute;
-          const structEntry = structEntries.find(entry => entry.name === fieldName);
-          if (structEntry === undefined) {
-            throw Error(`Cannot find struct entry with name ${fieldName}`);
-          }
-          acc[fieldName] = toDatumTypeReference(locationName, structEntry.datumType);
-          return acc;
+    .reduce((vbAcc, attributeData) => {
+      const { buffer, references } = attributeData;
+      vbAcc[buffer] = Object.values(references)
+        .reduce((bufferAcc, { datumType, name, reference }) => {
+          bufferAcc[name] = toDatumTypeReference(reference, datumType);
+          return bufferAcc;
         }, {} as Record<string, WPKDatumTypeReference<any>>) as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>[typeof buffer];
-      return acc;
+      return vbAcc;
     }, {} as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>);
   const locations = vertexBufferAttributeData.flatMap(attributeData =>
-    attributeData.locationAttributes.map(({ attribute: { shaderLocation }, locationName, type: { locationType } }) =>
-      `  @location(${shaderLocation}) ${locationName} : ${locationType},`));
+    attributeData.locationAttributes.map(({ attribute: { shaderLocation }, locationName, datumType }) =>
+      `  @location(${shaderLocation}) ${locationName} : ${datumType},`));
   const reconstitutedMatrices = vertexBufferAttributeData.flatMap(attributeData =>
     attributeData.reconstitutedMatrices.map(({ matrixName, matrixType, vectorLocationNames }) =>
       `  let ${matrixName} = ${matrixType}(${vectorLocationNames.join(', ')});`));

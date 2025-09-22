@@ -2,7 +2,7 @@ import { HasError, RemoveNever } from '../utils';
 import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatMarshalled, WPKBufferFormatUniform } from './buffer-formats';
 import { WPKDatumTypeReference, WPKDatumTypeReferenceBase, WPKScalarReference, WPKShaderStructReferences, WPKVectorReference } from './code';
 import { WPKMeshParameters, WPKMeshTemplateMap } from './mesh-template';
-import { WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarSignedInt, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderVector } from './structs';
+import { WPKShaderDatumType, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarSignedInt, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderVector } from './structs';
 
 //#region references
 export type WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBuffer extends keyof TBufferFormatMap> =
@@ -162,23 +162,12 @@ export type WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap extends 
   : never
 }[string & keyof TBufferFormatMap];
 export type WPKVertexBufferDataTypes = WPKShaderScalar | WPKShaderVector | WPKShaderVector[];
-export type WPKVertexBufferEntryType = WPKShaderScalar | WPKShaderVector;
-export type WPKVertexBufferLocationTypeScalar = {
-  locationType: WPKShaderScalar;
-};
-export type WPKVertexBufferLocationTypeVector = {
-  locationType: WPKShaderVector;
-};
-export type WPKVertexBufferLocationTypeMatrix = {
-  locationType: WPKShaderVector;
-  count: WPKShaderDimension;
-};
-export type WPKVertexBufferLocationType = WPKVertexBufferLocationTypeScalar | WPKVertexBufferLocationTypeVector | WPKVertexBufferLocationTypeMatrix;
+export type WPKVertexBufferLocationType = WPKShaderScalar | WPKShaderVector;
 
 export type WPKVertexBufferLocationAttribute = {
   fieldName: string;
   locationName: string;
-  type: WPKVertexBufferLocationType;
+  datumType: WPKShaderDatumType;
   attribute: GPUVertexAttribute;
 };
 export type WPKVertexBufferReconstitutedMatrix = {
@@ -186,18 +175,24 @@ export type WPKVertexBufferReconstitutedMatrix = {
   matrixType: WPKShaderMatrix;
   vectorLocationNames: string[];
 };
+export type WPKVertexBufferReference = {
+  name: string;
+  reference: string;
+  datumType: WPKShaderDatumType;
+};
 export type WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   buffer: string & keyof TBufferFormatMap;
   stride: number;
   locationAttributes: Array<WPKVertexBufferLocationAttribute>;
   reconstitutedMatrices: Array<WPKVertexBufferReconstitutedMatrix>;
+  references: Array<WPKVertexBufferReference>;
 };
 export type WPKSortedVertexBufferLocationTypes<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Array<WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>>;
 export type WPKVertexBufferLocationEntry<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   buffer: string & keyof TBufferFormatMap;
   field: string;
   matrixColumn?: number;
-  type: WPKVertexBufferEntryType;
+  type: WPKVertexBufferLocationType;
 };
 //#endregion
 

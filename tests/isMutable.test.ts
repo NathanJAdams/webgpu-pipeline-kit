@@ -17,6 +17,7 @@ describe('isMutable', () => {
   test('immutable', () => {
     const packedCache = packedCacheFactory.of<Example, false>(false, []);
     expect(packedCache.isMutable()).toBe(false);
+    //@ts-expect-error
     expect(packedCache['mutate']).not.toBeDefined();
   });
 });
