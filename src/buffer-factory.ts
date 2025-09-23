@@ -7,6 +7,15 @@ const VALID_BYTES_MULTIPLE = 16;
 
 const LOGGER = logFactory.getLogger('buffer');
 
+const indexCounter = () => {
+  let index = 0;
+  return {
+    next: (): number => {
+      return index++;
+    },
+  };
+};
+
 const checkNotDestroyed = (state: WPKManagedBufferState): void => {
   if (state === WPKManagedBufferState.Destroyed) {
     throw Error('Cannot use managed buffer after being destroyed');
@@ -31,6 +40,7 @@ enum WPKManagedBufferState {
 export const bufferFactory = {
   ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${data.byteLength}`);
+    const counter = indexCounter();
     const size = toValidSize(label, data.byteLength);
     if (size > data.byteLength) {
       logFuncs.lazyTrace(LOGGER, () => `Aligning buffer ${label} to new size ${size}`);
@@ -50,7 +60,7 @@ export const bufferFactory = {
         if (trackedBuffer === undefined) {
           logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
-            label,
+            label: `${label}-${counter.next()}`,
             size,
             usage,
           });
@@ -82,6 +92,7 @@ export const bufferFactory = {
   },
   ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} of byte length ${bytesLength}`);
+    const counter = indexCounter();
     if (debuggable) {
       usage |= GPUBufferUsage.COPY_SRC;
     }
@@ -94,7 +105,7 @@ export const bufferFactory = {
         if (trackedBuffer === undefined) {
           logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
-            label,
+            label: `${label}-${counter.next()}`,
             size,
             usage,
           });
@@ -124,6 +135,7 @@ export const bufferFactory = {
   },
   ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating resizeable buffer '${label}' of usage ${usageToString(usage)}`);
+    const counter = indexCounter();
     let previousBuffer: GPUBuffer | undefined;
     let currentBuffer: GPUBuffer | undefined;
     const capacity = new Capacity(MINIMUM_BYTES_LENGTH, 1.2, 1.5);
@@ -156,7 +168,7 @@ export const bufferFactory = {
           logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${capacity.capacity} and usage ${usageToString(usage)}`);
           previousBuffer = currentBuffer;
           const newBuffer = currentBuffer = device.createBuffer({
-            label,
+            label: `${label}-${counter.next()}`,
             size: capacity.capacity,
             usage,
           });
@@ -191,6 +203,7 @@ export const bufferFactory = {
   },
   ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating mutable buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
+    const counter = indexCounter();
     const size = toValidSize(label, bytesLength);
     usage |= GPUBufferUsage.COPY_DST;
     if (debuggable) {
@@ -209,7 +222,7 @@ export const bufferFactory = {
         if (trackedBuffer === undefined) {
           logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
-            label,
+            label: `${label}-${counter.next()}`,
             size,
             usage,
           });

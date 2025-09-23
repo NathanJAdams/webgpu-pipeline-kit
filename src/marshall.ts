@@ -18,10 +18,10 @@ export const marshallerFactory = {
       totalStride += datumBridge.stride;
     }
     logFuncs.lazyTrace(LOGGER, () => `Creating marshaller with total stride ${totalStride}`);
-    logFuncs.lazyTrace(LOGGER, () => `Create: format ${bufferFormatMarshalled.marshall} totalStride ${totalStride}`);
+    logFuncs.lazyTrace(LOGGER, () => `Create: format ${JSON.stringify(bufferFormatMarshalled.marshall)} totalStride ${totalStride}`);
     return {
       encode(instances) {
-        logFuncs.lazyTrace(LOGGER, () => `Encode: format ${bufferFormatMarshalled.marshall} totalStride ${totalStride}`);
+        logFuncs.lazyTrace(LOGGER, () => `Encode: format ${JSON.stringify(bufferFormatMarshalled.marshall)} totalStride ${totalStride}`);
         logFuncs.lazyDebug(LOGGER, () => `Extract data from ${instances.length} instances ${JSON.stringify(instances)}`);
         const totalSize = instances.length * totalStride;
         logFuncs.lazyTrace(LOGGER, () => `Creating data view to hold extracted instance data of size ${totalSize}`);

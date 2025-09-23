@@ -11,7 +11,7 @@ import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderStageCompute, WPKShaderStageRender, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderStageCompute, WPKShaderStageRender, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferFormatUniform, WPKBufferFormatEntityMarshalled, WPKBufferFormatEntityLayout } from './types';
 import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -61,13 +61,10 @@ export const pipelineFactory = {
   },
 };
 
-const toEntityCache = <
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TMutableEntities extends boolean,
-  TResizeableEntities extends boolean,
->(options: WPKPipelineOptions<TUniform, TEntity, any, TMutableEntities, TResizeableEntities>, bufferFormats: TBufferFormatMap): WPKEntityCache<any, any, any> => {
+const toEntityCache = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
+  options: WPKPipelineOptions<TUniform, TEntity, any, TMutableEntities, TResizeableEntities>,
+  bufferFormats: TBufferFormatMap
+): WPKEntityCache<any, any, any> => {
   if (options.resizeableEntities) {
     const entityIndexes = bufferFormatFuncs.findFormatEntityIndexes(bufferFormats);
     const entityIndexDatumExtractors = entityIndexes.map(userFormat => datumExtractEmbedFactory.ofEntityId(userFormat.entityIdKey).extract);
@@ -447,50 +444,68 @@ const addContents = async (
   const { bufferType } = bufferFormat;
   if (bufferType === 'uniform') {
     logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling uniform from ${bufferName}`);
-    const { marshall } = bufferFormat;
-    const uniform = {};
+    const uniform = unmarshallUniform(dataView, bufferFormat);
+    logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled uniform from format ${bufferName}`);
+    contentMap[bufferName] = uniform;
+  } else if (bufferType === 'marshalled') {
+    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from format ${bufferName}`);
+    const entities = unmarshallEntityMarshalledArray(dataView, bufferFormat);
+    logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
+    contentMap[bufferName] = entities;
+  } else if (bufferType === 'editable') {
+    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from layout ${bufferName}`);
+    const entities = unmarshallEntityLayoutArray(dataView, bufferFormat);
+    logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
+    contentMap[bufferName] = entities;
+  }
+};
+
+export const unmarshallUniform = <TUniform>(dataView: DataView, bufferFormat: WPKBufferFormatUniform<TUniform>): TUniform => {
+  const { marshall } = bufferFormat;
+  const uniform = {} as TUniform;
+  let datumOffset = 0;
+  for (const entry of marshall) {
+    const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset);
+    bridge.dataViewToInstance(0, uniform, dataView);
+    datumOffset += bridge.stride;
+  }
+  return uniform;
+};
+
+export const unmarshallEntityMarshalledArray = <TEntity>(dataView: DataView, bufferFormat: WPKBufferFormatEntityMarshalled<TEntity>): TEntity[] => {
+  const { marshall } = bufferFormat;
+  const formatStride = shaderFuncs.toStrideArray(marshall);
+  const entityCount = Math.floor(dataView.byteLength / formatStride);
+  const entities: TEntity[] = Array(entityCount);
+  for (let i = 0; i < entityCount; i++) {
+    const dataViewOffset = i * formatStride;
+    const entity = {} as TEntity;
     let datumOffset = 0;
     for (const entry of marshall) {
       const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset);
-      bridge.dataViewToInstance(0, uniform, dataView);
+      bridge.dataViewToInstance(dataViewOffset, entity, dataView);
       datumOffset += bridge.stride;
     }
-    contentMap[bufferName] = uniform as any;
-  } else if (bufferType === 'marshalled') {
-    const { marshall } = bufferFormat;
-    const formatStride = shaderFuncs.toStrideArray(marshall);
-    const entityCount = mappedRange.byteLength / formatStride;
-    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling ${entityCount} entities from format ${bufferName}`);
-    const entities: object[] = [];
-    for (let i = 0; i < entityCount; i++) {
-      const dataViewOffset = i * formatStride;
-      const entity = {};
-      let datumOffset = 0;
-      for (const entry of marshall) {
-        const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset);
-        bridge.dataViewToInstance(dataViewOffset, entity, dataView);
-        datumOffset += bridge.stride;
-      }
-      entities.push(entity);
-    }
-    contentMap[bufferName] = entities as any;
-  } else if (bufferType === 'editable') {
-    const { layout } = bufferFormat;
-    const formatStride = shaderFuncs.toStrideArray(layout);
-    const entityCount = mappedRange.byteLength / formatStride;
-    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling ${entityCount} entities from layout ${bufferName}`);
-    const entities: object[] = [];
-    for (let i = 0; i < entityCount; i++) {
-      const dataViewOffset = i * formatStride;
-      const entity = {};
-      let datumOffset = 0;
-      for (const entry of layout) {
-        const bridge = datumBridgeFactory.ofStructEntry(entry, datumOffset);
-        bridge.dataViewToInstance(dataViewOffset, entity, dataView);
-        datumOffset += bridge.stride;
-      }
-      entities.push(entity);
-    }
-    contentMap[bufferName] = entities as any;
+    entities.push(entity);
   }
+  return entities;
+};
+
+export const unmarshallEntityLayoutArray = (dataView: DataView, bufferFormat: WPKBufferFormatEntityLayout): object[] => {
+  const { layout } = bufferFormat;
+  const formatStride = shaderFuncs.toStrideArray(layout);
+  const entityCount = Math.floor(dataView.byteLength / formatStride);
+  const entities = Array(entityCount);
+  for (let i = 0; i < entityCount; i++) {
+    const dataViewOffset = i * formatStride;
+    const entity = {};
+    let datumOffset = 0;
+    for (const entry of layout) {
+      const bridge = datumBridgeFactory.ofStructEntry(entry, datumOffset);
+      bridge.dataViewToInstance(dataViewOffset, entity, dataView);
+      datumOffset += bridge.stride;
+    }
+    entities.push(entity);
+  }
+  return entities;
 };
