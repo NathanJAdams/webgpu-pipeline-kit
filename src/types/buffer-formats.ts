@@ -22,6 +22,8 @@ export type WPKBufferFormatElementEntityIndex<T> =
   & {
     entityIdKey: WPKPathString<T>;
   };
+
+// TODO allow deriving value(s) from an instance
 export type WPKBufferFormatElementFloat<T> = WPKBufferFormatElementScalar<'f32', WPKPathNumber<T>>;
 export type WPKBufferFormatElementSint<T> = WPKBufferFormatElementScalar<'i32', WPKPathNumber<T>>;
 export type WPKBufferFormatElementUint<T> = WPKBufferFormatElementScalar<'u32', WPKPathNumber<T>>;

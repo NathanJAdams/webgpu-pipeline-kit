@@ -32,7 +32,7 @@ export const pipelineFactory = {
     const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
     const textureFormatChangeDetector = changeDetectorFactory.ofTripleEquals<GPUTextureFormat>('rgba8unorm');
     const bufferResources = toBufferResources(uniformCache, entityCache, definition, debug);
-    const pipelineDetailResource = toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources, debug);
+    const pipelineDetailResource = toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources, entityCache, debug);
     const pipeline: WPKPipeline<any, any, any, any, any> = {
       name,
       pipelineDetail(device, queue, encoder, options) {
@@ -41,6 +41,9 @@ export const pipelineFactory = {
         isAntiAliasedChangeDetector.compareAndUpdate(isAntiAliased);
         textureFormatChangeDetector.compareAndUpdate(textureFormat);
         return pipelineDetailResource.get(device, queue, encoder);
+      },
+      clean() {
+        pipelineDetailResource.clean();
       },
     };
     if (options.mutableUniform) {
@@ -127,6 +130,7 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
   isAntiAliasedFunc: () => boolean,
   textureFormatFunc: () => GPUTextureFormat,
   bufferResources: WPKBufferResources<any, any, any>,
+  entityCache: WPKEntityCache<TEntity, any, any>,
   debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
 ): WPKResource<WPKPipelineDetail> => {
   const { name, meshFactories, shader, bufferFormats } = definition;
@@ -159,7 +163,7 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
     renderPipelineDetailResource = toRenderPipelineDetailsResource(name, meshFactories, render, instanceCountFunc, bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc, debuggable);
   }
   logFuncs.lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
-  const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, debug);
+  const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, entityCache, debug);
   return {
     get(device, queue, encoder) {
       logFuncs.lazyTrace(LOGGER, () => `Creating pipeline detail ${name}`);
@@ -180,6 +184,12 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
         }
       }
       return pipelineDetail;
+    },
+    clean() {
+      computePipelineDetailsResource?.clean();
+      renderPipelineDetailResource?.clean();
+      debugFuncResource?.clean();
+      Object.values(bufferResources.buffers).forEach(resource => resource.clean());
     },
   };
 };
@@ -245,6 +255,9 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
     const indicesBufferResource: WPKResource<GPUBuffer> = {
       get(device, queue, encoder) {
         return meshBufferResource.indices.get(device, queue, encoder).buffer;
+      },
+      clean() {
+        meshBufferResource.indices.clean();
       },
     };
     const vertexBufferDetailResources: WPKResource<WPKVertexBufferDetail>[] = [];
@@ -373,6 +386,7 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
   bufferFormats: TBufferFormatMap,
   bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
   dispatchResource: WPKDispatchResource<any> | undefined,
+  entityCache: WPKEntityCache<TEntity, any, any>,
   debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
 ): WPKResource<WPKDebugFunc> | undefined => {
   const { onBufferContents } = debug;
@@ -405,7 +419,7 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
         const copyBytesLength = sourceBuffer.bytesLength;
         target.resize(copyBytesLength);
         const targetBuffer = target.get(device, queue, encoder);
-        logFuncs.lazyDebug(DEBUG_LOGGER, () => `Copying data ${copyBytesLength} bytes from ${bufferName} to debug buffer`);
+        logFuncs.lazyDebug(DEBUG_LOGGER, () => `Copying data ${copyBytesLength} bytes from ${sourceBuffer.buffer.label} to debug buffer ${targetBuffer.buffer.label}`);
         encoder.copyBufferToBuffer(sourceBuffer.buffer, 0, targetBuffer.buffer, 0, copyBytesLength);
         debugBuffers[bufferName] = {
           format,
@@ -420,11 +434,19 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
               bufferName,
               buffer,
               format,
+              entityCache,
               contentMap));
         await Promise.all(promises);
         await onBufferContents(contentMap);
       };
       return debugFunc;
+    },
+    clean() {
+      Object.values(sourceTargetBuffers).forEach(sourceTargetBuffer => {
+        sourceTargetBuffer.source.clean();
+        sourceTargetBuffer.target.clean();
+      });
+      dispatchResource?.buffer.clean();
     },
   };
 };
@@ -433,6 +455,7 @@ const addContents = async (
   bufferName: string,
   buffer: GPUBuffer,
   bufferFormat: WPKBufferFormat<any, any>,
+  entityCache: WPKEntityCache<any, any, any>,
   contentMap: WPKDebugBufferContentMap<any, any, any>
 ): Promise<void> => {
   logFuncs.lazyDebug(DEBUG_LOGGER, () => `Synching ${bufferName} debug buffer for read`);
@@ -449,7 +472,7 @@ const addContents = async (
     contentMap[bufferName] = uniform;
   } else if (bufferType === 'marshalled') {
     logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from format ${bufferName}`);
-    const entities = unmarshallEntityMarshalledArray(dataView, bufferFormat);
+    const entities = unmarshallEntityMarshalledArray(dataView, bufferFormat, entityCache);
     logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
     contentMap[bufferName] = entities;
   } else if (bufferType === 'editable') {
@@ -472,7 +495,7 @@ export const unmarshallUniform = <TUniform>(dataView: DataView, bufferFormat: WP
   return uniform;
 };
 
-export const unmarshallEntityMarshalledArray = <TEntity>(dataView: DataView, bufferFormat: WPKBufferFormatEntityMarshalled<TEntity>): TEntity[] => {
+export const unmarshallEntityMarshalledArray = <TEntity, TMutable extends boolean, TResizeable extends boolean>(dataView: DataView, bufferFormat: WPKBufferFormatEntityMarshalled<TEntity>, entityCache: WPKEntityCache<TEntity, TMutable, TResizeable>): TEntity[] => {
   const { marshall } = bufferFormat;
   const formatStride = shaderFuncs.toStrideArray(marshall);
   const entityCount = Math.floor(dataView.byteLength / formatStride);
@@ -482,7 +505,7 @@ export const unmarshallEntityMarshalledArray = <TEntity>(dataView: DataView, buf
     const entity = {} as TEntity;
     let datumOffset = 0;
     for (const entry of marshall) {
-      const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset);
+      const bridge = datumBridgeFactory.ofFormatElement(entry, datumOffset, entityCache);
       bridge.dataViewToInstance(dataViewOffset, entity, dataView);
       datumOffset += bridge.stride;
     }

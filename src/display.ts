@@ -78,6 +78,7 @@ export const displayFactory = {
             await debugFunc();
           }
         }
+        pipelines.forEach(pipeline => pipeline.clean());
       },
     };
   },

@@ -45,6 +45,8 @@
     "build:prod": "tsup --config tsup.config.prod.ts",
     "clean": "rimraf ./dist/",
     "lint": "eslint ./src --fix && madge --circular src/**/*",
+    "serve:orbiter": "yarn clean && yarn build:dev && http-server ./dist/dev/orbiter",
+    "serve:star": "yarn clean && yarn build:dev && http-server ./dist/dev/star",
     "serve:triangles": "yarn clean && yarn build:dev && http-server ./dist/dev/triangles",
     "test": "vitest --run"
   },

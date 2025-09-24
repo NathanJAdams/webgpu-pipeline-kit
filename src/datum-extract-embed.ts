@@ -110,6 +110,7 @@ const getValueAtPathWithIndex = (instance: any, refPath: WPKRefPath, index: numb
 const setValueAtPathWithIndex = (instance: any, refPath: WPKRefPath, value: any, index: number): void => {
   const key = refPath[index];
   if (index === refPath.length - 1) {
+    logFuncs.lazyTrace(LOGGER, () => `Set value ${JSON.stringify(value)} at path ${JSON.stringify(refPath)}`);
     instance[key] = value;
     return;
   }

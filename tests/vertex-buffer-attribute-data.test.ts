@@ -1,4 +1,3 @@
-import { describe, test, expect } from 'vitest';
 import { WPKBufferFormat, WPKVertexBufferLocation } from '../src/types';
 import { shaderFuncs } from '../src/shader-utils';
 

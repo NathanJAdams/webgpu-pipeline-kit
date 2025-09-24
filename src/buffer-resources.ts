@@ -52,6 +52,7 @@ export const bufferResourcesFactory = {
     const buffers: Record<string, WPKResource<WPKTrackedBuffer>> = {};
     logFuncs.lazyDebug(LOGGER, () => `Create buffer resources for ${name}`);
     for (const [bufferName, bufferFormat] of Object.entries(bufferFormats)) {
+      logFuncs.lazyTrace(LOGGER, () => `Creating buffer resource for format ${JSON.stringify(bufferFormat)}`);
       const { bufferType } = bufferFormat;
       const usage = bufferUsages[bufferName as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>];
       const label = `${name}-buffer-${bufferName}`;

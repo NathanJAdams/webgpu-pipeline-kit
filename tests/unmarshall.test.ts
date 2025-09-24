@@ -1,5 +1,3 @@
-import { describe, test, expect } from 'vitest';
-
 import { WPKBufferFormatUniform, WPKRefPath } from '../src/types';
 import { unmarshallUniform } from '../src/pipeline';
 import { getValueAtPath, setValueAtPath } from '../src/datum-extract-embed';

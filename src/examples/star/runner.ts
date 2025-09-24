@@ -1,7 +1,7 @@
-import { BufferFormats } from './buffer-formats';
-import { Triangle, TriangleUniform } from './instance-formats';
-import { trianglesPipelineDefinition, pipelineOptions } from './pipeline-definition';
-import { factories, setLogLevel, WPKDisplayOptions } from '../..';
+import { StarBufferFormats } from './buffer-formats';
+import { Star, StarUniform } from './instance-formats';
+import { camera, starPipelineDefinition, starPipelineOptions } from './pipeline-definition';
+import { factories, setLogLevel, Transformation, WPKDisplayOptions } from '../..';
 import { logFactory } from '../../logging';
 import { WPKDebugOptions } from '../../types';
 import { Color, logFuncs } from '../../utils';
@@ -15,29 +15,28 @@ export const run = async (): Promise<void> => {
     throw Error('Failed to get game canvas from document');
   }
   const pipelineRunner = await factories.display.of(canvas);
-  const debugOptions: WPKDebugOptions<TriangleUniform, Triangle, BufferFormats> = {
+  const debugOptions: WPKDebugOptions<StarUniform, Star, StarBufferFormats> = {
     async onBufferContents(contents) {
       logFuncs.lazyInfo(LOGGER, () => `Buffer contents: ${JSON.stringify(contents)}`);
     },
   };
-  const trianglePipeline = factories.pipeline.ofDefinition(trianglesPipelineDefinition, pipelineOptions, debugOptions);
-  pipelineRunner.add(trianglePipeline);
+  const starPipeline = factories.pipeline.ofDefinition(starPipelineDefinition, starPipelineOptions, debugOptions);
+  pipelineRunner.add(starPipeline);
   const options: WPKDisplayOptions = {
     clear: Color.BLACK,
     isAntiAliased: true,
   };
   await pipelineRunner.display(options);
-  let gameTime = 0;
   while (true) {
-    gameTime++;
-    trianglePipeline.mutateUniform({ gameTime });
-    const triangle: Triangle = {
-      x: 1,
-      y: 2,
-      z: 3,
+    starPipeline.mutateUniform({ camera });
+    const star: Star = {
+      visual: {
+        color: new Color(0.7, 0.8, 0.9),
+        transformation: new Transformation(),
+      },
     };
-    LOGGER.debug('adding triangle');
-    trianglePipeline.add(triangle);
+    LOGGER.debug('adding star');
+    starPipeline.add(star);
     await pipelineRunner.display(options);
     await sleep(1_000);
   }

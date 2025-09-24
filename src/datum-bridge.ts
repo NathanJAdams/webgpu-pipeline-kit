@@ -48,6 +48,7 @@ export const datumBridgeFactory = {
       const extractEmbedder = datumExtractEmbedFactory.ofEntityId(formatElement.entityIdKey);
       return datumBridgeFactory.ofEntityIndex(extractEmbedder, datumGetSetter, datumOffset, entityCache as WPKCacheResizeable<T>);
     } else {
+      logFuncs.lazyInfo(LOGGER, () => `datum offset ${datumOffset}, entity cache defined ${entityCache !== undefined} entity cache resizeable ${entityCache?.isResizeable}`);
       throw Error(`Cannot create datum bridge from user format ${JSON.stringify(formatElement)}`);
     }
   },
@@ -69,6 +70,7 @@ export const datumBridgeFactory = {
       const extractEmbedder = datumExtractEmbedFactory.ofMatrix(name);
       return datumBridgeFactory.ofNumberArray(stride, extractEmbedder, datumGetSetter, datumOffset, shaderFuncs.toDatumLength(datumType));
     } else {
+      logFuncs.lazyInfo(LOGGER, () => `datum offset ${datumOffset}, entity cache defined ${entityCache !== undefined} entity cache resizeable ${entityCache?.isResizeable}`);
       throw Error(`Cannot create datum bridge from user format ${JSON.stringify(structEntry)}`);
     }
   },

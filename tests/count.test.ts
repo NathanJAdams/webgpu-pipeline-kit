@@ -1,5 +1,3 @@
-import { describe, test, expect } from 'vitest';
-
 import { setLogLevel } from '../src/logging';
 import { packedCacheFactory } from '../src/packed-cache';
 

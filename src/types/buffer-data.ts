@@ -50,6 +50,7 @@ export type WPKTrackedBuffer = {
 };
 export type WPKResource<T> = {
   get: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => T;
+  clean: () => void;
 };
 export type WPKMeshBufferResource = {
   indices: WPKResource<WPKTrackedBuffer>;

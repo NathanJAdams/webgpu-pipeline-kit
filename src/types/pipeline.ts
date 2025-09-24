@@ -33,6 +33,7 @@ export type WPKPipeline<TUniform, TEntity, TMutableUniform extends boolean, TMut
   {
     name: string;
     pipelineDetail: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder, options: WPKPipelineDetailOptions) => WPKPipelineDetail;
+    clean: () => void;
   }
   & (TMutableUniform extends true
     ? {

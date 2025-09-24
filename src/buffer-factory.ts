@@ -7,11 +7,15 @@ const VALID_BYTES_MULTIPLE = 16;
 
 const LOGGER = logFactory.getLogger('buffer');
 
-const indexCounter = () => {
+const createLabeller = (label: string) => {
   let index = 0;
+  let currentLabel = `${label}-${index}`;
   return {
-    next: (): number => {
-      return index++;
+    current: (): string => currentLabel,
+    next: (): string => {
+      index++;
+      currentLabel = `${label}-${index}`;
+      return currentLabel;
     },
   };
 };
@@ -39,11 +43,11 @@ enum WPKManagedBufferState {
 
 export const bufferFactory = {
   ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
-    logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${data.byteLength}`);
-    const counter = indexCounter();
-    const size = toValidSize(label, data.byteLength);
+    const labeller = createLabeller(label);
+    logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${labeller.current()}' of usage ${usageToString(usage)} from data of byte length ${data.byteLength}`);
+    const size = toValidSize(labeller.current(), data.byteLength);
     if (size > data.byteLength) {
-      logFuncs.lazyTrace(LOGGER, () => `Aligning buffer ${label} to new size ${size}`);
+      logFuncs.lazyTrace(LOGGER, () => `Aligning buffer ${labeller.current()} to new size ${size}`);
       const alignedBuffer = new ArrayBuffer(size);
       new Uint8Array(alignedBuffer).set(new Uint8Array(data));
       data = alignedBuffer;
@@ -58,26 +62,28 @@ export const bufferFactory = {
       get(device, queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
-          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
+          labeller.next();
+          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${labeller.current()} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
-            label: `${label}-${counter.next()}`,
+            label: labeller.current(),
             size,
             usage,
           });
-          logFuncs.lazyTrace(LOGGER, () => `Writing data to new buffer ${label} with queue`);
+          logFuncs.lazyTrace(LOGGER, () => `Writing data to new buffer ${labeller.current()} with queue`);
           queue.writeBuffer(buffer, 0, data);
           state = WPKManagedBufferState.New;
+          const destroy = () => {
+            state = WPKManagedBufferState.Destroyed;
+            buffer.destroy();
+          };
           trackedBuffer = {
             isNew: true,
             bytesLength: size,
             buffer,
-            destroy() {
-              state = WPKManagedBufferState.Destroyed;
-              buffer.destroy();
-            },
+            destroy,
           };
         } else {
-          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${label}`);
+          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${labeller.current()}`);
           if (state === WPKManagedBufferState.New) {
             state = WPKManagedBufferState.Reused;
             trackedBuffer = {
@@ -88,24 +94,27 @@ export const bufferFactory = {
         }
         return trackedBuffer;
       },
+      clean() {
+      },
     };
   },
   ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
-    logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${label}' of usage ${usageToString(usage)} of byte length ${bytesLength}`);
-    const counter = indexCounter();
+    const labeller = createLabeller(label);
+    logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${labeller.current()}' of usage ${usageToString(usage)} of byte length ${bytesLength}`);
     if (debuggable) {
       usage |= GPUBufferUsage.COPY_SRC;
     }
-    const size = toValidSize(label, bytesLength);
+    const size = toValidSize(labeller.current(), bytesLength);
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
     return {
       get(device, _queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
-          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
+          labeller.next();
+          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${labeller.current()} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
-            label: `${label}-${counter.next()}`,
+            label: labeller.current(),
             size,
             usage,
           });
@@ -120,7 +129,7 @@ export const bufferFactory = {
             },
           };
         } else {
-          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${label}`);
+          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${labeller.current()}`);
           if (state === WPKManagedBufferState.New) {
             state = WPKManagedBufferState.Reused;
             trackedBuffer = {
@@ -131,12 +140,14 @@ export const bufferFactory = {
         }
         return trackedBuffer;
       },
+      clean() {
+      },
     };
   },
   ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
-    logFuncs.lazyDebug(LOGGER, () => `Creating resizeable buffer '${label}' of usage ${usageToString(usage)}`);
-    const counter = indexCounter();
-    let previousBuffer: GPUBuffer | undefined;
+    const labeller = createLabeller(label);
+    logFuncs.lazyDebug(LOGGER, () => `Creating resizeable buffer '${labeller.current()}' of usage ${usageToString(usage)}`);
+    const oldBuffers: GPUBuffer[] = [];
     let currentBuffer: GPUBuffer | undefined;
     const capacity = new Capacity(MINIMUM_BYTES_LENGTH, 1.2, 1.5);
     let previousBytesLength = capacity.capacity;
@@ -151,24 +162,20 @@ export const bufferFactory = {
     }
     return {
       resize(bytesLength) {
-        logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${label} to desired size ${bytesLength}`);
+        logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${labeller.current()} to desired size ${bytesLength}`);
         desiredBytesLength = bytesLength;
       },
       get(device, queue, encoder) {
         checkNotDestroyed(state);
-        if (previousBuffer !== undefined) {
-          logFuncs.lazyDebug(LOGGER, () => `Destroying previous buffer ${label}`);
-          previousBuffer.destroy();
-          previousBuffer = undefined;
-        }
         if (trackedBuffer === undefined || desiredBytesLength > capacity.capacity) {
           previousBytesLength = capacity.capacity;
           capacity.ensureCapacity(desiredBytesLength);
-          capacity.capacity = toValidSize(label, capacity.capacity);
-          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${capacity.capacity} and usage ${usageToString(usage)}`);
-          previousBuffer = currentBuffer;
+          capacity.capacity = toValidSize(labeller.current(), capacity.capacity);
+          labeller.next();
+          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${labeller.current()} of size ${capacity.capacity} and usage ${usageToString(usage)}`);
+          const previousBuffer = currentBuffer;
           const newBuffer = currentBuffer = device.createBuffer({
-            label: `${label}-${counter.next()}`,
+            label: labeller.current(),
             size: capacity.capacity,
             usage,
           });
@@ -182,15 +189,18 @@ export const bufferFactory = {
               newBuffer.destroy();
             },
           };
-          if (copyDataOnResize && previousBuffer !== undefined) {
-            const copySize = Math.min(previousBytesLength, capacity.capacity); // in case reducing capacity is supported
-            if (copySize > 0) {
-              logFuncs.lazyTrace(LOGGER, () => `Copy ${copySize} bytes of data to buffer ${label} from previous`);
-              encoder.copyBufferToBuffer(previousBuffer, currentBuffer, copySize);
+          if (previousBuffer !== undefined) {
+            if (copyDataOnResize) {
+              const copySize = Math.min(previousBytesLength, capacity.capacity); // in case reducing capacity is supported
+              if (copySize > 0) {
+                logFuncs.lazyTrace(LOGGER, () => `Copy ${copySize} bytes of data to buffer ${labeller.current()} from previous`);
+                encoder.copyBufferToBuffer(previousBuffer, currentBuffer, copySize);
+              }
             }
+            oldBuffers.push(previousBuffer);
           }
         } else if (trackedBuffer !== undefined && state === WPKManagedBufferState.New) {
-          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${label}`);
+          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${labeller.current()}`);
           state = WPKManagedBufferState.Reused;
           trackedBuffer = {
             ...trackedBuffer,
@@ -199,12 +209,19 @@ export const bufferFactory = {
         }
         return trackedBuffer;
       },
+      clean() {
+        oldBuffers.forEach((buffer) => {
+          logFuncs.lazyDebug(LOGGER, () => `Destroying old buffer ${buffer.label}`);
+          buffer.destroy();
+        });
+        oldBuffers.length = 0;
+      },
     };
   },
   ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
-    logFuncs.lazyDebug(LOGGER, () => `Creating mutable buffer '${label}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
-    const counter = indexCounter();
-    const size = toValidSize(label, bytesLength);
+    const labeller = createLabeller(label);
+    logFuncs.lazyDebug(LOGGER, () => `Creating mutable buffer '${labeller.current()}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
+    const size = toValidSize(labeller.current(), bytesLength);
     usage |= GPUBufferUsage.COPY_DST;
     if (debuggable) {
       usage |= GPUBufferUsage.COPY_SRC;
@@ -214,15 +231,16 @@ export const bufferFactory = {
     const mutatedDataArray: WPKMutatedData[] = [];
     return {
       mutate(data, index) {
-        logFuncs.lazyInfo(LOGGER, () => `Mutating data for mutable buffer ${label}`);
+        logFuncs.lazyInfo(LOGGER, () => `Mutating data for mutable buffer ${labeller.current()}`);
         mutatedDataArray.push({ data, index });
       },
       get(device, queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
-          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${label} of size ${size} and usage ${usageToString(usage)}`);
+          labeller.next();
+          logFuncs.lazyTrace(LOGGER, () => `Creating new buffer ${labeller.current()} of size ${size} and usage ${usageToString(usage)}`);
           const buffer = device.createBuffer({
-            label: `${label}-${counter.next()}`,
+            label: labeller.current(),
             size,
             usage,
           });
@@ -237,7 +255,7 @@ export const bufferFactory = {
             },
           };
         } else {
-          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${label}`);
+          logFuncs.lazyTrace(LOGGER, () => `Reusing buffer ${labeller.current()}`);
           if (state === WPKManagedBufferState.New) {
             state = WPKManagedBufferState.Reused;
             trackedBuffer = {
@@ -248,11 +266,13 @@ export const bufferFactory = {
         }
         const { buffer } = trackedBuffer;
         for (const { data, index } of mutatedDataArray) {
-          logFuncs.lazyTrace(LOGGER, () => `Writing mutated data to buffer ${label} at index ${index} and length ${data.byteLength} using queue`);
+          logFuncs.lazyTrace(LOGGER, () => `Writing mutated data to buffer ${labeller.current()} at index ${index} and length ${data.byteLength} using queue`);
           queue.writeBuffer(buffer, index, data);
         }
         mutatedDataArray.length = 0;
         return trackedBuffer;
+      },
+      clean() {
       },
     };
   },
@@ -294,6 +314,10 @@ export const bufferFactory = {
           mutatedSlices = undefined;
         }
         return backingTrackedBuffer;
+      },
+      clean() {
+        staging.clean();
+        backing.clean();
       },
     };
   },

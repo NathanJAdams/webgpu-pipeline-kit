@@ -18,10 +18,14 @@ export const pipelineResourceFactory = {
     return resourceFactory.ofCached({
       get(device, _queue, _encoder) {
         logFuncs.lazyTrace(LOGGER, () => `Creating bind group layout ${label}`);
-        return device.createBindGroupLayout({
+        const layout = device.createBindGroupLayout({
           label,
           entries,
         });
+        logFuncs.lazyTrace(LOGGER, () => `Created bind group layout ${JSON.stringify(layout)}`);
+        return layout;
+      },
+      clean() {
       },
     });
   },
@@ -35,10 +39,15 @@ export const pipelineResourceFactory = {
       get(device, queue, encoder) {
         const bindGroupLayouts = bindGroupLayoutsResource.get(device, queue, encoder);
         logFuncs.lazyTrace(LOGGER, () => `Creating pipeline layout ${label} from ${bindGroupLayouts.length} bind group layouts [${bindGroupLayouts.map(l => l.label).join(', ')}]`);
-        return device.createPipelineLayout({
+        const layout = device.createPipelineLayout({
           label,
           bindGroupLayouts,
         });
+        logFuncs.lazyTrace(LOGGER, () => `Created pipeline layout ${JSON.stringify(layout)}`);
+        return layout;
+      },
+      clean() {
+        bindGroupLayoutsResource.clean();
       },
     });
   },
@@ -56,7 +65,7 @@ export const pipelineResourceFactory = {
       [pipelineLayoutResource],
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating shader module ${label}`);
-        return device.createShaderModule({
+        const module = device.createShaderModule({
           label,
           code,
           compilationHints: entryPoints.map((entryPoint) => ({
@@ -64,6 +73,8 @@ export const pipelineResourceFactory = {
             layout: values[0],
           })),
         });
+        logFuncs.lazyTrace(LOGGER, () => `Created shader module ${JSON.stringify(module)}`);
+        return module;
       },
     );
   },
@@ -78,12 +89,14 @@ export const pipelineResourceFactory = {
       [bufferResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating bind group entry binding ${binding}`);
-        return {
+        const entry = {
           binding,
           resource: {
             buffer: values[0].buffer,
           },
         };
+        logFuncs.lazyTrace(LOGGER, () => `Created bind group entry ${JSON.stringify({ ...entry, buffer: entry.resource.buffer.label, })}`);
+        return entry;
       },
     );
   },
@@ -98,11 +111,13 @@ export const pipelineResourceFactory = {
       [bindGroupLayoutResource, bindGroupEntriesResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating bind group ${label}`);
-        return device.createBindGroup({
+        const group = device.createBindGroup({
           label,
           layout: values[0],
           entries: values[1],
         });
+        logFuncs.lazyTrace(LOGGER, () => `Created bind group ${JSON.stringify(group)}`);
+        return group;
       },
     );
   },
@@ -115,10 +130,12 @@ export const pipelineResourceFactory = {
       [bindGroupResource],
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating bind group detail group index ${group}`);
-        return {
+        const detail = {
           group: values[0],
           index: group,
         };
+        logFuncs.lazyTrace(LOGGER, () => `Created bind group detail ${JSON.stringify(detail)}`);
+        return detail;
       },
     );
   },
@@ -137,7 +154,7 @@ export const pipelineResourceFactory = {
       [pipelineLayoutResource, shaderResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating compute pipeline ${label}`);
-        return device.createComputePipeline({
+        const pipeline = device.createComputePipeline({
           label,
           layout: values[0],
           compute: {
@@ -145,6 +162,8 @@ export const pipelineResourceFactory = {
             entryPoint,
           },
         });
+        logFuncs.lazyTrace(LOGGER, () => `Created compute pipeline ${JSON.stringify(pipeline)}`);
+        return pipeline;
       },
     );
   },
@@ -158,11 +177,13 @@ export const pipelineResourceFactory = {
       [bindGroupsResource, computePipelineResource, dispatchSizeResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating compute detail');
-        return {
+        const detail = {
           bindGroups: values[0],
           pipeline: values[1],
           dispatchSize: values[2],
         };
+        logFuncs.lazyTrace(LOGGER, () => `Created compute detail ${JSON.stringify(detail)}`);
+        return detail;
       },
     );
   },
@@ -173,19 +194,27 @@ export const pipelineResourceFactory = {
     logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch params resource');
     return resourceFactory.ofCachedFromDependencies(
       [instanceCountResource] as const,
-      (_device, _queue, _encoder, values) =>
-        pipelineFuncs.toDispatchParams(passes, values[0])
+      (_device, _queue, _encoder, values) => {
+        logFuncs.lazyTrace(LOGGER, () => 'Creating dispatch params resource');
+        const params = pipelineFuncs.toDispatchParams(passes, values[0]);
+        logFuncs.lazyTrace(LOGGER, () => `Created dispatch params ${JSON.stringify(params)}`);
+        return params;
+      }
     );
   },
   ofDispatchSize: (
     dispatchParamsResource: WPKResource<WPKDispatchParams<any>>,
     entryPoint: string,
   ): WPKResource<WPKDispatchSize> => {
-    logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch buffer resource');
+    logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch size resource');
     return resourceFactory.ofCachedFromDependencies(
       [dispatchParamsResource] as const,
-      (_device, _queue, _encoder, values) =>
-        values[0].dispatchSizes[entryPoint]
+      (_device, _queue, _encoder, values) => {
+        logFuncs.lazyTrace(LOGGER, () => `Creating dispatch size for ${entryPoint}`);
+        const size = values[0].dispatchSizes[entryPoint];
+        logFuncs.lazyTrace(LOGGER, () => `Created dispatch size ${JSON.stringify(size)}`);
+        return size;
+      }
     );
   },
 
@@ -202,7 +231,9 @@ export const pipelineResourceFactory = {
       offset: 0,
       shaderLocation: meshBufferLocation,
     }];
-    return pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, 'vertex', meshBufferResource.vertices);
+    const detail = pipelineResourceFactory.ofVertexBufferDetail(arrayStride, attributes, 'vertex', meshBufferResource.vertices);
+    logFuncs.lazyTrace(LOGGER, () => `Created vertex buffer detail resource ${JSON.stringify(detail)}`);
+    return detail;
   },
   ofVertexBufferDetailBufferLocationFieldTypes: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
     vertexBufferLocationFieldTypes: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>,
@@ -218,7 +249,9 @@ export const pipelineResourceFactory = {
       throw Error(`Cannot create buffer location for uniform buffer ${buffer}`);
     }
     const attributes = locationAttributes.map(attribute => attribute.attribute);
-    return pipelineResourceFactory.ofVertexBufferDetail(stride, attributes, 'instance', bufferResource);
+    const detail = pipelineResourceFactory.ofVertexBufferDetail(stride, attributes, 'instance', bufferResource);
+    logFuncs.lazyTrace(LOGGER, () => `Created vertex buffer detail resource ${JSON.stringify(detail)}`);
+    return detail;
   },
   ofVertexBufferDetail: (
     arrayStride: number,
@@ -231,7 +264,7 @@ export const pipelineResourceFactory = {
       [bufferResource] as const,
       (_device, _queue, _encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating vertex buffer detail');
-        return {
+        const detail = {
           buffer: values[0].buffer,
           layout: {
             arrayStride,
@@ -239,6 +272,8 @@ export const pipelineResourceFactory = {
             stepMode: step,
           },
         };
+        logFuncs.lazyTrace(LOGGER, () => `Created vertex buffer detail ${JSON.stringify({ ...detail, buffer: detail.buffer.label, })}`);
+        return detail;
       },
     );
   },
@@ -250,7 +285,9 @@ export const pipelineResourceFactory = {
       vertexBufferDetailResources,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating vertex buffers');
-        return values.map((data) => data.buffer);
+        const buffers = values.map((data) => data.buffer);
+        logFuncs.lazyTrace(LOGGER, () => `Created vertex buffers ${JSON.stringify(buffers.map(b => b.label))}`);
+        return buffers;
       },
     );
   },
@@ -262,7 +299,9 @@ export const pipelineResourceFactory = {
       [vertexBufferDetailsResource] as const,
       (_device, _queue, _encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating vertex buffer layouts');
-        return values[0].map((data) => data.layout);
+        const layouts = values[0].map((data) => data.layout);
+        logFuncs.lazyTrace(LOGGER, () => `Created vertex buffer layouts ${JSON.stringify(layouts)}`);
+        return layouts;
       },
     );
   },
@@ -285,15 +324,17 @@ export const pipelineResourceFactory = {
     const cullMode = meshFuncs.cullMode(mesh);
     const isAntiAliasedResource: WPKResource<boolean> = {
       get: (_device, _queue, _encoder) => isAntiAliasedFunc(),
+      clean() { },
     };
     const textureFormatResource: WPKResource<GPUTextureFormat> = {
       get: (_device, _queue, _encoder) => textureFormatFunc(),
+      clean() { },
     };
     return resourceFactory.ofCachedFromDependencies(
       [renderPipelineLayoutResource, shaderModuleResource, vertexBufferLayoutsResource, isAntiAliasedResource, textureFormatResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating render pipeline ${label}`);
-        return device.createRenderPipeline({
+        const pipeline = device.createRenderPipeline({
           label,
           layout: values[0],
           vertex: {
@@ -317,6 +358,8 @@ export const pipelineResourceFactory = {
             cullMode,
           },
         });
+        logFuncs.lazyTrace(LOGGER, () => `Created render pipeline ${pipeline}`);
+        return pipeline;
       },
     );
   },
@@ -333,7 +376,7 @@ export const pipelineResourceFactory = {
       [bindGroupsDetailResource, indicesBufferResource, vertexBuffersResource, renderPipelineResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating render pipeline detail');
-        return ({
+        const detail = {
           bindGroups: values[0],
           indices: {
             buffer: values[1],
@@ -342,7 +385,9 @@ export const pipelineResourceFactory = {
           vertexBuffers: values[2],
           pipeline: values[3],
           drawCountsFunc,
-        });
+        };
+        logFuncs.lazyTrace(LOGGER, () => `Created render pipeline detail ${JSON.stringify({ ...detail, vertexBuffers: detail.vertexBuffers.map(b => b.label), })}`);
+        return detail;
       }
     );
   },

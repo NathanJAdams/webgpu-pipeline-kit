@@ -11,6 +11,10 @@ export const resourceFactory = {
         }
         return object;
       },
+      clean() {
+        object = undefined;
+        resource.clean();
+      },
     };
   },
   ofFunc: <T>(func: () => T, isDirty: () => boolean = () => true): WPKResource<T> => {
@@ -22,12 +26,18 @@ export const resourceFactory = {
         }
         return object;
       },
+      clean() {
+        object = undefined;
+      },
     };
   },
   ofArray: <T>(resources: WPKResource<T>[]): WPKResource<T[]> => {
     return {
       get(device, queue, encoder) {
         return resources.map((resource) => resource.get(device, queue, encoder));
+      },
+      clean() {
+        resources.forEach(resource => resource.clean());
       },
     };
   },
@@ -50,6 +60,9 @@ export const resourceFactory = {
           lastDependencies = currentDependencies;
         }
         return cachedValue;
+      },
+      clean() {
+        dependencyResources.forEach(resource => resource.clean());
       },
     };
   },
