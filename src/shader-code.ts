@@ -305,7 +305,7 @@ const toDatumTypeReference = <TDatumType extends WPKShaderDatumType>(prefix: str
     for (let column = 0; column < columns; column++) {
       for (let row = 0; row < rows; row++) {
         const indices = `_${column}_${row}`;
-        reference[indices] = toDatumTypeReferenceHidden(`${prefix}.${indices}`, componentType);
+        reference[indices] = toDatumTypeReferenceHidden(`${prefix}[${column}][${row}]`, componentType);
       }
     }
   }

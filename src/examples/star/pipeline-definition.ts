@@ -2,11 +2,9 @@ import { bufferFormats, StarBufferFormats } from './buffer-formats';
 import { Star, StarUniform } from './instance-formats';
 import { meshTemplates, StarMeshTemplates } from './mesh-templates';
 import { starShader } from './shader';
-import { builders, Camera, Vector3 } from '../..';
+import { builders, Camera } from '../..';
 
 export const camera = new Camera(true);
-camera.setPosition(Vector3.ZERO);
-camera.flushChanges();
 
 export const starPipelineOptions = builders.pipelineOptions<StarUniform, Star, true, true, true>()
   .mutableUniform(true)

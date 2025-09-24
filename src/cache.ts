@@ -11,20 +11,23 @@ export const cacheFactory = {
     initialUniform: TUniform,
   ): WPKUniformCache<TUniform, TMutable> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating uniform cache');
-    let previous: TUniform = initialUniform;
-    let next: TUniform = initialUniform;
+    let _uniform: TUniform = initialUniform;
+    let _isDirty: boolean = true;
     const cache: WPKUniformCache<TUniform, any> = {
       isMutable: mutable,
-      isDirty: () => previous !== next,
+      isDirty: () => _isDirty,
       get() {
-        previous = next;
-        return next;
+        _isDirty = false;
+        return _uniform;
       },
     };
     if (mutable) {
       logFuncs.lazyTrace(LOGGER, () => 'Making uniform cache mutable');
       const typedCached = cache as WPKUniformCache<TUniform, true>;
-      typedCached.mutate = (uniform) => next = uniform;
+      typedCached.mutate = (uniform) => {
+        _uniform = uniform;
+        _isDirty = true;
+      };
     }
     return cache as WPKUniformCache<TUniform, TMutable>;
   },

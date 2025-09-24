@@ -19,19 +19,19 @@ export class Camera {
   private isDirtyAspectRatio: boolean = true;
   private isDirtyFieldOfView: boolean = true;
   private isDirtyNearFar: boolean = true;
-  private _viewMatrix: CameraMatrixValues = [
+  private readonly _viewMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1,
   ];
-  private _projectionMatrix: CameraMatrixValues = [
+  private readonly _projectionMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, -1,
-    0, 0, 0, 0,
+    0, 0, 2, 0,
   ];
-  private _viewProjectionMatrix: CameraMatrixValues = [
+  private readonly _viewProjectionMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
@@ -43,15 +43,18 @@ export class Camera {
   ) { }
 
   get viewMatrix(): Readonly<CameraMatrixValues> {
+    this.flushChanges();
     return this._viewMatrix;
   }
   get projectionMatrix(): Readonly<CameraMatrixValues> {
+    this.flushChanges();
     return this._projectionMatrix;
   }
   get viewProjectionMatrix(): Readonly<CameraMatrixValues> {
     if (!this.enableViewProjectionMatrix) {
       throw Error('The `enableViewProjectionMatrix` flag in the constructor must be `true` to allow using it');
     }
+    this.flushChanges();
     return this._viewProjectionMatrix;
   }
 
@@ -93,103 +96,106 @@ export class Camera {
     this.setRotation(this._rotation.multiply(rotation).normalize());
   }
 
-  flushChanges(): void {
-    const vm = this._viewMatrix;
-    const updateViewProjectionMatrix = this.enableViewProjectionMatrix && (this.isDirtyPosition || this.isDirtyRotation || this.isDirtyAspectRatio || this.isDirtyFieldOfView || this.isDirtyNearFar);
+  private flushChanges(): void {
+    let viewChanged = false;
+    let projectionChanged = false;
+
     if (this.isDirtyPosition || this.isDirtyRotation) {
+      const { x: rx, y: ry, z: rz, w: rw } = this._rotation;
       const { x: px, y: py, z: pz } = this._position;
-      const { x: qx, y: qy, z: qz, w: qw } = this._rotation;
-      const qxSq = qx ** 2;
-      const qySq = qy ** 2;
-      const qzSq = qz ** 2;
-      const qx_qy = qx * qy;
-      const qx_qz = qx * qz;
-      const qx_qw = qx * qw;
-      const qy_qz = qy * qz;
-      const qy_qw = qy * qw;
-      const qz_qw = qz * qw;
-      const m00 = 1 - 2 * (qySq + qzSq);
-      const m01 = 2 * (qx_qy + qz_qw);
-      const m02 = 2 * (qx_qz - qy_qw);
-      const m10 = 2 * (qx_qy - qz_qw);
-      const m11 = 1 - 2 * (qxSq + qzSq);
-      const m12 = 2 * (qy_qz + qx_qw);
-      const m20 = 2 * (qx_qz + qy_qw);
-      const m21 = 2 * (qy_qz - qx_qw);
-      const m22 = 1 - 2 * (qxSq + qySq);
+
+      const x2 = rx + rx;
+      const y2 = ry + ry;
+      const z2 = rz + rz;
+
+      const xx = rx * x2;
+      const yy = ry * y2;
+      const zz = rz * z2;
+      const xy = rx * y2;
+      const xz = rx * z2;
+      const yz = ry * z2;
+      const wx = rw * x2;
+      const wy = rw * y2;
+      const wz = rw * z2;
+
+      const m00 = 1 - (yy + zz);
+      const m01 = xy + wz;
+      const m02 = xz - wy;
+      const m10 = xy - wz;
+      const m11 = 1 - (xx + zz);
+      const m12 = yz + wx;
+      const m20 = xz + wy;
+      const m21 = yz - wx;
+      const m22 = 1 - (xx + yy);
+
+      const vm = this._viewMatrix;
       vm[0] = m00;
-      vm[1] = m10;
-      vm[2] = m20;
-      // m[3] = 0;
-      vm[4] = m01;
+      vm[1] = m01;
+      vm[2] = m02;
+      vm[4] = m10;
       vm[5] = m11;
-      vm[6] = m21;
-      // m[7] = 0;
-      vm[8] = m02;
-      vm[9] = m12;
+      vm[6] = m12;
+      vm[8] = m20;
+      vm[9] = m21;
       vm[10] = m22;
-      // m[11] = 0;
-      vm[12] = -(m00 * px + m01 * py + m02 * pz);
-      vm[13] = -(m10 * px + m11 * py + m12 * pz);
-      vm[14] = -(m20 * px + m21 * py + m22 * pz);
-      // m[15] = 1;
+      vm[12] = m00 * -px + m10 * -py + m20 * -pz;
+      vm[13] = m01 * -px + m11 * -py + m21 * -pz;
+      vm[14] = m02 * -px + m12 * -py + m22 * -pz;
+
       this.isDirtyPosition = false;
       this.isDirtyRotation = false;
+      viewChanged = true;
     }
-    const pm = this._projectionMatrix;
-    if (this.isDirtyAspectRatio || this.isDirtyFieldOfView) {
-      const fovRadians = (this._fieldOfViewDegrees * Math.PI) / 180;
-      const f = 1 / Math.tan(fovRadians / 2);
-      pm[0] = f / this._aspectRatio;
-      // m[1] = 0;
-      // m[2] = 0;
-      // m[3] = 0;
-      // m[4] = 0;
-      pm[5] = f;
-      // m[6] = 0;
-      // m[7] = 0;
-      this.isDirtyAspectRatio = false;
-      this.isDirtyFieldOfView = false;
-    }
-    if (this.isDirtyNearFar) {
+
+    if (this.isDirtyFieldOfView || this.isDirtyAspectRatio || this.isDirtyNearFar) {
+      const fovRad = (this._fieldOfViewDegrees * Math.PI) / 180;
+      const f = 1.0 / Math.tan(fovRad / 2);
       const [near, far] = this._nearFar;
-      const reciprocalNegativeRange = 1 / (near - far);
-      // m[8] = 0;
-      // m[9] = 0;
-      pm[10] = (far + near) * reciprocalNegativeRange;
-      // m[11] = -1;
-      // m[12] = 0;
-      // m[13] = 0;
-      pm[14] = 2 * far * near * reciprocalNegativeRange;
-      // m[15] = 0;
+      const nf = 1 / (near - far);
+
+      const pm = this._projectionMatrix;
+      pm[0] = f / this._aspectRatio;
+      pm[5] = f;
+      pm[10] = (far + near) * nf;
+      pm[14] = (2 * far * near) * nf;
+
+      this.isDirtyFieldOfView = false;
+      this.isDirtyAspectRatio = false;
       this.isDirtyNearFar = false;
+      projectionChanged = true;
     }
-    if (updateViewProjectionMatrix) {
+
+    if (this.enableViewProjectionMatrix && (viewChanged || projectionChanged)) {
+      const vm = this._viewMatrix;
+      const pm = this._projectionMatrix;
       const vpm = this._viewProjectionMatrix;
-      const pm0 = pm[0];
-      const pm5 = pm[5];
-      const pm10 = pm[10];
-      const pm14 = pm[14];
-      const vm8 = vm[8];
-      const vm9 = vm[9];
-      const vm10 = vm[10];
-      const vm11 = vm[11];
-      vpm[0] = pm0 * vm[0];
-      vpm[1] = pm0 * vm[1];
-      vpm[2] = pm0 * vm[2];
-      vpm[3] = pm0 * vm[3];
-      vpm[4] = pm5 * vm[4];
-      vpm[5] = pm5 * vm[5];
-      vpm[6] = pm5 * vm[6];
-      vpm[7] = pm5 * vm[7];
-      vpm[8] = pm10 * vm8 + pm14 * vm[12];
-      vpm[9] = pm10 * vm9 + pm14 * vm[13];
-      vpm[10] = pm10 * vm10 + pm14 * vm[14];
-      vpm[11] = pm10 * vm11 + pm14 * vm[15];
-      vpm[12] = -vm8;
-      vpm[13] = -vm9;
-      vpm[14] = -vm10;
-      vpm[15] = -vm11;
+
+      const pm00 = pm[0];
+      const pm11 = pm[5];
+      const pm22 = pm[10];
+      const pm32 = pm[14];
+
+      const vm20 = vm[8];
+      const vm21 = vm[9];
+      const vm22 = vm[10];
+      const vm23 = vm[11];
+
+      vpm[0] = pm00 * vm[0];
+      vpm[1] = pm00 * vm[1];
+      vpm[2] = pm00 * vm[2];
+      vpm[3] = pm00 * vm[3];
+      vpm[4] = pm11 * vm[4];
+      vpm[5] = pm11 * vm[5];
+      vpm[6] = pm11 * vm[6];
+      vpm[7] = pm11 * vm[7];
+      vpm[8] = pm22 * vm20 - vm[12];
+      vpm[9] = pm22 * vm21 - vm[13];
+      vpm[10] = pm22 * vm22 - vm[14];
+      vpm[11] = pm22 * vm23 - vm[15];
+      vpm[12] = pm32 * vm20;
+      vpm[13] = pm32 * vm21;
+      vpm[14] = pm32 * vm22;
+      vpm[15] = pm32 * vm23;
     }
   }
 }

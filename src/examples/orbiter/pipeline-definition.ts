@@ -5,7 +5,6 @@ import { meshTemplates, OrbiterMeshTemplates } from './mesh-templates';
 import { orbiterShader } from './shader';
 
 export const camera = new Camera(true);
-camera.flushChanges();
 
 export const orbiterPipelineOptions = builders.pipelineOptions<OrbiterUniform, Orbiter, true, true, true>()
   .mutableUniform(true)

@@ -426,6 +426,7 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
           buffer: targetBuffer.buffer
         };
       }
+      const entityCount = entityCache.count();
       const debugFunc: WPKDebugFunc = async (): Promise<void> => {
         const contentMap = {} as WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap>;
         const promises = Object.entries(debugBuffers)
@@ -435,6 +436,7 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
               buffer,
               format,
               entityCache,
+              entityCount,
               contentMap));
         await Promise.all(promises);
         await onBufferContents(contentMap);
@@ -456,6 +458,7 @@ const addContents = async (
   buffer: GPUBuffer,
   bufferFormat: WPKBufferFormat<any, any>,
   entityCache: WPKEntityCache<any, any, any>,
+  entityCount: number,
   contentMap: WPKDebugBufferContentMap<any, any, any>
 ): Promise<void> => {
   logFuncs.lazyDebug(DEBUG_LOGGER, () => `Synching ${bufferName} debug buffer for read`);
@@ -472,12 +475,12 @@ const addContents = async (
     contentMap[bufferName] = uniform;
   } else if (bufferType === 'marshalled') {
     logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from format ${bufferName}`);
-    const entities = unmarshallEntityMarshalledArray(dataView, bufferFormat, entityCache);
+    const entities = unmarshallEntityMarshalledArray(dataView, bufferFormat, entityCache, entityCount);
     logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
     contentMap[bufferName] = entities;
   } else if (bufferType === 'editable') {
     logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from layout ${bufferName}`);
-    const entities = unmarshallEntityLayoutArray(dataView, bufferFormat);
+    const entities = unmarshallEntityLayoutArray(dataView, bufferFormat, entityCount);
     logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
     contentMap[bufferName] = entities;
   }
@@ -495,10 +498,14 @@ export const unmarshallUniform = <TUniform>(dataView: DataView, bufferFormat: WP
   return uniform;
 };
 
-export const unmarshallEntityMarshalledArray = <TEntity, TMutable extends boolean, TResizeable extends boolean>(dataView: DataView, bufferFormat: WPKBufferFormatEntityMarshalled<TEntity>, entityCache: WPKEntityCache<TEntity, TMutable, TResizeable>): TEntity[] => {
+export const unmarshallEntityMarshalledArray = <TEntity, TMutable extends boolean, TResizeable extends boolean>(
+  dataView: DataView,
+  bufferFormat: WPKBufferFormatEntityMarshalled<TEntity>,
+  entityCache: WPKEntityCache<TEntity, TMutable, TResizeable>,
+  entityCount: number
+): TEntity[] => {
   const { marshall } = bufferFormat;
   const formatStride = shaderFuncs.toStrideArray(marshall);
-  const entityCount = Math.floor(dataView.byteLength / formatStride);
   const entities: TEntity[] = Array(entityCount);
   for (let i = 0; i < entityCount; i++) {
     const dataViewOffset = i * formatStride;
@@ -509,15 +516,18 @@ export const unmarshallEntityMarshalledArray = <TEntity, TMutable extends boolea
       bridge.dataViewToInstance(dataViewOffset, entity, dataView);
       datumOffset += bridge.stride;
     }
-    entities.push(entity);
+    entities[i] = entity;
   }
   return entities;
 };
 
-export const unmarshallEntityLayoutArray = (dataView: DataView, bufferFormat: WPKBufferFormatEntityLayout): object[] => {
+export const unmarshallEntityLayoutArray = (
+  dataView: DataView,
+  bufferFormat: WPKBufferFormatEntityLayout,
+  entityCount: number
+): object[] => {
   const { layout } = bufferFormat;
   const formatStride = shaderFuncs.toStrideArray(layout);
-  const entityCount = Math.floor(dataView.byteLength / formatStride);
   const entities = Array(entityCount);
   for (let i = 0; i < entityCount; i++) {
     const dataViewOffset = i * formatStride;
@@ -528,7 +538,7 @@ export const unmarshallEntityLayoutArray = (dataView: DataView, bufferFormat: WP
       bridge.dataViewToInstance(dataViewOffset, entity, dataView);
       datumOffset += bridge.stride;
     }
-    entities.push(entity);
+    entities[i] = entity;
   }
   return entities;
 };

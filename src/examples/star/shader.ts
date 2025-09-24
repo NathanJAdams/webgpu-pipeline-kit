@@ -6,7 +6,7 @@ import { builders } from '../..';
 const meshTemplate = builders.meshTemplate<StarMeshTemplates>()
   .key('sphere')
   .parametersObject()
-  .subdivisions(3)
+  .subdivisions(4)
   .buildParameters()
   .buildObject();
 
@@ -18,10 +18,8 @@ const vertexShader = builders.vertexShader<StarUniform, Star, StarBufferFormats>
   .pushObject().buffer('visual').field('color').buildElement()
   .buildVertexBuffers()
   .code((wgsl, params) => wgsl`
-  return vec4<f32>(${params.vertex_position.xy}, 0.0, 1.0);
-
-  // let model_position = ${params.vertex_buffers.position.transformation} * vec4<f32>(${params.vertex_position}, 1.0);
-  // return ${params.bindings.uniforms.viewProjection} * model_position;
+  let model_position = ${params.vertex_buffers.position.transformation} * vec4<f32>(${params.vertex_position}, 1.0);
+  return ${params.bindings.uniforms.viewProjection} * model_position;
 `)
   .buildObject();
 

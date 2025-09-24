@@ -14,6 +14,8 @@ export const run = async (): Promise<void> => {
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
   }
+  window.addEventListener('resize', () => resizeCanvasToDisplaySize(canvas));
+  resizeCanvasToDisplaySize(canvas);
   const pipelineRunner = await factories.display.of(canvas);
   const debugOptions: WPKDebugOptions<OrbiterUniform, Orbiter, OrbiterBufferFormats> = {
     async onBufferContents(contents) {
@@ -59,4 +61,13 @@ const cosSin = (number: number): [number, number] => [Math.cos(number), Math.sin
 
 const sleep = (millis: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, millis));
+};
+
+const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement): void => {
+  const displayWidth = canvas.clientWidth;
+  const displayHeight = canvas.clientHeight;
+  if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+  }
 };
