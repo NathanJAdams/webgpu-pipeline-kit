@@ -17,6 +17,6 @@ export const orbiterPipelineOptions = builders.pipelineOptions<OrbiterUniform, O
 export const orbiterPipelineDefinition = builders.pipelineDefinition<OrbiterUniform, Orbiter, OrbiterBufferFormats, OrbiterMeshTemplates>()
   .name('orbiter')
   .bufferFormats(bufferFormats)
-  .meshFactories(meshTemplates)
+  .meshTemplates(meshTemplates)
   .shader(orbiterShader)
   .buildObject();

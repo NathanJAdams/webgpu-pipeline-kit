@@ -13,7 +13,7 @@ export type WPKPipelineDefinition<
 > = {
   name: string;
   bufferFormats: TBufferFormatMap;
-  meshFactories: TMeshTemplateMap;
+  meshTemplates: TMeshTemplateMap;
   shader: WPKShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>;
 };
 //#endregion

@@ -133,7 +133,7 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
   entityCache: WPKEntityCache<TEntity, any, any>,
   debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
 ): WPKResource<WPKPipelineDetail> => {
-  const { name, meshFactories, shader, bufferFormats } = definition;
+  const { name, meshTemplates, shader, bufferFormats } = definition;
   logFuncs.lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
   if (bufferResources === undefined) {
     throw Error('Error when creating pipeline, no buffer resources');
@@ -160,7 +160,7 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
     computePipelineDetailsResource = toComputePipelineDetailsResource(name, compute, bufferFormats, bufferResources, dispatchResource);
   }
   if (render !== undefined) {
-    renderPipelineDetailResource = toRenderPipelineDetailsResource(name, meshFactories, render, instanceCountFunc, bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc, debuggable);
+    renderPipelineDetailResource = toRenderPipelineDetailsResource(name, meshTemplates, render, instanceCountFunc, bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc, debuggable);
   }
   logFuncs.lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
   const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, entityCache, debug);

@@ -17,6 +17,6 @@ export const starPipelineOptions = builders.pipelineOptions<StarUniform, Star, t
 export const starPipelineDefinition = builders.pipelineDefinition<StarUniform, Star, StarBufferFormats, StarMeshTemplates>()
   .name('star')
   .bufferFormats(bufferFormats)
-  .meshFactories(meshTemplates)
+  .meshTemplates(meshTemplates)
   .shader(starShader)
   .buildObject();

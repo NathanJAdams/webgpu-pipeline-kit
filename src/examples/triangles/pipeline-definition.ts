@@ -15,6 +15,6 @@ export const pipelineOptions = builders.pipelineOptions<TriangleUniform, Triangl
 export const trianglesPipelineDefinition = builders.pipelineDefinition<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
   .name('triangle')
   .bufferFormats(bufferFormats)
-  .meshFactories(meshTemplates)
+  .meshTemplates(meshTemplates)
   .shader(shader)
   .buildObject();
