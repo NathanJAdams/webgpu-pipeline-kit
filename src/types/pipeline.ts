@@ -124,7 +124,6 @@ export type WPKViews = {
   resolveTarget?: GPUTextureView;
 };
 export type WPKViewsFunc = () => WPKViews;
-export type WPKAspectRatioUpdater = (aspectRatio: number) => Promise<any>;
 //#endregion
 
 //#region debug

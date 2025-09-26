@@ -1,6 +1,7 @@
 import { logFactory } from './logging';
+import { addPeripheralEventHandlers } from './peripheral-events';
 import { pipelineFuncs } from './pipeline-utils';
-import { WPKPipelineRunner, WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKPipeline, WPKPipelineDetail, WPKRenderPipelineDetail, WPKViews, WPKViewsFunc, WPKAspectRatioUpdater, WPKPipelineInvoker } from './types';
+import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKPeripheralEventHandlers, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKViews, WPKViewsFunc } from './types';
 import { Color, logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -21,7 +22,7 @@ export const pipelineRunnerFactory = {
     };
     return createPipelineRunner(device, invoker);
   },
-  ofComputeRender: async (canvas: HTMLCanvasElement, clearColor: Color, aspectRatioUpdater: WPKAspectRatioUpdater): Promise<WPKPipelineRunner<true, true>> => {
+  ofComputeRender: async (canvas: HTMLCanvasElement, clearColor: Color, peripheralEventHandlers: WPKPeripheralEventHandlers): Promise<WPKPipelineRunner<true, true>> => {
     logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
     const gpu = pipelineFuncs.getGpu();
     const device = await pipelineFuncs.getDevice(gpu);
@@ -38,10 +39,10 @@ export const pipelineRunnerFactory = {
         invokeRenderPipeline(render, index, encoder, views, clearValue);
       }
     };
-    await listenAspectRatio(canvas, aspectRatioUpdater);
+    await addPeripheralEventHandlers(canvas, peripheralEventHandlers);
     return createPipelineRunner(device, invoker);
   },
-  ofRender: async (canvas: HTMLCanvasElement, clearColor: Color, aspectRatioUpdater: WPKAspectRatioUpdater): Promise<WPKPipelineRunner<false, true>> => {
+  ofRender: async (canvas: HTMLCanvasElement, clearColor: Color, peripheralEventHandlers: WPKPeripheralEventHandlers): Promise<WPKPipelineRunner<false, true>> => {
     logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
     const gpu = pipelineFuncs.getGpu();
     const device = await pipelineFuncs.getDevice(gpu);
@@ -55,7 +56,7 @@ export const pipelineRunnerFactory = {
         invokeRenderPipeline(render, index, encoder, views, clearValue);
       }
     };
-    await listenAspectRatio(canvas, aspectRatioUpdater);
+    await addPeripheralEventHandlers(canvas, peripheralEventHandlers);
     return createPipelineRunner(device, invoker);
   },
 };
@@ -71,24 +72,6 @@ const createViewsGetter = async (canvas: HTMLCanvasElement, device: GPUDevice): 
     format,
   });
   return createViewsFunc(canvas, context, device, format);
-};
-
-const listenAspectRatio = async (canvas: HTMLCanvasElement, aspectRatioUpdater: WPKAspectRatioUpdater): Promise<void> => {
-  const updateAspectRatio = async () => {
-    const displayWidth = canvas.clientWidth;
-    const displayHeight = canvas.clientHeight;
-    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-      logFuncs.lazyDebug(LOGGER, () => `Resizing canvas to [${displayWidth}, ${displayHeight}]`);
-      canvas.width = displayWidth;
-      canvas.height = displayHeight;
-      await aspectRatioUpdater(displayWidth / displayHeight);
-    }
-  };
-  await updateAspectRatio();
-  if (window !== undefined) {
-    logFuncs.lazyInfo(LOGGER, () => 'Adding resize listener to canvas');
-    window.addEventListener('resize', async () => await listenAspectRatio(canvas, aspectRatioUpdater));
-  }
 };
 
 const createPipelineRunner = async <TCompute extends boolean, TRender extends boolean>(

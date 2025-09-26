@@ -4,8 +4,8 @@ import { meshTemplates } from './mesh-templates';
 import { renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel, Transformation, Vector3 } from '../..';
 import { logFactory } from '../../logging';
-import { WPKDebugOptions } from '../../types';
-import { changeDetectorFactory, Color, logFuncs } from '../../utils';
+import { WPKDebugOptions, WPKPeripheralEventHandlers } from '../../types';
+import { Color, logFuncs } from '../../utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
 
@@ -16,9 +16,13 @@ export const run = async (): Promise<void> => {
     throw Error('Failed to get game canvas from document');
   }
   const camera = new Camera(true);
-  const aspectRatioChangeDetector = changeDetectorFactory.ofTripleEquals(1);
-  let hasResized = true;
-  const runner = await factories.pipelineRunner.ofRender(canvas, Color.BLACK, async (aspectRatio) => hasResized = aspectRatioChangeDetector.compareAndUpdate(aspectRatio));
+  const eventHandlers: WPKPeripheralEventHandlers = {
+    'screen-resize': async (eventInfo) => {
+      camera.setAspectRatio(eventInfo.aspectRatio);
+      starPipeline.mutateUniform({ camera });
+    },
+  };
+  const runner = await factories.pipelineRunner.ofRender(canvas, Color.BLACK, eventHandlers);
   const starPipelineOptions = builders.pipelineOptions<StarUniform, Star, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)
@@ -38,11 +42,6 @@ export const run = async (): Promise<void> => {
     LOGGER.debug('adding star');
     const star = newStar();
     starPipeline.add(star);
-    if (hasResized) {
-      camera.setAspectRatio(aspectRatioChangeDetector.get());
-      starPipeline.mutateUniform({ camera });
-      hasResized = false;
-    }
     await runner.step();
     await sleep(1_000);
   }

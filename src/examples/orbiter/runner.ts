@@ -4,7 +4,7 @@ import { meshTemplates } from './mesh-templates';
 import { computeShader, renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel } from '../..';
 import { logFactory } from '../../logging';
-import { WPKDebugOptions } from '../../types';
+import { WPKDebugOptions, WPKPeripheralEventHandlers } from '../../types';
 import { Color, logFuncs } from '../../utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -16,7 +16,10 @@ export const run = async (): Promise<void> => {
     throw Error('Failed to get game canvas from document');
   }
   const camera = new Camera(true);
-  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, async (aspectRatio) => camera.setAspectRatio(aspectRatio));
+  const eventHandlers: WPKPeripheralEventHandlers = {
+    'screen-resize': async (eventInfo) => camera.setAspectRatio(eventInfo.aspectRatio),
+  };
+  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, eventHandlers);
   const orbiterPipelineOptions = builders.pipelineOptions<OrbiterUniform, Orbiter, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)
