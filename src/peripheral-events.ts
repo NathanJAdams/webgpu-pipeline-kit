@@ -7,16 +7,38 @@ const LOGGER = logFactory.getLogger('events');
 export const addPeripheralEventHandlers = async (canvas: HTMLCanvasElement, peripheralEventHandlers: WPKPeripheralEventHandlers): Promise<void> => {
   for (const [eventType, eventHandler] of Object.entries(peripheralEventHandlers)) {
     switch (eventType) {
-      case WPKPeripheralEventType.DRAG_START: addDragEventListener(canvas, 'dragstart', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.DRAG_START>);
-      case WPKPeripheralEventType.DRAG: addDragEventListener(canvas, 'drag', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.DRAG>);
-      case WPKPeripheralEventType.DRAG_END: addDragEventListener(canvas, 'dragend', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.DRAG_END>);
-      case WPKPeripheralEventType.KEY_DOWN: addKeyEventListener(canvas, 'keydown', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.KEY_DOWN>);
-      case WPKPeripheralEventType.KEY_UP: addKeyEventListener(canvas, 'keyup', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.KEY_UP>);
-      case WPKPeripheralEventType.KEY_PRESS: addKeyEventListener(canvas, 'keypress', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.KEY_PRESS>);
-      case WPKPeripheralEventType.MOUSE_DOWN: addMouseEventListener(canvas, 'mousedown', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_DOWN>);
-      case WPKPeripheralEventType.MOUSE_MOVE: addMouseEventListener(canvas, 'mousemove', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_MOVE>);
-      case WPKPeripheralEventType.MOUSE_UP: addMouseEventListener(canvas, 'mouseup', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_UP>);
-      case WPKPeripheralEventType.SCREEN_RESIZE: await addScreenEventListener(canvas, 'resize', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.SCREEN_RESIZE>);
+      case WPKPeripheralEventType.DRAG_START:
+        addDragEventListener(canvas, 'dragstart', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.DRAG_START>);
+        break;
+      case WPKPeripheralEventType.DRAG:
+        addDragEventListener(canvas, 'drag', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.DRAG>);
+        break;
+      case WPKPeripheralEventType.DRAG_END:
+        addDragEventListener(canvas, 'dragend', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.DRAG_END>);
+        break;
+      case WPKPeripheralEventType.KEY_DOWN:
+        addKeyEventListener(canvas, 'keydown', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.KEY_DOWN>);
+        break;
+      case WPKPeripheralEventType.KEY_UP:
+        addKeyEventListener(canvas, 'keyup', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.KEY_UP>);
+        break;
+      case WPKPeripheralEventType.KEY_PRESS:
+        addKeyEventListener(canvas, 'keypress', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.KEY_PRESS>);
+        break;
+      case WPKPeripheralEventType.MOUSE_DOWN:
+        addMouseEventListener(canvas, 'mousedown', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_DOWN>);
+        break;
+      case WPKPeripheralEventType.MOUSE_MOVE:
+        addMouseEventListener(canvas, 'mousemove', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_MOVE>);
+        break;
+      case WPKPeripheralEventType.MOUSE_UP:
+        addMouseEventListener(canvas, 'mouseup', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_UP>);
+        break;
+      case WPKPeripheralEventType.SCREEN_RESIZE:
+        await addScreenEventListener(canvas, 'resize', eventHandler as WPKPeripheralEventHandler<WPKPeripheralEventType.SCREEN_RESIZE>);
+        break;
+      default:
+        throw Error(`Unrecognized peripheral event ${eventType}`);
     }
   }
 };
