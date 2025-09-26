@@ -8,7 +8,6 @@ export type {
   WPKMeshTemplate,
   WPKMeshTemplateMap,
   WPKMeshParametersDeclaration,
-  WPKMouseButton,
   WPKPeripheralEventHandlers,
   WPKPipelineOptions,
   WPKComputeShader,
@@ -19,4 +18,5 @@ export type {
 export { builders } from './builders';
 export { factories } from './factories';
 export { setLogLevel } from './logging';
+export { WPKMouseButton } from './types';
 export * from './math';

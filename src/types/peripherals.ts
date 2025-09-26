@@ -59,9 +59,3 @@ export type WPKPeripheralEventHandler<TEvent extends keyof WPKPeripheralEventInf
 export type WPKPeripheralEventHandlers = {
   [E in keyof WPKPeripheralEventInfoTypeMap]?: WPKPeripheralEventHandler<E>;
 };
-
-export const mouseButtonByIndex: readonly WPKMouseButton[] = [
-  WPKMouseButton.LEFT,
-  WPKMouseButton.MIDDLE,
-  WPKMouseButton.RIGHT,
-];
