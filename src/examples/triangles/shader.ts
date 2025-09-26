@@ -8,7 +8,7 @@ const computeGroupBindings = builders.computeGroupBindings<TriangleUniform, Tria
   .pushObject().group(0).binding(1).buffer('offsets').buildElement()
   .buildArray();
 
-const computeShader = builders.computeShader<TriangleUniform, Triangle, BufferFormats>()
+export const computeShader = builders.computeShader<TriangleUniform, Triangle, BufferFormats>()
   .groupBindings(computeGroupBindings)
   .passesArray()
   .pushObject()
@@ -46,7 +46,7 @@ const renderGroupBindings = builders.renderGroupBindings<TriangleUniform, Triang
   .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
   .buildArray();
 
-const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
+export const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
   .groupBindings(renderGroupBindings)
   .passesArray()
   .pushObject()
@@ -55,9 +55,4 @@ const renderShader = builders.renderShader<TriangleUniform, Triangle, BufferForm
   .fragment(fragmentShader)
   .buildElement()
   .buildPasses()
-  .buildObject();
-
-export const shader = builders.shader<TriangleUniform, Triangle, BufferFormats, MeshTemplates>()
-  .compute(computeShader)
-  .render(renderShader)
   .buildObject();

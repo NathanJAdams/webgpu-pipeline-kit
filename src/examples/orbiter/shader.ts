@@ -9,7 +9,7 @@ const computeGroupBindings = builders.computeGroupBindings<OrbiterUniform, Orbit
   .pushObject().group(2).binding(0).buffer('position').buildElement()
   .buildArray();
 
-const computeShader = builders.computeShader<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
+export const computeShader = builders.computeShader<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
   .groupBindings(computeGroupBindings)
   .prologue(
     `fn calculateEccentricAnomaly(meanAnomalyAtTime: f32, eccentricity: f32) -> f32 {
@@ -129,7 +129,7 @@ const renderGroupBindings = builders.renderGroupBindings<OrbiterUniform, Orbiter
   .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
   .buildArray();
 
-const renderShader = builders.renderShader<OrbiterUniform, Orbiter, OrbiterBufferFormats, OrbiterMeshTemplates>()
+export const renderShader = builders.renderShader<OrbiterUniform, Orbiter, OrbiterBufferFormats, OrbiterMeshTemplates>()
   .groupBindings(renderGroupBindings)
   .passesArray()
   .pushObject()
@@ -138,9 +138,4 @@ const renderShader = builders.renderShader<OrbiterUniform, Orbiter, OrbiterBuffe
   .fragment(fragmentShader)
   .buildElement()
   .buildPasses()
-  .buildObject();
-
-export const orbiterShader = builders.shader<OrbiterUniform, Orbiter, OrbiterBufferFormats, OrbiterMeshTemplates>()
-  .compute(computeShader)
-  .render(renderShader)
   .buildObject();

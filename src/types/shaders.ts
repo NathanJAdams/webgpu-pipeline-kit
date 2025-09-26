@@ -197,7 +197,7 @@ export type WPKVertexBufferLocationEntry<TUniform, TEntity, TBufferFormatMap ext
 //#endregion
 
 //#region shader
-type WPKShaderStage<
+export type WPKShaderStage<
   TUniform,
   TEntity,
   TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
@@ -209,7 +209,7 @@ type WPKShaderStage<
   groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, true, TIncludeEntity>>;
   passes: Array<TPass>;
 };
-export type WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> =
+export type WPKComputeShader<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> =
   WPKShaderStage<
     TUniform,
     TEntity,
@@ -217,7 +217,7 @@ export type WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap extends WP
     true,
     WPKComputePass<TUniform, TEntity, TBufferFormatMap>
   >;
-export type WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> =
+export type WPKRenderShader<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> =
   WPKShaderStage<
     TUniform,
     TEntity,
@@ -225,13 +225,4 @@ export type WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap extends WPK
     false,
     WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>
   >;
-export type WPKShader<
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TMeshTemplateMap extends WPKMeshTemplateMap
-> = {
-  compute?: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>;
-  render?: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>;
-};
 //#endregion

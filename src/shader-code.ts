@@ -1,7 +1,7 @@
 import { logFactory } from './logging';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormat, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKShaderStageCompute, WPKShaderModuleDetail, WPKShaderStageRender, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderScalarSignedInt } from './types';
+import { WPKBufferFormat, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKComputeShader, WPKShaderModuleDetail, WPKRenderShader, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderScalarSignedInt } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('shader');
@@ -10,7 +10,7 @@ const WHITESPACE = '\n\n';
 const BUFFER_INDEXING_VARIABLE = 'instance_index';
 
 export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
-  shader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>, bufferFormats: TBufferFormatMap
+  shader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap>, bufferFormats: TBufferFormatMap
 ): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating compute shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
@@ -42,7 +42,7 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
 };
 
 export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
-  shader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormats: TBufferFormatMap
+  shader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>, bufferFormats: TBufferFormatMap
 ): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;

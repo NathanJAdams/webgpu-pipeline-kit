@@ -1,4 +1,3 @@
-import { describe, test, expect } from 'vitest';
 import { toShaderCodeError } from '../../src/node/diagnostics';
 import { setLogLevel } from '../../src';
 

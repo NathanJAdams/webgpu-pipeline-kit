@@ -11,57 +11,107 @@ import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDefinition, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKShader, WPKShaderStageCompute, WPKShaderStageRender, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferFormatUniform, WPKBufferFormatEntityMarshalled, WPKBufferFormatEntityLayout } from './types';
-import { changeDetectorFactory, logFuncs, recordFuncs } from './utils';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKComputeShader, WPKRenderShader, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferFormatUniform, WPKBufferFormatEntityMarshalled, WPKBufferFormatEntityLayout, WPKShaderStage } from './types';
+import { logFuncs, recordFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
 const DEBUG_LOGGER = logFactory.getLogger('debug');
 
 export const pipelineFactory = {
-  ofDefinition: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
-    definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+  ofCompute: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
+    name: string,
+    bufferFormats: TBufferFormatMap,
+    shader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
     debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap> = {},
-  ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities> => {
-    if (Object.keys(definition.bufferFormats).includes(shaderReserved.DISPATCH_PARAMS_BUFFER_NAME)) {
-      throw Error(`Cannot use reserved buffer format name ${shaderReserved.DISPATCH_PARAMS_BUFFER_NAME}`);
-    }
-    const { name, bufferFormats } = definition;
+  ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, true, false> => {
+    checkNotUsingReservedBufferFormats(bufferFormats);
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
-    const isAntiAliasedChangeDetector = changeDetectorFactory.ofTripleEquals<boolean>(true);
-    const textureFormatChangeDetector = changeDetectorFactory.ofTripleEquals<GPUTextureFormat>('rgba8unorm');
-    const bufferResources = toBufferResources(uniformCache, entityCache, definition, debug);
-    const pipelineDetailResource = toPipelineDetailResource(definition, isAntiAliasedChangeDetector.get, textureFormatChangeDetector.get, bufferResources, entityCache, debug);
-    const pipeline: WPKPipeline<any, any, any, any, any> = {
+    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, shader);
+    const dispatchResource = toComputeDispatchResource(name, shader, bufferResources.instanceCount, debug.onBufferContents !== undefined);
+    const computePipelineDetailsResource = toComputePipelineDetailsResource(name, shader, bufferFormats, bufferResources, dispatchResource);
+    const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, entityCache, debug);
+    const pipelineDetailResource = toPipelineDetailResource<true, false>(name, bufferResources, computePipelineDetailsResource, undefined, debugFuncResource);
+    const pipeline: WPKPipeline<any, any, any, any, any, true, false> = {
       name,
-      pipelineDetail(device, queue, encoder, options) {
+      pipelineDetail(device, queue, encoder) {
         bufferResources.update();
-        const { isAntiAliased, textureFormat } = options;
-        isAntiAliasedChangeDetector.compareAndUpdate(isAntiAliased);
-        textureFormatChangeDetector.compareAndUpdate(textureFormat);
         return pipelineDetailResource.get(device, queue, encoder);
       },
       clean() {
         pipelineDetailResource.clean();
       },
     };
-    if (options.mutableUniform) {
-      (pipeline as WPKPipeline<TUniform, any, true, any, any>).mutateUniform = (uniform) => (uniformCache as WPKUniformCache<TUniform, true>).mutate(uniform);
-    }
-    if (options.mutableEntities) {
-      if (options.resizeableEntities) {
-        (pipeline as WPKPipeline<any, TEntity, any, true, true>).mutateEntityById = (id, entity) => (entityCache as WPKEntityCache<TEntity, true, true>).mutate(id, entity);
-      } else {
-        (pipeline as WPKPipeline<any, TEntity, any, true, false>).mutateEntityByIndex = (index, entity) => (entityCache as WPKEntityCache<TEntity, true, false>).mutate(index, entity);
-      }
-    }
-    if (options.resizeableEntities) {
-      (pipeline as WPKPipeline<any, TEntity, any, any, true>).add = (entity) => (entityCache as WPKEntityCache<TEntity, any, true>).add(entity);
-      (pipeline as WPKPipeline<any, TEntity, any, any, true>).remove = (id) => (entityCache as WPKEntityCache<TEntity, any, true>).remove(id);
-    }
-    return pipeline as WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>;
+    addPipelineOptions(pipeline, options, uniformCache, entityCache);
+    return pipeline as WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, true, false>;
   },
+  ofComputeRender: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
+    name: string,
+    bufferFormats: TBufferFormatMap,
+    meshTemplates: TMeshTemplateMap,
+    computeShader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap>,
+    renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+    options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
+    debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap> = {},
+  ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, true, true> => {
+    checkNotUsingReservedBufferFormats(bufferFormats);
+    const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
+    const entityCache = toEntityCache(options, bufferFormats);
+    const debuggable = debug.onBufferContents !== undefined;
+    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, computeShader, renderShader);
+    const dispatchResource = toComputeDispatchResource(name, computeShader, bufferResources.instanceCount, debuggable);
+    const computePipelineDetailsResource = toComputePipelineDetailsResource(`${name}-compute`, computeShader, bufferFormats, bufferResources, dispatchResource);
+    const renderPipelineDetailResource = toRenderPipelineDetailsResource(`${name}-render`, meshTemplates, renderShader, bufferResources.instanceCount, bufferFormats, bufferResources, debuggable);
+    const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, entityCache, debug);
+    const pipelineDetailResource = toPipelineDetailResource<true, true>(name, bufferResources, computePipelineDetailsResource, renderPipelineDetailResource, debugFuncResource);
+    const pipeline: WPKPipeline<any, any, any, any, any, true, true> = {
+      name,
+      pipelineDetail(device, queue, encoder) {
+        bufferResources.update();
+        return pipelineDetailResource.get(device, queue, encoder);
+      },
+      clean() {
+        pipelineDetailResource.clean();
+      },
+    };
+    addPipelineOptions(pipeline, options, uniformCache, entityCache);
+    return pipeline as WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, true, true>;
+  },
+  ofRender: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
+    name: string,
+    bufferFormats: TBufferFormatMap,
+    meshTemplates: TMeshTemplateMap,
+    shader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+    options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
+    debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap> = {},
+  ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, false, true> => {
+    checkNotUsingReservedBufferFormats(bufferFormats);
+    const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
+    const entityCache = toEntityCache(options, bufferFormats);
+    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, shader);
+    const renderPipelineDetailResource = toRenderPipelineDetailsResource(name, meshTemplates, shader, bufferResources.instanceCount, bufferFormats, bufferResources, debug.onBufferContents !== undefined);
+    const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, undefined, entityCache, debug);
+    const pipelineDetailResource = toPipelineDetailResource<false, true>(name, bufferResources, undefined, renderPipelineDetailResource, debugFuncResource);
+    const pipeline: WPKPipeline<any, any, any, any, any, false, true> = {
+      name,
+      pipelineDetail(device, queue, encoder) {
+        bufferResources.update();
+        return pipelineDetailResource.get(device, queue, encoder);
+      },
+      clean() {
+        pipelineDetailResource.clean();
+      },
+    };
+    addPipelineOptions(pipeline, options, uniformCache, entityCache);
+    return pipeline as WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, false, true>;
+  },
+};
+
+const checkNotUsingReservedBufferFormats = (bufferFormats: WPKBufferFormatMap<any, any>): void => {
+  if (Object.keys(bufferFormats).includes(shaderReserved.DISPATCH_PARAMS_BUFFER_NAME)) {
+    throw Error(`Cannot use reserved buffer format name ${shaderReserved.DISPATCH_PARAMS_BUFFER_NAME}`);
+  }
 };
 
 const toEntityCache = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
@@ -80,26 +130,27 @@ const toEntityCache = <TUniform, TEntity, TBufferFormatMap extends WPKBufferForm
 };
 
 const toBufferResources = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
+  name: string,
   uniformCache: WPKUniformCache<TUniform, any>,
   entityCache: WPKEntityCache<TEntity, any, any>,
-  definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, any>,
-  debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>
+  bufferFormats: TBufferFormatMap,
+  debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
+  ...shaders: WPKShaderStage<TUniform, TEntity, TBufferFormatMap, any, any>[]
 ): WPKBufferResources<any, any, any> => {
-  const { bufferFormats, name, shader } = definition;
   logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for definition ${name}`);
-  const bufferUsages = toBufferUsages(shader, bufferFormats);
+  const bufferUsages = toBufferUsages<TUniform, TEntity, TBufferFormatMap>(bufferFormats, ...shaders);
   return bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages, debug.onBufferContents !== undefined);
 };
 
 const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
-  shader: WPKShader<TUniform, TEntity, TBufferFormatMap, any>,
   bufferFormats: TBufferFormatMap,
+  ...shaders: WPKShaderStage<TUniform, TEntity, TBufferFormatMap, any, any>[]
 ): Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags> => {
   logFuncs.lazyDebug(LOGGER, () => `Calculate buffer usage from buffer formats ${JSON.stringify(Object.keys(bufferFormats))}`);
   return recordFuncs.mapRecord(bufferFormats, (bufferFormat, key) => {
     logFuncs.lazyTrace(LOGGER, () => `Calculate buffer usage from buffer format ${JSON.stringify(key)}`);
-    const isBinding = isBufferBound(key, shader.compute?.groupBindings) || isBufferBound(key, shader.render?.groupBindings);
-    const isVertex = shader.render !== undefined; // TODO check buffer locations instead of blanket use
+    const isBinding = shaders.some(shader => isBufferBound(key, shader.groupBindings));
+    const isVertex = shaders !== undefined; // TODO check buffer locations for render shaders
     const { bufferType } = bufferFormat;
     let usage = 0;
     if (bufferType === 'uniform') {
@@ -125,59 +176,27 @@ const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFor
 const isBufferBound = (key: string, groupBindings?: Array<WPKGroupBinding<any, any, any, any, any>>): boolean =>
   (groupBindings !== undefined) && groupBindings.some(gb => gb.buffer === key);
 
-const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<any, any>, TMeshTemplateMap extends WPKMeshTemplateMap>(
-  definition: WPKPipelineDefinition<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
-  isAntiAliasedFunc: () => boolean,
-  textureFormatFunc: () => GPUTextureFormat,
+const toPipelineDetailResource = <TCompute extends boolean, TRender extends boolean>(
+  name: string,
   bufferResources: WPKBufferResources<any, any, any>,
-  entityCache: WPKEntityCache<TEntity, any, any>,
-  debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
-): WPKResource<WPKPipelineDetail> => {
-  const { name, meshTemplates, shader, bufferFormats } = definition;
-  logFuncs.lazyDebug(LOGGER, () => `Create pipeline detail resource ${name}`);
-  if (bufferResources === undefined) {
-    throw Error('Error when creating pipeline, no buffer resources');
-  }
-  let computePipelineDetailsResource: WPKResource<WPKComputePipelineDetail[]> | undefined;
-  let renderPipelineDetailResource: WPKResource<WPKRenderPipelineDetail[]> | undefined;
-  let dispatchResource: WPKDispatchResource<any> | undefined;
-  const instanceCountFunc = bufferResources.instanceCount;
-  const debuggable = debug.onBufferContents !== undefined;
-  const { compute, render } = shader;
-  if (compute !== undefined) {
-    const { passes } = compute;
-    const instanceCountResource = resourceFactory.ofFunc(instanceCountFunc);
-    const params = pipelineResourceFactory.ofDispatchParams(instanceCountResource, passes);
-    const entryPoints = passes.map(pass => pass.entryPoint);
-    const format = shaderReserved.createDispatchFormat(entryPoints);
-    const marshaller = shaderReserved.createDispatchMarshaller(format);
-    const buffer = bufferResourcesFactory.ofDispatch(name, format, params, marshaller, debuggable);
-    dispatchResource = {
-      format,
-      buffer,
-      params,
-    };
-    computePipelineDetailsResource = toComputePipelineDetailsResource(name, compute, bufferFormats, bufferResources, dispatchResource);
-  }
-  if (render !== undefined) {
-    renderPipelineDetailResource = toRenderPipelineDetailsResource(name, meshTemplates, render, instanceCountFunc, bufferFormats, bufferResources, isAntiAliasedFunc, textureFormatFunc, debuggable);
-  }
-  logFuncs.lazyDebug(LOGGER, () => `Pipeline ${name} has compute pipeline ${computePipelineDetailsResource !== undefined} has render pipeline ${renderPipelineDetailResource !== undefined}`);
-  const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, entityCache, debug);
-  return {
+  computePipelineDetailsResource: TCompute extends true ? WPKResource<WPKComputePipelineDetail[]> : undefined,
+  renderPipelineDetailResource: TRender extends true ? WPKResource<WPKRenderPipelineDetail[]> : undefined,
+  debugFuncResource: WPKResource<WPKDebugFunc> | undefined,
+): WPKResource<WPKPipelineDetail<TCompute, TRender>> => {
+  const resource: WPKResource<WPKPipelineDetail<any, any>> = {
     get(device, queue, encoder) {
-      logFuncs.lazyTrace(LOGGER, () => `Creating pipeline detail ${name}`);
+      logFuncs.lazyTrace(LOGGER, () => `Creating pipeline details ${name}`);
       const instanceCount = bufferResources.instanceCount();
-      const pipelineDetail: WPKPipelineDetail = {
+      const pipelineDetail: WPKPipelineDetail<boolean, boolean> = {
         name,
         instanceCount,
       };
       if (instanceCount > 0) {
         if (computePipelineDetailsResource !== undefined) {
-          pipelineDetail.compute = computePipelineDetailsResource.get(device, queue, encoder);
+          (pipelineDetail as WPKPipelineDetail<true, boolean>).compute = computePipelineDetailsResource.get(device, queue, encoder);
         }
         if (renderPipelineDetailResource !== undefined) {
-          pipelineDetail.render = renderPipelineDetailResource.get(device, queue, encoder);
+          (pipelineDetail as WPKPipelineDetail<boolean, true>).render = renderPipelineDetailResource.get(device, queue, encoder);
         }
         if (debugFuncResource !== undefined) {
           pipelineDetail.debugFunc = debugFuncResource.get(device, queue, encoder);
@@ -192,11 +211,54 @@ const toPipelineDetailResource = <TUniform, TEntity, TBufferFormatMap extends WP
       Object.values(bufferResources.buffers).forEach(resource => resource.clean());
     },
   };
+  return resource as WPKResource<WPKPipelineDetail<TCompute, TRender>>;
+};
+
+const addPipelineOptions = <TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
+  pipeline: WPKPipeline<any, any, any, any, any, any, any>,
+  options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
+  uniformCache: WPKUniformCache<TUniform, TMutableUniform>,
+  entityCache: WPKEntityCache<TEntity, TMutableEntities, any>,
+): void => {
+  if (options.mutableUniform) {
+    (pipeline as WPKPipeline<TUniform, any, true, any, any, any, any>).mutateUniform = (uniform) => (uniformCache as WPKUniformCache<TUniform, true>).mutate(uniform);
+  }
+  if (options.mutableEntities) {
+    if (options.resizeableEntities) {
+      (pipeline as WPKPipeline<any, TEntity, any, true, true, any, any>).mutateEntityById = (id, entity) => (entityCache as WPKEntityCache<TEntity, true, true>).mutate(id, entity);
+    } else {
+      (pipeline as WPKPipeline<any, TEntity, any, true, false, any, any>).mutateEntityByIndex = (index, entity) => (entityCache as WPKEntityCache<TEntity, true, false>).mutate(index, entity);
+    }
+  }
+  if (options.resizeableEntities) {
+    (pipeline as WPKPipeline<any, TEntity, any, any, true, any, any>).add = (entity) => (entityCache as WPKEntityCache<TEntity, any, true>).add(entity);
+    (pipeline as WPKPipeline<any, TEntity, any, any, true, any, any>).remove = (id) => (entityCache as WPKEntityCache<TEntity, any, true>).remove(id);
+  }
+};
+
+const toComputeDispatchResource = (
+  name: string,
+  shader: WPKComputeShader<any, any, any>,
+  instanceCountFunc: () => number,
+  debuggable: boolean
+): WPKDispatchResource<any> => {
+  const { passes } = shader;
+  const instanceCountResource = resourceFactory.ofFunc(instanceCountFunc);
+  const params = pipelineResourceFactory.ofDispatchParams(instanceCountResource, passes);
+  const entryPoints = passes.map(pass => pass.entryPoint);
+  const format = shaderReserved.createDispatchFormat(entryPoints);
+  const marshaller = shaderReserved.createDispatchMarshaller(format);
+  const buffer = bufferResourcesFactory.ofDispatch(name, format, params, marshaller, debuggable);
+  return {
+    format,
+    buffer,
+    params,
+  };
 };
 
 const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
   name: string,
-  computeShader: WPKShaderStageCompute<TUniform, TEntity, TBufferFormatMap>,
+  computeShader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap>,
   bufferFormats: TBufferFormatMap,
   bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
   dispatchResource: WPKDispatchResource<any>,
@@ -225,12 +287,10 @@ const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ex
 const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
   name: string,
   meshTemplateMap: TMeshTemplateMap,
-  renderShader: WPKShaderStageRender<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+  renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
   instanceCountFunc: () => number,
   bufferFormats: TBufferFormatMap,
   bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
-  isAntiAliasedFunc: () => boolean,
-  textureFormatFunc: () => GPUTextureFormat,
   debuggable: boolean,
 ): WPKResource<WPKRenderPipelineDetail[]> => {
   logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline details resource ${name}`);
@@ -271,7 +331,7 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
     const vertexBufferDetailsResource = resourceFactory.ofArray(vertexBufferDetailResources);
     const vertexBufferLayoutsResource = pipelineResourceFactory.ofVertexBufferLayouts(vertexBufferDetailsResource);
     const vertexBuffersResource = pipelineResourceFactory.ofVertexBuffers(vertexBufferDetailResources);
-    const pipelineResource = pipelineResourceFactory.ofRenderPipeline(name, index, mesh, renderShaderModuleResource, vertex.entryPoint, fragment.entryPoint, vertexBufferLayoutsResource, pipelineLayoutResource, isAntiAliasedFunc, textureFormatFunc);
+    const pipelineResource = pipelineResourceFactory.ofRenderPipeline(name, index, mesh, renderShaderModuleResource, vertex.entryPoint, fragment.entryPoint, vertexBufferLayoutsResource, pipelineLayoutResource);
     const renderPipelineDetailResource = pipelineResourceFactory.ofRenderPipelineDetail(indicesType, bindGroupsDetailResource, indicesBufferResource, vertexBuffersResource, pipelineResource, drawCountsFunc);
     renderPipelineDetailResources.push(renderPipelineDetailResource);
   }

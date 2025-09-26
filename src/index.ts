@@ -1,17 +1,16 @@
 export type {
   WPKBufferFormat,
   WPKBufferFormatMap,
-  WPKDisplay,
-  WPKDisplayOptions,
+  WPKPipelineRunner as WPKDisplay,
   WPKIndices,
   WPKMesh,
   WPKMeshParameters,
   WPKMeshTemplate,
   WPKMeshTemplateMap,
   WPKMeshParametersDeclaration,
-  WPKPipelineDefinition,
   WPKPipelineOptions,
-  WPKShader,
+  WPKComputeShader,
+  WPKRenderShader,
   WPKVertices,
 } from './types';
 

@@ -32,7 +32,7 @@ const renderGroupBindings = builders.renderGroupBindings<StarUniform, Star, Star
   .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
   .buildArray();
 
-const renderShader = builders.renderShader<StarUniform, Star, StarBufferFormats, StarMeshTemplates>()
+export const renderShader = builders.renderShader<StarUniform, Star, StarBufferFormats, StarMeshTemplates>()
   .groupBindings(renderGroupBindings)
   .passesArray()
   .pushObject()
@@ -41,8 +41,4 @@ const renderShader = builders.renderShader<StarUniform, Star, StarBufferFormats,
   .fragment(fragmentShader)
   .buildElement()
   .buildPasses()
-  .buildObject();
-
-export const starShader = builders.shader<StarUniform, Star, StarBufferFormats, StarMeshTemplates>()
-  .render(renderShader)
   .buildObject();

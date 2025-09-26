@@ -1,19 +1,21 @@
 import { logFactory } from '../logging';
 import { getShaderCodeStageResult } from './diagnostics';
 import { toCodeShaderCompute, toCodeShaderRender } from '../shader-code';
-import { WPKPipelineDefinition, WPKShaderModuleDetail } from '../types';
-import { WPKShaderCodeResult, WPKShaderCodeStageResult } from './types';
+import { WPKBufferFormatMap, WPKComputeShader, WPKRenderShader } from '../types';
+import { WPKShaderCodeStageResult } from './types';
 
 const LOGGER = logFactory.getLogger('shader');
 
-export const checkShaderCode = async (definition: WPKPipelineDefinition<any, any, any, any>): Promise<void> => {
-  const { compute, render } = await shaderCodeResult(definition);
-  if (compute) {
-    checkShaderCodeStage('compute', compute);
-  }
-  if (render) {
-    checkShaderCodeStage('render', render);
-  }
+export const checkComputeShaderCode = async (shader: WPKComputeShader<any, any, any>, bufferFormats: WPKBufferFormatMap<any, any>): Promise<void> => {
+  const computeShaderModuleDetail = toCodeShaderCompute(shader, bufferFormats);
+  const result = await getShaderCodeStageResult(computeShaderModuleDetail.code);
+  checkShaderCodeStage('compute', result);
+};
+
+export const checkRenderShaderCode = async (shader: WPKRenderShader<any, any, any, any>, bufferFormats: WPKBufferFormatMap<any, any>): Promise<void> => {
+  const renderShaderModuleDetail = toCodeShaderRender(shader, bufferFormats);
+  const result = await getShaderCodeStageResult(renderShaderModuleDetail.code);
+  checkShaderCodeStage('render', result);
 };
 
 export const checkShaderCodeStage = async (stage: string, result: WPKShaderCodeStageResult): Promise<void> => {
@@ -71,23 +73,4 @@ const toEndIndex = (source: string, spanEnd: number): number => {
 const toErrorMarkIndex = (source: string, spanStart: number): number => {
   const penultimateNewlineBeforeStart = source.lastIndexOf('\n', spanStart);
   return spanStart - penultimateNewlineBeforeStart;
-};
-
-const shaderCodeResult = async (definition: WPKPipelineDefinition<any, any, any, any>): Promise<WPKShaderCodeResult> => {
-  const { bufferFormats, shader: { compute: computeShader, render: renderShader } } = definition;
-  const compute = (computeShader === undefined)
-    ? undefined
-    : await shaderCodeStageResult(toCodeShaderCompute(computeShader, bufferFormats));
-  const render = (renderShader === undefined)
-    ? undefined
-    : await shaderCodeStageResult(toCodeShaderRender(renderShader, bufferFormats));
-  return {
-    compute,
-    render,
-  };
-};
-
-const shaderCodeStageResult = async (detail: WPKShaderModuleDetail): Promise<WPKShaderCodeStageResult> => {
-  const { code } = detail;
-  return await getShaderCodeStageResult(code);
 };

@@ -1,7 +1,8 @@
-import { BufferFormats } from './buffer-formats';
+import { bufferFormats, BufferFormats } from './buffer-formats';
 import { Triangle, TriangleUniform } from './instance-formats';
-import { trianglesPipelineDefinition, pipelineOptions } from './pipeline-definition';
-import { factories, setLogLevel, WPKDisplayOptions } from '../..';
+import { meshTemplates } from './mesh-templates';
+import { computeShader, renderShader } from './shader';
+import { builders, factories, setLogLevel } from '../..';
 import { logFactory } from '../../logging';
 import { WPKDebugOptions } from '../../types';
 import { Color, logFuncs } from '../../utils';
@@ -14,46 +15,40 @@ export const run = async (): Promise<void> => {
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
   }
-  window.addEventListener('resize', () => resizeCanvasToDisplaySize(canvas));
-  resizeCanvasToDisplaySize(canvas);
-  const pipelineRunner = await factories.display.of(canvas);
+  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, async (_aspectRatio) => { });
+  const pipelineOptions = builders.pipelineOptions<TriangleUniform, Triangle, true, true, true>()
+    .mutableUniform(true)
+    .mutableEntities(true)
+    .resizeableEntities(true)
+    .initialUniformObject().gameTime(0).buildInitialUniform()
+    .initialEntities([])
+    .buildObject();
   const debugOptions: WPKDebugOptions<TriangleUniform, Triangle, BufferFormats> = {
     async onBufferContents(contents) {
       logFuncs.lazyInfo(LOGGER, () => `Buffer contents: ${JSON.stringify(contents)}`);
     },
   };
-  const trianglePipeline = factories.pipeline.ofDefinition(trianglesPipelineDefinition, pipelineOptions, debugOptions);
+  const trianglePipeline = factories.pipeline.ofComputeRender('triangles', bufferFormats, meshTemplates, computeShader, renderShader, pipelineOptions, debugOptions);
   pipelineRunner.add(trianglePipeline);
-  const options: WPKDisplayOptions = {
-    clear: Color.BLACK,
-    isAntiAliased: true,
-  };
-  await pipelineRunner.display(options);
+  await pipelineRunner.step();
   let gameTime = 0;
   while (true) {
     gameTime++;
     trianglePipeline.mutateUniform({ gameTime });
-    const triangle: Triangle = {
-      x: 1,
-      y: 2,
-      z: 3,
-    };
+    const triangle = newTriangle();
     LOGGER.debug('adding triangle');
     trianglePipeline.add(triangle);
-    await pipelineRunner.display(options);
+    await pipelineRunner.step();
     await sleep(1_000);
   }
 };
 
+const newTriangle = (): Triangle => ({
+  x: 1,
+  y: 2,
+  z: 3,
+});
+
 const sleep = (millis: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, millis));
-};
-
-const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement): void => {
-  const displayWidth = canvas.clientWidth;
-  const displayHeight = canvas.clientHeight;
-  if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-    canvas.width = displayWidth;
-    canvas.height = displayHeight;
-  }
 };

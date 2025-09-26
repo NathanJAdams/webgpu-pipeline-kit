@@ -314,24 +314,16 @@ export const pipelineResourceFactory = {
     fragmentShaderEntryPoint: string,
     vertexBufferLayoutsResource: WPKResource<GPUVertexBufferLayout[]>,
     renderPipelineLayoutResource: WPKResource<GPUPipelineLayout>,
-    isAntiAliasedFunc: () => boolean,
-    textureFormatFunc: () => GPUTextureFormat,
   ): WPKResource<GPURenderPipeline> => {
     const label = `${name}-render-pipeline-${index}`;
     logFuncs.lazyDebug(LOGGER, () => `Creating render pipeline resource ${label}`);
     const topology = mesh.topology;
     const frontFace = mesh.winding;
     const cullMode = meshFuncs.cullMode(mesh);
-    const isAntiAliasedResource: WPKResource<boolean> = {
-      get: (_device, _queue, _encoder) => isAntiAliasedFunc(),
-      clean() { },
-    };
-    const textureFormatResource: WPKResource<GPUTextureFormat> = {
-      get: (_device, _queue, _encoder) => textureFormatFunc(),
-      clean() { },
-    };
+    const gpu = pipelineFuncs.getGpu();
+    const format = pipelineFuncs.getFormat(gpu);
     return resourceFactory.ofCachedFromDependencies(
-      [renderPipelineLayoutResource, shaderModuleResource, vertexBufferLayoutsResource, isAntiAliasedResource, textureFormatResource] as const,
+      [renderPipelineLayoutResource, shaderModuleResource, vertexBufferLayoutsResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating render pipeline ${label}`);
         const pipeline = device.createRenderPipeline({
@@ -346,11 +338,11 @@ export const pipelineResourceFactory = {
             module: values[1],
             entryPoint: fragmentShaderEntryPoint,
             targets: [{
-              format: values[4],
+              format,
             }],
           },
           multisample: {
-            count: pipelineFuncs.toSampleCount(values[3]),
+            count: pipelineFuncs.ANTI_ALIASED_SAMPLE_COUNT,
           },
           primitive: {
             topology,

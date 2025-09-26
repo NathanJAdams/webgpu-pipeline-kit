@@ -1,22 +1,5 @@
 import { DISPATCH_PARAMS_BUFFER_NAME, WPKDispatchParams, WPKDispatchSize } from './buffer-data';
 import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
-import { WPKMeshTemplateMap } from './mesh-template';
-import { WPKShader } from './shaders';
-import { Color } from '../utils';
-
-//#region definition
-export type WPKPipelineDefinition<
-  TUniform,
-  TEntity,
-  TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>,
-  TMeshTemplateMap extends WPKMeshTemplateMap,
-> = {
-  name: string;
-  bufferFormats: TBufferFormatMap;
-  meshTemplates: TMeshTemplateMap;
-  shader: WPKShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>;
-};
-//#endregion
 
 //#region options
 export type WPKPipelineOptions<TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean> = {
@@ -29,10 +12,10 @@ export type WPKPipelineOptions<TUniform, TEntity, TMutableUniform extends boolea
 //#endregion
 
 //#region pipeline
-export type WPKPipeline<TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean> =
-  {
+export type WPKPipeline<TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean, TCompute extends boolean, TRender extends boolean> =
+  & {
     name: string;
-    pipelineDetail: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder, options: WPKPipelineDetailOptions) => WPKPipelineDetail;
+    pipelineDetail: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => WPKPipelineDetail<TCompute, TRender>;
     clean: () => void;
   }
   & (TMutableUniform extends true
@@ -58,10 +41,6 @@ export type WPKPipeline<TUniform, TEntity, TMutableUniform extends boolean, TMut
     }
     : object
   );
-export type WPKPipelineDetailOptions = {
-  isAntiAliased: boolean;
-  textureFormat: GPUTextureFormat;
-};
 //#endregion
 
 //#region details
@@ -98,34 +77,44 @@ export type WPKRenderPipelineDetail = {
   drawCountsFunc: () => WPKDrawCounts;
 };
 export type WPKDebugFunc = () => Promise<void>;
-export type WPKPipelineDetail = {
-  name: string;
-  instanceCount: number;
-  compute?: WPKComputePipelineDetail[];
-  render?: WPKRenderPipelineDetail[];
-  debugFunc?: WPKDebugFunc;
-};
+export type WPKPipelineDetail<TCompute extends boolean, TRender extends boolean> =
+  & {
+    name: string;
+    instanceCount: number;
+    debugFunc?: WPKDebugFunc;
+  }
+  & (
+    TCompute extends true
+    ? {
+      compute: WPKComputePipelineDetail[];
+    }
+    : object
+  )
+  & (
+    TRender extends true
+    ? {
+      render: WPKRenderPipelineDetail[];
+    }
+    : object
+  )
+  ;
 //#endregion
 
-//#region display
-export type WPKDisplayAddPipelineOptionsAddBefore = {
+//#region runner
+export type WPKAddPipelineOptionsAddBefore = {
   before: string;
 };
-export type WPKDisplayAddPipelineOptionsAddAfter = {
+export type WPKAddPipelineOptionsAddAfter = {
   after: string;
 };
-export type WPKDisplayAddPipelineOptions =
-  | WPKDisplayAddPipelineOptionsAddBefore
-  | WPKDisplayAddPipelineOptionsAddAfter
+export type WPKAddPipelineOptions =
+  | WPKAddPipelineOptionsAddBefore
+  | WPKAddPipelineOptionsAddAfter
   ;
-export type WPKDisplayOptions = {
-  clear: Color;
-  isAntiAliased: boolean;
-};
-export type WPKDisplay = {
-  add: (pipeline: WPKPipeline<any, any, any, any, any>, options?: WPKDisplayAddPipelineOptions) => void;
+export type WPKPipelineRunner<TCompute extends boolean, TRender extends boolean> = {
+  add: (pipeline: WPKPipeline<any, any, any, any, any, TCompute, TRender>, options?: WPKAddPipelineOptions) => void;
   remove: (name: string) => void;
-  display: (options: WPKDisplayOptions) => Promise<void>;
+  step: () => Promise<void>;
 };
 //#endregion
 
@@ -134,7 +123,8 @@ export type WPKViews = {
   view: GPUTextureView;
   resolveTarget?: GPUTextureView;
 };
-export type WPKViewsFunc = (isAntiAliased: boolean) => WPKViews;
+export type WPKViewsFunc = () => WPKViews;
+export type WPKAspectRatioUpdater = (aspectRatio: number) => Promise<any>;
 //#endregion
 
 //#region debug
@@ -156,4 +146,8 @@ export type WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap extends
 } & {
   [DISPATCH_PARAMS_BUFFER_NAME]: WPKDispatchParams<any>;
 };
+//#endregion
+
+//#region invoke
+export type WPKPipelineInvoker<TCompute extends boolean, TRender extends boolean> = (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail<TCompute, TRender>) => void;
 //#endregion

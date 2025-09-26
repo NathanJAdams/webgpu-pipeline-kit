@@ -49,13 +49,13 @@ const VERTEX_FORMAT_BYTE_LENGTHS: Record<GPUVertexFormat, number> = {
 };
 
 export const pipelineFuncs = {
+  ANTI_ALIASED_SAMPLE_COUNT: 4,
   toByteLength: (format: GPUVertexFormat): number => {
     return VERTEX_FORMAT_BYTE_LENGTHS[format];
   },
   toByteLengthTotal: (formats: GPUVertexFormat[]): number => {
     return formats.reduce((currentByteLength, format) => currentByteLength + pipelineFuncs.toByteLength(format), 0);
   },
-  toSampleCount: (isAntiAliased: boolean): number => isAntiAliased ? 4 : 1,
   toDispatchParams: (passes: WPKComputePass<any, any, any>[], instanceCount: number): WPKDispatchParams<any> => {
     return {
       instanceCount,
