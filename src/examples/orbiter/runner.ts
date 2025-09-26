@@ -15,8 +15,8 @@ export const run = async (): Promise<void> => {
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
   }
-  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, async (aspectRatio) => camera.setAspectRatio(aspectRatio));
   const camera = new Camera(true);
+  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, async (aspectRatio) => camera.setAspectRatio(aspectRatio));
   const orbiterPipelineOptions = builders.pipelineOptions<OrbiterUniform, Orbiter, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)

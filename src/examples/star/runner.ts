@@ -15,10 +15,10 @@ export const run = async (): Promise<void> => {
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
   }
+  const camera = new Camera(true);
   const aspectRatioChangeDetector = changeDetectorFactory.ofTripleEquals(1);
   let hasResized = true;
   const runner = await factories.pipelineRunner.ofRender(canvas, Color.BLACK, async (aspectRatio) => hasResized = aspectRatioChangeDetector.compareAndUpdate(aspectRatio));
-  const camera = new Camera(true);
   const starPipelineOptions = builders.pipelineOptions<StarUniform, Star, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)

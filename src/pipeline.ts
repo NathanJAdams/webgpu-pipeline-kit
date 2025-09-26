@@ -11,7 +11,7 @@ import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKComputeShader, WPKRenderShader, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferFormatUniform, WPKBufferFormatEntityMarshalled, WPKBufferFormatEntityLayout, WPKShaderStage } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKComputeShader, WPKRenderShader, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferFormatUniform, WPKBufferFormatEntityMarshalled, WPKBufferFormatEntityLayout } from './types';
 import { logFuncs, recordFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -28,7 +28,7 @@ export const pipelineFactory = {
     checkNotUsingReservedBufferFormats(bufferFormats);
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
-    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, shader);
+    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, shader, undefined);
     const dispatchResource = toComputeDispatchResource(name, shader, bufferResources.instanceCount, debug.onBufferContents !== undefined);
     const computePipelineDetailsResource = toComputePipelineDetailsResource(name, shader, bufferFormats, bufferResources, dispatchResource);
     const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, dispatchResource, entityCache, debug);
@@ -89,7 +89,7 @@ export const pipelineFactory = {
     checkNotUsingReservedBufferFormats(bufferFormats);
     const uniformCache = cacheFactory.ofUniform(options.mutableUniform, options.initialUniform);
     const entityCache = toEntityCache(options, bufferFormats);
-    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, shader);
+    const bufferResources = toBufferResources(name, uniformCache, entityCache, bufferFormats, debug, undefined, shader);
     const renderPipelineDetailResource = toRenderPipelineDetailsResource(name, meshTemplates, shader, bufferResources.instanceCount, bufferFormats, bufferResources, debug.onBufferContents !== undefined);
     const debugFuncResource = toDebugFuncResource(bufferFormats, bufferResources, undefined, entityCache, debug);
     const pipelineDetailResource = toPipelineDetailResource<false, true>(name, bufferResources, undefined, renderPipelineDetailResource, debugFuncResource);
@@ -135,22 +135,24 @@ const toBufferResources = <TUniform, TEntity, TBufferFormatMap extends WPKBuffer
   entityCache: WPKEntityCache<TEntity, any, any>,
   bufferFormats: TBufferFormatMap,
   debug: WPKDebugOptions<TUniform, TEntity, TBufferFormatMap>,
-  ...shaders: WPKShaderStage<TUniform, TEntity, TBufferFormatMap, any, any>[]
+  computeShader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap> | undefined,
+  renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, any> | undefined,
 ): WPKBufferResources<any, any, any> => {
   logFuncs.lazyTrace(LOGGER, () => `Create buffer resources for definition ${name}`);
-  const bufferUsages = toBufferUsages<TUniform, TEntity, TBufferFormatMap>(bufferFormats, ...shaders);
+  const bufferUsages = toBufferUsages<TUniform, TEntity, TBufferFormatMap>(bufferFormats, computeShader, renderShader);
   return bufferResourcesFactory.ofUniformAndInstances(name, uniformCache, entityCache, bufferFormats, bufferUsages, debug.onBufferContents !== undefined);
 };
 
 const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
   bufferFormats: TBufferFormatMap,
-  ...shaders: WPKShaderStage<TUniform, TEntity, TBufferFormatMap, any, any>[]
+  computeShader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap> | undefined,
+  renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, any> | undefined,
 ): Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags> => {
   logFuncs.lazyDebug(LOGGER, () => `Calculate buffer usage from buffer formats ${JSON.stringify(Object.keys(bufferFormats))}`);
-  return recordFuncs.mapRecord(bufferFormats, (bufferFormat, key) => {
-    logFuncs.lazyTrace(LOGGER, () => `Calculate buffer usage from buffer format ${JSON.stringify(key)}`);
-    const isBinding = shaders.some(shader => isBufferBound(key, shader.groupBindings));
-    const isVertex = shaders !== undefined; // TODO check buffer locations for render shaders
+  return recordFuncs.mapRecord(bufferFormats, (bufferFormat, bufferName) => {
+    logFuncs.lazyTrace(LOGGER, () => `Calculate buffer usage from buffer format ${JSON.stringify(bufferName)}`);
+    const isBinding = isBufferBound(bufferName, computeShader?.groupBindings) || isBufferBound(bufferName, renderShader?.groupBindings);
+    const isVertex = renderShader?.passes.some(pass => pass.vertex.vertexBuffers.some(vertexBuffer => vertexBuffer.buffer === bufferName));
     const { bufferType } = bufferFormat;
     let usage = 0;
     if (bufferType === 'uniform') {
@@ -165,9 +167,9 @@ const toBufferUsages = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFor
         usage |= GPUBufferUsage.VERTEX;
       }
     }
-    logFuncs.lazyTrace(LOGGER, () => `Buffer ${key} has usage ${usageToString(usage)}`);
+    logFuncs.lazyTrace(LOGGER, () => `Buffer ${bufferName} has usage ${usageToString(usage)}`);
     if (usage === 0) {
-      logFuncs.lazyWarn(LOGGER, () => `Buffer ${key} isn't used`);
+      logFuncs.lazyWarn(LOGGER, () => `Buffer ${bufferName} isn't used`);
     }
     return usage;
   }) as Record<WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, boolean, boolean>, GPUBufferUsageFlags>;
