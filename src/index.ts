@@ -8,6 +8,7 @@ export type {
   WPKMeshTemplate,
   WPKMeshTemplateMap,
   WPKMeshParametersDeclaration,
+  WPKPeripheralEventHandlers,
   WPKPipelineOptions,
   WPKComputeShader,
   WPKRenderShader,
