@@ -1,12 +1,12 @@
 import { Equality } from './compare';
 
-export type ChangeDetector<T> = {
+export type WPKChangeDetector<T> = {
     get: () => T;
     compareAndUpdate: (next: T) => boolean;
 };
 
 export const changeDetectorFactory = {
-  of: <T>(first: T, equals: Equality<T>): ChangeDetector<T> => {
+  of: <T>(first: T, equals: Equality<T>): WPKChangeDetector<T> => {
     let current: T = first;
     return {
       get() {
@@ -19,10 +19,10 @@ export const changeDetectorFactory = {
       },
     };
   },
-  ofDoubleEquals: <T>(first: T): ChangeDetector<T> => {
+  ofDoubleEquals: <T>(first: T): WPKChangeDetector<T> => {
     return changeDetectorFactory.of<T>(first, (a, b) => a == b);
   },
-  ofTripleEquals: <T>(first: T): ChangeDetector<T> => {
+  ofTripleEquals: <T>(first: T): WPKChangeDetector<T> => {
     return changeDetectorFactory.of<T>(first, (a, b) => a === b);
   },
 };
