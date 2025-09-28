@@ -17,13 +17,18 @@ export class Quaternion {
   }
 
   static fromAxisAngle(axis: Vector3, radians: number): Quaternion {
+    const axisLength = axis.length();
+    if (axisLength < 1e-6) {
+      return Quaternion.IDENTITY;
+    }
     const halfAngle = radians * 0.5;
     const s = Math.sin(halfAngle);
     const c = Math.cos(halfAngle);
+    const multiplier = s / axisLength;
     return new Quaternion(
-      axis.x * s,
-      axis.y * s,
-      axis.z * s,
+      axis.x * multiplier,
+      axis.y * multiplier,
+      axis.z * multiplier,
       c
     );
   }
@@ -71,20 +76,30 @@ export class Quaternion {
     );
   }
 
-  slerp(target: Quaternion, proportion: number): Quaternion {
+  slerp(target: Quaternion, proportion: number, epsilon = 1e-6): Quaternion {
     if (proportion <= 0) {
       return this;
     }
     if (proportion >= 1) {
       return target;
     }
-    const dot = this.x * target.x + this.y * target.y + this.z * target.z + this.w * target.w;
+    let dot = this.x * target.x + this.y * target.y + this.z * target.z + this.w * target.w;
     if (dot < 0) {
       target = new Quaternion(-target.x, -target.y, -target.z, -target.w);
+      dot = -dot;
     }
     const theta_0 = Math.acos(dot);
     const theta = theta_0 * proportion;
     const sinTheta = Math.sin(theta_0);
+    if (sinTheta < epsilon) {
+      // fallback to linear interpolation to avoid division by zero
+      return new Quaternion(
+        this.x * (1 - proportion) + target.x * proportion,
+        this.y * (1 - proportion) + target.y * proportion,
+        this.z * (1 - proportion) + target.z * proportion,
+        this.w * (1 - proportion) + target.w * proportion
+      ).normalize();
+    }
     const s0 = Math.cos(theta) - dot * Math.sin(theta) / sinTheta;
     const s1 = Math.sin(theta) / sinTheta;
     return new Quaternion(

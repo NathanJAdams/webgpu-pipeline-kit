@@ -1,3 +1,5 @@
+import { logFactory } from '../logging';
+import { logFuncs } from '../utils';
 import { Quaternion } from './Quaternion';
 import { Vector3 } from './Vector3';
 
@@ -7,6 +9,8 @@ export type TransformationValues = [
   number, number, number, number,
   number, number, number, number,
 ];
+
+const LOGGER = logFactory.getLogger('data');
 
 export class Transformation {
   private _position = Vector3.ZERO;
@@ -38,12 +42,17 @@ export class Transformation {
   }
 
   setScale(scale: Vector3) {
+    if (scale.x <= 0 || scale.y <= 0 || scale.z <= 0) {
+      logFuncs.lazyWarn(LOGGER, () => `Cannot set scale component to non-positive value [${scale.x}, ${scale.y}, ${scale.z}]`);
+      return;
+    }
     this.isDirtyScale = true;
     this._scale = scale;
   }
 
   private flushChanges(): void {
     if (this.isDirtyRotation || this.isDirtyScale) {
+      this._rotation = this._rotation.normalize();
       const { x: sx, y: sy, z: sz } = this._scale;
       const { x: rx, y: ry, z: rz, w: rw } = this._rotation;
 
