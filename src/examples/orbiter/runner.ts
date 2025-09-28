@@ -15,7 +15,7 @@ export const run = async (): Promise<void> => {
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
   }
-  const camera = new Camera(true);
+  const camera = new Camera();
   const eventHandlers: WPKPeripheralEventHandlers = {
     'screen-resize': async (eventInfo) => camera.setAspectRatio(eventInfo.aspectRatio),
   };
