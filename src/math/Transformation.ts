@@ -31,6 +31,16 @@ export class Transformation {
     return this._matrix;
   }
 
+  get position(): Vector3 {
+    return this._position;
+  }
+  get rotation(): Quaternion {
+    return this._rotation;
+  }
+  get scale(): Vector3 {
+    return this._scale;
+  }
+
   setPosition(position: Vector3) {
     this.isDirtyPosition = true;
     this._position = position;

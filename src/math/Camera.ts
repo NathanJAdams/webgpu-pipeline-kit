@@ -52,6 +52,25 @@ export class Camera {
     return this._viewProjectionMatrix;
   }
 
+  get position(): Vector3 {
+    return this._position;
+  }
+  get rotation(): Quaternion {
+    return this._rotation;
+  }
+  get fieldOfViewDegrees(): number {
+    return this._fieldOfViewDegrees;
+  }
+  get aspectRatio(): number {
+    return this._aspectRatio;
+  }
+  get near(): number {
+    return this._near;
+  }
+  get far(): number {
+    return this._far;
+  }
+
   setPosition(position: Vector3) {
     this.isDirtyPosition = true;
     this._position = position;
