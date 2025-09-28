@@ -1,7 +1,7 @@
 {
   "name": "webgpu-pipeline-kit",
   "description": "A type-safe declarative way of creating WebGPU pipelines",
-  "version": "1.7.7",
+  "version": "1.7.8",
   "author": {
     "name": "Nathan Adams",
     "url": "https://github.com/NathanJAdams"
