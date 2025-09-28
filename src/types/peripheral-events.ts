@@ -22,6 +22,8 @@ export enum WPKMouseButton {
   LEFT = 'left',
   MIDDLE = 'middle',
   RIGHT = 'right',
+  BACK = 'back',
+  FORWARD = 'forward',
 };
 type WPKKeyModifiers = {
   alt: boolean;
@@ -57,7 +59,6 @@ export type WPKMouseButtonEventInfo = WPKMouseEventInfoBase & {
   repeatCount: number;
 };
 export type WPKMouseMoveEventInfo = WPKMouseEventInfoBase & {
-  delta: WPKScreenXY;
 };
 export type WPKMouseDragEventInfo = WPKMouseButtonEventInfo & WPKMouseMoveEventInfo & {
   drag: WPKScreenXY;
@@ -68,7 +69,10 @@ export type WPKScreenEventInfo = WPKPeripheralEventBase & {
   aspectRatio: number;
 };
 
-export type WPKPeripheralEventHandler<TEvent extends keyof WPKPeripheralEventInfoTypeMap> = (eventInfo: WPKPeripheralEventInfoTypeMap[TEvent]) => Promise<any>;
+export type WPKPeripheralEventHandler<TEvent extends keyof WPKPeripheralEventInfoTypeMap> = (eventInfo: WPKPeripheralEventInfoTypeMap[TEvent]) => any;
 export type WPKPeripheralEventHandlers = {
   [E in keyof WPKPeripheralEventInfoTypeMap]?: WPKPeripheralEventHandler<E>;
+};
+export type WPKEventListenerRemover = {
+  remove: () => void;
 };

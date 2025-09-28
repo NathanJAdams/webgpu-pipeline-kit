@@ -1,192 +1,316 @@
 import { logFactory } from './logging';
-import { WPKKeyEventInfo, WPKMouseButton, WPKMouseButtonEventInfo, WPKMouseDragEventInfo, WPKMouseMoveEventInfo, WPKPeripheralEventHandler, WPKPeripheralEventHandlers, WPKPeripheralEventType, WPKScreenXY } from './types';
+import { WPKEventListenerRemover, WPKKeyEventInfo, WPKMouseButton, WPKMouseButtonEventInfo, WPKMouseDragEventInfo, WPKMouseMoveEventInfo, WPKPeripheralEventHandler, WPKPeripheralEventHandlers, WPKPeripheralEventInfoTypeMap, WPKPeripheralEventType, WPKScreenEventInfo, WPKScreenXY } from './types';
 import { changeDetectorFactory, logFuncs, WPKChangeDetector } from './utils';
 
 const LOGGER = logFactory.getLogger('events');
 
 type WPKCoords = [number, number];
 
-export const addPeripheralEventHandlers = async (canvas: HTMLCanvasElement, handlers: WPKPeripheralEventHandlers): Promise<void> => {
-  if (window === undefined) {
-    logFuncs.lazyInfo(LOGGER, () => 'Not adding event handlers as window is undefined');
-    return;
-  }
-  addKeyEventListener(canvas, handlers, WPKPeripheralEventType.KEY_DOWN, 'keydown');
-  addKeyEventListener(canvas, handlers, WPKPeripheralEventType.KEY_PRESS, 'keypress');
-  addKeyEventListener(canvas, handlers, WPKPeripheralEventType.KEY_UP, 'keyup');
-  const isMouseMoveRequired = hasEventType(handlers, WPKPeripheralEventType.MOUSE_DRAG) || hasEventType(handlers, WPKPeripheralEventType.MOUSE_MOVE);
-  const isMouseDownRequired = isMouseMoveRequired || hasEventType(handlers, WPKPeripheralEventType.MOUSE_DOWN);
-  const isMouseUpRequired = hasEventType(handlers, WPKPeripheralEventType.MOUSE_UP);
-  const isScreenResizeRequired = isMouseDownRequired || isMouseUpRequired || hasEventType(handlers, WPKPeripheralEventType.SCREEN_RESIZE);
-  const mousePosition: WPKCoords = [0, 0];
-  const mouseDelta: WPKCoords = [0, 0];
-  const mouseButtonChangePosition: WPKCoords = [0, 0];
-  const mouseButtonTrigger = changeDetectorFactory.ofTripleEquals<WPKMouseButton>(WPKMouseButton.LEFT);
-  const screenPosition: WPKCoords = [0, 0];
-  const screenSize: WPKCoords = [0, 0];
-  if (isMouseMoveRequired) {
-    addMouseMoveListener(handlers, screenPosition, screenSize, mousePosition, mouseDelta, mouseButtonChangePosition, mouseButtonTrigger);
-  }
-  if (isMouseDownRequired) {
-    addMouseButtonListener(handlers[WPKPeripheralEventType.MOUSE_DOWN], 'mousedown', screenPosition, screenSize, mousePosition, mouseDelta, mouseButtonChangePosition, mouseButtonTrigger);
-  }
-  if (isMouseUpRequired) {
-    addMouseButtonListener(handlers[WPKPeripheralEventType.MOUSE_UP], 'mouseup', screenPosition, screenSize, mousePosition, mouseDelta, mouseButtonChangePosition, mouseButtonTrigger);
-  }
-  if (isScreenResizeRequired) {
-    addScreenResizeListener(handlers, canvas, screenPosition, screenSize);
-  }
-};
-
-const hasEventType = (handlers: WPKPeripheralEventHandlers, eventType: WPKPeripheralEventType): boolean => (handlers[eventType] !== undefined);
-
-const addKeyEventListener = async (
+export const addPeripheralEventHandlers = (
   canvas: HTMLCanvasElement,
   handlers: WPKPeripheralEventHandlers,
-  eventType: WPKPeripheralEventType.KEY_DOWN | WPKPeripheralEventType.KEY_PRESS | WPKPeripheralEventType.KEY_UP,
-  eventName: 'keydown' | 'keypress' | 'keyup'
-): Promise<void> => {
-  const handler = handlers[eventType];
-  if (handler !== undefined) {
-    logFuncs.lazyInfo(LOGGER, () => `Adding ${eventType} listener`);
-    window.addEventListener(eventName, async (event) => {
-      logFuncs.lazyInfo(LOGGER, () => `Handling ${eventName} event`);
-      await handler(toKeyEventInfo(canvas, event));
-    });
+  eventsWindow: Window | undefined = window
+): WPKEventListenerRemover => {
+  if (typeof eventsWindow === 'undefined') {
+    return {
+      remove() {
+      }
+    };
+  }
+  const removers: WPKEventListenerRemover[] = [];
+  const screenPosition: WPKCoords = [0, 0];
+  const screenSize: WPKCoords = [0, 0];
+  setupKeyHandlers(handlers, eventsWindow, removers);
+  setupMouseHandlers(handlers, eventsWindow, removers, screenPosition, screenSize);
+  setupScreenHandlers(canvas, handlers, eventsWindow, removers, screenPosition, screenSize);
+  return {
+    remove() {
+      removers.forEach((remover) => {
+        try {
+          remover.remove();
+        } catch (error) {
+          logFuncs.lazyWarn(LOGGER, () => `Error when removing listener ${error}`);
+        }
+      });
+      removers.length = 0;
+    },
+  };
+};
+
+const setupKeyHandlers = (
+  handlers: WPKPeripheralEventHandlers,
+  eventsWindow: Window,
+  eventListenerRemovers: WPKEventListenerRemover[]
+): void => {
+  const handlerKeyDown = handlers[WPKPeripheralEventType.KEY_DOWN];
+  const handlerKeyPress = handlers[WPKPeripheralEventType.KEY_PRESS];
+  const handlerKeyUp = handlers[WPKPeripheralEventType.KEY_UP];
+  if (handlerKeyDown !== undefined) {
+    eventListenerRemovers.push(addKeyEventListener(eventsWindow, handlerKeyDown, WPKPeripheralEventType.KEY_DOWN, 'keydown'));
+  }
+  if (handlerKeyPress !== undefined) {
+    eventListenerRemovers.push(addKeyEventListener(eventsWindow, handlerKeyPress, WPKPeripheralEventType.KEY_PRESS, 'keypress'));
+  }
+  if (handlerKeyUp !== undefined) {
+    eventListenerRemovers.push(addKeyEventListener(eventsWindow, handlerKeyUp, WPKPeripheralEventType.KEY_UP, 'keyup'));
   }
 };
 
-const addMouseMoveListener = async (
+const setupMouseHandlers = (
   handlers: WPKPeripheralEventHandlers,
+  eventsWindow: Window,
+  eventListenerRemovers: WPKEventListenerRemover[],
+  screenPosition: WPKCoords,
+  screenSize: WPKCoords,
+): void => {
+  const handlerMouseDown = handlers[WPKPeripheralEventType.MOUSE_DOWN];
+  const handlerMouseDrag = handlers[WPKPeripheralEventType.MOUSE_DRAG];
+  const handlerMouseUp = handlers[WPKPeripheralEventType.MOUSE_UP];
+  const handlerMouseMove = handlers[WPKPeripheralEventType.MOUSE_MOVE];
+  const isMouseMoveRequired = (handlerMouseDrag !== undefined) || (handlerMouseMove !== undefined);
+  const isMouseDownRequired = isMouseMoveRequired || (handlerMouseDown !== undefined);
+  const isMouseUpRequired = (handlerMouseUp !== undefined);
+  const mousePosition: WPKCoords = [0, 0];
+  const mouseDrag: WPKCoords = [0, 0];
+  const mouseDown: WPKCoords = [0, 0];
+  const mouseDownButton = changeDetectorFactory.ofTripleEquals<WPKMouseButton>(WPKMouseButton.LEFT);
+  if (isMouseMoveRequired) {
+    eventListenerRemovers.push(addMouseMoveListener(eventsWindow, handlerMouseDrag, handlerMouseMove, screenPosition, screenSize, mousePosition, mouseDrag, mouseDown, mouseDownButton));
+  }
+  if (isMouseDownRequired) {
+    eventListenerRemovers.push(addMouseButtonListener(eventsWindow, handlerMouseDown, WPKPeripheralEventType.MOUSE_DOWN, 'mousedown', screenPosition, screenSize, mousePosition, mouseDown, mouseDownButton));
+  }
+  if (isMouseUpRequired) {
+    eventListenerRemovers.push(addMouseButtonListener(eventsWindow, handlerMouseUp, WPKPeripheralEventType.MOUSE_UP, 'mouseup', screenPosition, screenSize, mousePosition, mouseDown, mouseDownButton));
+  }
+};
+
+const setupScreenHandlers = (
+  canvas: HTMLCanvasElement,
+  handlers: WPKPeripheralEventHandlers,
+  eventsWindow: Window,
+  eventListenerRemovers: WPKEventListenerRemover[],
+  screenPosition: WPKCoords,
+  screenSize: WPKCoords,
+): void => {
+  const handlerScreenResize = handlers[WPKPeripheralEventType.SCREEN_RESIZE];
+  const isScreenResizeRequired = (handlerScreenResize !== undefined)
+    || (handlers[WPKPeripheralEventType.MOUSE_DOWN] !== undefined)
+    || (handlers[WPKPeripheralEventType.MOUSE_DRAG] !== undefined)
+    || (handlers[WPKPeripheralEventType.MOUSE_MOVE] !== undefined)
+    || (handlers[WPKPeripheralEventType.MOUSE_UP] !== undefined)
+    ;
+  if (isScreenResizeRequired) {
+    updateScreenBounds(eventsWindow, canvas, screenPosition, screenSize);
+    eventListenerRemovers.push(addScreenResizeListener(eventsWindow, handlerScreenResize, canvas, screenPosition, screenSize));
+    if (handlerScreenResize !== undefined) {
+      const eventInfo: WPKScreenEventInfo = {
+        width: screenSize[0],
+        height: screenSize[1],
+        aspectRatio: screenSize[0] / screenSize[1],
+        timestamp: 0,
+      };
+      invokeHandler(handlerScreenResize, WPKPeripheralEventType.SCREEN_RESIZE, eventInfo);
+    }
+  }
+};
+
+const addKeyEventListener = <TEventType extends WPKPeripheralEventType.KEY_DOWN | WPKPeripheralEventType.KEY_PRESS | WPKPeripheralEventType.KEY_UP>(
+  eventsWindow: Window,
+  handler: WPKPeripheralEventHandler<TEventType>,
+  eventType: TEventType,
+  eventName: 'keydown' | 'keypress' | 'keyup'
+): WPKEventListenerRemover => {
+  logFuncs.lazyInfo(LOGGER, () => `Adding ${eventName} listener`);
+  const listener = (event: KeyboardEvent) => {
+    logFuncs.lazyInfo(LOGGER, () => `Handling ${eventName} event`);
+    invokeHandler(handler, eventType, toKeyEventInfo(event));
+  };
+  eventsWindow.addEventListener(eventName, listener, { passive: true });
+  return {
+    remove() {
+      eventsWindow.removeEventListener(eventName, listener);
+    },
+  };
+};
+
+const addMouseMoveListener = (
+  eventsWindow: Window,
+  mouseDragHandler: WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_DRAG> | undefined,
+  mouseMoveHandler: WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_MOVE> | undefined,
   screenPosition: WPKCoords,
   screenSize: WPKCoords,
   mousePosition: WPKCoords,
-  mouseDelta: WPKCoords,
-  mouseDragStart: WPKCoords,
-  mouseButtonTrigger: WPKChangeDetector<WPKMouseButton>
-): Promise<void> => {
-  const mouseDragHandler = handlers[WPKPeripheralEventType.MOUSE_DRAG];
-  const mouseMoveHandler = handlers[WPKPeripheralEventType.MOUSE_MOVE];
-  window.addEventListener('mousemove', async (event) => {
+  mouseDrag: WPKCoords,
+  mouseDown: WPKCoords,
+  mouseDownButton: WPKChangeDetector<WPKMouseButton>
+): WPKEventListenerRemover => {
+  const listener = (event: MouseEvent) => {
     logFuncs.lazyTrace(LOGGER, () => `Handling ${event.type} event`);
-    updateMousePositions(event, screenPosition, mousePosition, mouseDelta);
+    updateMousePositions(event, screenPosition, mousePosition);
     if (event.buttons > 0) {
       //mouse drag
       if (mouseDragHandler !== undefined) {
-        const eventInfo = toMouseDragEventInfo(event, screenSize, mousePosition, mouseDelta, mouseDragStart, mouseButtonTrigger);
-        await mouseDragHandler(eventInfo);
+        mouseDrag[0] = mousePosition[0] - mouseDown[0];
+        mouseDrag[1] = mousePosition[1] - mouseDown[1];
+        const eventInfo = toMouseDragEventInfo(event, screenSize, mousePosition, mouseDrag, mouseDownButton);
+        invokeHandler(mouseDragHandler, WPKPeripheralEventType.MOUSE_DRAG, eventInfo);
       }
     } else {
       // mouse move
       if (mouseMoveHandler !== undefined) {
-        const eventInfo = toMouseMoveEventInfo(event, screenSize, mousePosition, mouseDelta);
-        await mouseMoveHandler(eventInfo);
+        const eventInfo = toMouseMoveEventInfo(event, screenSize, mousePosition);
+        invokeHandler(mouseMoveHandler, WPKPeripheralEventType.MOUSE_MOVE, eventInfo);
       }
     }
-  });
+  };
+  eventsWindow.addEventListener('mousemove', listener, { passive: true });
+  return {
+    remove() {
+      eventsWindow.removeEventListener('mousemove', listener);
+    },
+  };
 };
 
-const MOUSE_BUTTONS = [WPKMouseButton.LEFT, WPKMouseButton.RIGHT, WPKMouseButton.MIDDLE];
-const addMouseButtonListener = async (
-  handler: WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_DOWN> | WPKPeripheralEventHandler<WPKPeripheralEventType.MOUSE_UP> | undefined,
+const buttonMap: Record<number, WPKMouseButton> = {
+  0: WPKMouseButton.LEFT,
+  1: WPKMouseButton.MIDDLE,
+  2: WPKMouseButton.RIGHT,
+  3: WPKMouseButton.BACK,
+  4: WPKMouseButton.FORWARD,
+};
+
+const addMouseButtonListener = <TEventType extends WPKPeripheralEventType.MOUSE_DOWN | WPKPeripheralEventType.MOUSE_UP>(
+  eventsWindow: Window,
+  handler: WPKPeripheralEventHandler<TEventType> | undefined,
+  eventType: TEventType,
   eventName: 'mousedown' | 'mouseup',
   screenPosition: WPKCoords,
   screenSize: WPKCoords,
   mousePosition: WPKCoords,
-  mouseDelta: WPKCoords,
-  mouseButtonChangePosition: WPKCoords,
-  mouseButtonTrigger: WPKChangeDetector<WPKMouseButton>
-): Promise<void> => {
-  if (handler !== undefined) {
-    window.addEventListener(eventName, async (event) => {
-      logFuncs.lazyInfo(LOGGER, () => `Handling ${event.type} event`);
-      mouseButtonTrigger.compareAndUpdate(MOUSE_BUTTONS[event.button]);
-      updateMousePositions(event, screenPosition, mousePosition, mouseDelta);
-      mouseButtonChangePosition[0] = mousePosition[0];
-      mouseButtonChangePosition[1] = mousePosition[1];
-      if (handler !== undefined) {
-        const eventInfo = toMouseButtonEventInfo(event, screenSize, mousePosition, mouseButtonTrigger);
-        handler(eventInfo);
+  mouseDown: WPKCoords,
+  mouseDownButton: WPKChangeDetector<WPKMouseButton>
+): WPKEventListenerRemover => {
+  const listener = createRAFThrottledHandler((event: MouseEvent) => {
+    logFuncs.lazyInfo(LOGGER, () => `Handling ${event.type} event`);
+    const { button } = event;
+    if (eventName === 'mousedown') {
+      const mouseButton = buttonMap[button];
+      if (mouseButton !== undefined) {
+        mouseDownButton.compareAndUpdate(mouseButton);
       }
-    });
-  }
+    } else {
+      logFuncs.lazyDebug(LOGGER, () => `Mouse button ${button} will not trigger events`);
+    }
+    updateMousePositions(event, screenPosition, mousePosition);
+    if (eventName === 'mousedown') {
+      mouseDown[0] = mousePosition[0];
+      mouseDown[1] = mousePosition[1];
+    }
+    if (handler !== undefined) {
+      const eventInfo = toMouseButtonEventInfo(event, screenSize, mousePosition, mouseDownButton);
+      invokeHandler(handler, eventType, eventInfo);
+    }
+  });
+  eventsWindow.addEventListener(eventName, listener, { passive: true });
+  return {
+    remove() {
+      eventsWindow.removeEventListener(eventName, listener);
+    },
+  };
 };
 
-const addScreenResizeListener = async (
-  handlers: WPKPeripheralEventHandlers,
+const addScreenResizeListener = (
+  eventsWindow: Window,
+  handler: WPKPeripheralEventHandler<WPKPeripheralEventType.SCREEN_RESIZE> | undefined,
   canvas: HTMLCanvasElement,
   screenPosition: WPKCoords,
   screenSize: WPKCoords
-): Promise<void> => {
-  const screenResizeHandler = handlers[WPKPeripheralEventType.SCREEN_RESIZE];
-  window.addEventListener('resize', async (event) => {
+): WPKEventListenerRemover => {
+  const listener = createRAFThrottledHandler((event: UIEvent) => {
     logFuncs.lazyInfo(LOGGER, () => `Handling ${event.type} event`);
-    const { left, top, width, height } = canvas.getBoundingClientRect();
-    screenPosition[0] = left;
-    screenPosition[1] = top;
-    screenSize[0] = width;
-    screenSize[1] = height;
-    if (screenResizeHandler !== undefined) {
+    updateScreenBounds(eventsWindow, canvas, screenPosition, screenSize);
+    if (handler !== undefined) {
       const eventInfo = {
-        width,
-        height,
-        aspectRatio: width / height,
+        width: screenSize[0],
+        height: screenSize[1],
+        aspectRatio: screenSize[0] / screenSize[1],
         timestamp: event.timeStamp,
       };
-      await screenResizeHandler(eventInfo);
+      invokeHandler(handler, WPKPeripheralEventType.SCREEN_RESIZE, eventInfo);
     }
   });
+  eventsWindow.addEventListener('resize', listener, { passive: true });
+  return {
+    remove() {
+      eventsWindow.removeEventListener('resize', listener);
+    },
+  };
+};
+
+const updateScreenBounds = (
+  eventsWindow: Window,
+  canvas: HTMLCanvasElement,
+  screenPosition: WPKCoords,
+  screenSize: WPKCoords
+): void => {
+  const { left, top, width, height } = canvas.getBoundingClientRect();
+  screenPosition[0] = left;
+  screenPosition[1] = top;
+  screenSize[0] = width;
+  screenSize[1] = height;
+  const pixelRatio = eventsWindow.devicePixelRatio || 1;
+  const desiredWidth = Math.floor(width * pixelRatio);
+  const desiredHeight = Math.floor(height * pixelRatio);
+  if (canvas.width !== desiredWidth) {
+    canvas.width = desiredWidth;
+  }
+  if (canvas.height !== desiredHeight) {
+    canvas.height = desiredHeight;
+  }
+  logFuncs.lazyTrace(LOGGER, () => `Updated screen position ${screenPosition} and size ${screenSize}`);
 };
 
 const updateMousePositions = (
   event: MouseEvent,
   screenPosition: WPKCoords,
   mousePosition: WPKCoords,
-  mouseDelta: WPKCoords
 ): void => {
-  const [prevX, prevY] = mousePosition;
   const { clientX, clientY } = event;
   mousePosition[0] = clientX - screenPosition[0];
   mousePosition[1] = clientY - screenPosition[1];
-  mouseDelta[0] = mousePosition[0] - prevX;
-  mouseDelta[1] = mousePosition[1] - prevY;
 };
 
-const toKeyEventInfo = (_canvas: HTMLCanvasElement, event: KeyboardEvent): WPKKeyEventInfo => {
-  const { code, key, altKey, ctrlKey, metaKey, shiftKey, repeat, timeStamp } = event;
-  return {
-    code,
-    key,
-    modifiers: {
-      alt: altKey,
-      ctrl: ctrlKey,
-      meta: metaKey,
-      shift: shiftKey,
-    },
-    isRepeat: repeat,
-    timestamp: timeStamp,
-  };
-};
+const toKeyEventInfo = (event: KeyboardEvent): WPKKeyEventInfo => ({
+  code: event.code,
+  key: event.key,
+  modifiers: {
+    alt: event.altKey,
+    ctrl: event.ctrlKey,
+    meta: event.metaKey,
+    shift: event.shiftKey,
+  },
+  isRepeat: event.repeat,
+  timestamp: event.timeStamp,
+});
 
-const toMouseButtonEventInfo = (event: MouseEvent, screenSize: WPKCoords, mousePosition: WPKCoords, mouseButtonTrigger: WPKChangeDetector<WPKMouseButton>): WPKMouseButtonEventInfo => ({
+const toMouseButtonEventInfo = (event: MouseEvent, screenSize: WPKCoords, mousePosition: WPKCoords, mouseDownButton: WPKChangeDetector<WPKMouseButton>): WPKMouseButtonEventInfo => ({
   position: toScreenXY(screenSize, mousePosition),
-  trigger: mouseButtonTrigger.get(),
+  trigger: mouseDownButton.get(),
   pressed: toMouseButtons(event),
   repeatCount: event.detail,
   timestamp: event.timeStamp,
 });
 
-const toMouseMoveEventInfo = (event: MouseEvent, screenSize: WPKCoords, mousePosition: WPKCoords, mouseDelta: WPKCoords): WPKMouseMoveEventInfo => ({
+const toMouseMoveEventInfo = (event: MouseEvent, screenSize: WPKCoords, mousePosition: WPKCoords): WPKMouseMoveEventInfo => ({
   position: toScreenXY(screenSize, mousePosition),
-  delta: toScreenXY(screenSize, mouseDelta),
   timestamp: event.timeStamp,
 });
 
-const toMouseDragEventInfo = (event: MouseEvent, screenSize: WPKCoords, mousePosition: WPKCoords, mouseDelta: WPKCoords, mouseDragStart: WPKCoords, mouseButtonTrigger: WPKChangeDetector<WPKMouseButton>): WPKMouseDragEventInfo => ({
-  delta: toScreenXY(screenSize, mouseDelta),
-  drag: toScreenXY(screenSize, mouseDragStart),
+const toMouseDragEventInfo = (event: MouseEvent, screenSize: WPKCoords, mousePosition: WPKCoords, mouseDrag: WPKCoords, mouseDownButton: WPKChangeDetector<WPKMouseButton>): WPKMouseDragEventInfo => ({
   position: toScreenXY(screenSize, mousePosition),
-  trigger: mouseButtonTrigger.get(),
+  drag: toScreenXY(screenSize, mouseDrag),
+  trigger: mouseDownButton.get(),
   pressed: toMouseButtons(event),
   repeatCount: event.detail,
   timestamp: event.timeStamp,
@@ -204,6 +328,12 @@ const toMouseButtons = (event: MouseEvent): WPKMouseButton[] => {
   if (buttons & 4) {
     buttonsPressed.push(WPKMouseButton.MIDDLE);
   }
+  if (buttons & 8) {
+    buttonsPressed.push(WPKMouseButton.BACK);
+  }
+  if (buttons & 16) {
+    buttonsPressed.push(WPKMouseButton.FORWARD);
+  }
   return buttonsPressed;
 };
 
@@ -220,4 +350,31 @@ const toScreenXY = (screenSize: WPKCoords, mousePosition: WPKCoords): WPKScreenX
       y: y / screenSize[1],
     },
   };
+};
+
+const invokeHandler = <TEventType extends keyof WPKPeripheralEventHandlers>(
+  handler: WPKPeripheralEventHandler<TEventType>,
+  eventType: TEventType,
+  eventInfo: WPKPeripheralEventInfoTypeMap[TEventType]
+): void => {
+  try {
+    handler(eventInfo);
+  } catch (error) {
+    logFuncs.lazyError(LOGGER, () => `Error in ${eventType} handler. ${error}`);
+  }
+};
+
+const createRAFThrottledHandler = <T extends (...args: any[]) => void>(fn: T): T => {
+  let ticking = false;
+  let latestArgs: any[] = [];
+  return ((...args: any[]) => {
+    latestArgs = args;
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(() => {
+        fn(...latestArgs);
+        ticking = false;
+      });
+    }
+  }) as T;
 };

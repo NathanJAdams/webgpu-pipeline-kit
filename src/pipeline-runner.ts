@@ -1,7 +1,7 @@
 import { logFactory } from './logging';
 import { addPeripheralEventHandlers } from './peripheral-events';
 import { pipelineFuncs } from './pipeline-utils';
-import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKPeripheralEventHandlers, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKViews, WPKViewsFunc } from './types';
+import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKEventListenerRemover, WPKPeripheralEventHandlers, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKViews, WPKViewsFunc } from './types';
 import { Color, logFuncs } from './utils';
 
 const LOGGER = logFactory.getLogger('pipeline');
@@ -39,8 +39,8 @@ export const pipelineRunnerFactory = {
         invokeRenderPipeline(render, index, encoder, views, clearValue);
       }
     };
-    await addPeripheralEventHandlers(canvas, peripheralEventHandlers);
-    return createPipelineRunner(device, invoker);
+    const remover = addPeripheralEventHandlers(canvas, peripheralEventHandlers);
+    return createPipelineRunner(device, invoker, remover);
   },
   ofRender: async (canvas: HTMLCanvasElement, clearColor: Color, peripheralEventHandlers: WPKPeripheralEventHandlers): Promise<WPKPipelineRunner<false, true>> => {
     logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
@@ -56,8 +56,8 @@ export const pipelineRunnerFactory = {
         invokeRenderPipeline(render, index, encoder, views, clearValue);
       }
     };
-    await addPeripheralEventHandlers(canvas, peripheralEventHandlers);
-    return createPipelineRunner(device, invoker);
+    const remover = addPeripheralEventHandlers(canvas, peripheralEventHandlers);
+    return createPipelineRunner(device, invoker, remover);
   },
 };
 
@@ -76,7 +76,8 @@ const createViewsGetter = async (canvas: HTMLCanvasElement, device: GPUDevice): 
 
 const createPipelineRunner = async <TCompute extends boolean, TRender extends boolean>(
   device: GPUDevice,
-  pipelineInvoker: (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail<TCompute, TRender>) => void
+  pipelineInvoker: (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail<TCompute, TRender>) => void,
+  remover?: WPKEventListenerRemover
 ): Promise<WPKPipelineRunner<TCompute, TRender>> => {
   logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
   const pipelines: WPKPipeline<any, any, any, any, any, TCompute, TRender>[] = [];
@@ -127,6 +128,12 @@ const createPipelineRunner = async <TCompute extends boolean, TRender extends bo
         }
       }
       pipelines.forEach(pipeline => pipeline.clean());
+    },
+    destroy() {
+      device.destroy();
+      if (remover !== undefined) {
+        remover.remove();
+      }
     },
   };
 };

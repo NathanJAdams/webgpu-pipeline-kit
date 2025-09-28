@@ -115,6 +115,7 @@ export type WPKPipelineRunner<TCompute extends boolean, TRender extends boolean>
   add: (pipeline: WPKPipeline<any, any, any, any, any, TCompute, TRender>, options?: WPKAddPipelineOptions) => void;
   remove: (name: string) => void;
   step: () => Promise<void>;
+  destroy:()=>void;
 };
 //#endregion
 
