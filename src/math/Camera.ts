@@ -20,6 +20,7 @@ export class Camera {
   private isDirtyAspectRatio: boolean = true;
   private isDirtyFieldOfView: boolean = true;
   private isDirtyNearFar: boolean = true;
+  private isDirtyViewProjection: boolean = true;
   private readonly _viewMatrix: CameraMatrixValues = [
     1, 0, 0, 0,
     0, 1, 0, 0,
@@ -112,10 +113,10 @@ export class Camera {
 
   private flushChanges(flushView: boolean, flushProjection: boolean): void {
     if (flushView) {
-      flushView = this.updateView();
+      this.updateView();
     }
     if (flushProjection) {
-      flushProjection = this.updateProjection();
+      this.updateProjection();
     }
     if (flushView || flushProjection) {
       this.updateViewProjection();
@@ -169,6 +170,7 @@ export class Camera {
 
     this.isDirtyPosition = false;
     this.isDirtyRotation = false;
+    this.isDirtyViewProjection = true;
     return true;
   }
 
@@ -191,10 +193,14 @@ export class Camera {
     this.isDirtyFieldOfView = false;
     this.isDirtyAspectRatio = false;
     this.isDirtyNearFar = false;
+    this.isDirtyViewProjection = true;
     return true;
   }
 
   private updateViewProjection(): boolean {
+    if (!this.isDirtyViewProjection) {
+      return false;
+    }
     const vm = this._viewMatrix;
     const pm = this._projectionMatrix;
     const vpm = this._viewProjectionMatrix;
@@ -224,6 +230,7 @@ export class Camera {
     vpm[14] = pm22 * vm[14] + pm32 * vm[15];
     vpm[15] = -vm[14];
 
+    this.isDirtyViewProjection = false;
     return true;
   }
 }
