@@ -3,11 +3,11 @@ import { Triangle, TriangleUniform } from './instance-formats';
 import { meshTemplates } from './mesh-templates';
 import { computeShader, renderShader } from './shader';
 import { builders, factories, setLogLevel } from '../..';
-import { logFactory } from '../../logging';
+import { getLogger } from '../../logging';
 import { WPKDebugOptions, WPKPeripheralEventHandlers } from '../../types';
 import { Color, logFuncs } from '../../utils';
 
-const LOGGER = logFactory.getLogger('pipeline');
+const LOGGER = getLogger('pipeline');
 
 export const run = async (): Promise<void> => {
   setLogLevel('TRACE');

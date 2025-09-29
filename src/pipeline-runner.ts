@@ -1,10 +1,10 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { addPeripheralEventHandlers } from './peripheral-events';
 import { pipelineFuncs } from './pipeline-utils';
 import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKEventListenerRemover, WPKPeripheralEventHandlers, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKViews, WPKViewsFunc } from './types';
 import { Color, logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('pipeline');
+const LOGGER = getLogger('pipeline');
 
 const isOptionsAddBefore = (options?: WPKAddPipelineOptions): options is WPKAddPipelineOptionsAddBefore => (options !== undefined && (options as WPKAddPipelineOptionsAddBefore).before !== undefined);
 const isOptionsAddAfter = (options?: WPKAddPipelineOptions): options is WPKAddPipelineOptionsAddAfter => (options !== undefined && (options as WPKAddPipelineOptionsAddAfter).after !== undefined);

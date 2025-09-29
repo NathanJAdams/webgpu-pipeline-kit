@@ -1,9 +1,9 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { Vector3 } from './math';
 import { WPKIndices, WPKMesh, WPKMeshParametersDeclaration, WPKMeshTemplateCreator, WPKVertices } from './types';
 import { logFuncs, mathFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('mesh');
+const LOGGER = getLogger('mesh');
 
 export const meshFuncs = {
   UINT32_INDEX_COUNT: 1 << 16,

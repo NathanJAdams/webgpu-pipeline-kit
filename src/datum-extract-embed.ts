@@ -1,8 +1,8 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { WPKDatumExtractEmbedder, WPKPrimitiveMap, WPKRefPath } from './types';
 import { logFuncs, stringFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('data');
+const LOGGER = getLogger('data');
 
 export const datumExtractEmbedFactory = {
   ofScalar: <T>(scalarPath: string): WPKDatumExtractEmbedder<T, number> => ofNumber(scalarPath),

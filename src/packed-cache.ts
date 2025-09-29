@@ -1,8 +1,8 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { IdGetter, PackedCache } from './types';
 import { BidiMap, logFuncs, Random, randomFactory, setFuncs, sliceFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('cache');
+const LOGGER = getLogger('cache');
 
 export const packedCacheFactory = {
   of: <T, TMutable extends boolean>(

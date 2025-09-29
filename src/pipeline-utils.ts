@@ -1,8 +1,8 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { WPKComputePass, WPKDispatchParams, WPKDispatchSize, WPKDispatchSizes, WPKWorkGroupSize } from './types';
 import { logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('pipeline');
+const LOGGER = getLogger('pipeline');
 
 const VERTEX_FORMAT_BYTE_LENGTHS: Record<GPUVertexFormat, number> = {
   float16: 2 * 1,

@@ -1,9 +1,9 @@
 import { datumBridgeFactory } from './datum-bridge';
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { WPKBufferFormatMarshalled, WPKDatumBridge, WPKEntityCache, WPKMarshaller } from './types';
 import { logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('data');
+const LOGGER = getLogger('data');
 
 export const marshallerFactory = {
   ofMarshalled: <T>(bufferFormatMarshalled: WPKBufferFormatMarshalled<T, any, any>, entityCache?: WPKEntityCache<T, any, any>): WPKMarshaller<T> => {

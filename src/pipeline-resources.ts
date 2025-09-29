@@ -1,11 +1,11 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { meshFuncs } from './mesh-factories';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePass, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferAttributeData, WPKVertexBufferDetail } from './types';
 import { logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('resources');
+const LOGGER = getLogger('resources');
 
 export const pipelineResourceFactory = {
   // layouts

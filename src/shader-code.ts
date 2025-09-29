@@ -1,10 +1,10 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
 import { WPKBufferFormat, WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKComputeShader, WPKShaderModuleDetail, WPKRenderShader, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderScalarSignedInt } from './types';
 import { logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('shader');
+const LOGGER = getLogger('shader');
 
 const WHITESPACE = '\n\n';
 const BUFFER_INDEXING_VARIABLE = 'instance_index';

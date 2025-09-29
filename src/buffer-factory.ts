@@ -1,11 +1,11 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { WPKBufferMutable, WPKBufferResizeable, WPKMutatedData, WPKResource, WPKTrackedBuffer } from './types';
 import { Capacity, CopySlice, logFuncs, mathFuncs, ValueSlices } from './utils';
 
 const MINIMUM_BYTES_LENGTH = 32;
 const VALID_BYTES_MULTIPLE = 16;
 
-const LOGGER = logFactory.getLogger('buffer');
+const LOGGER = getLogger('buffer');
 
 const createLabeller = (label: string) => {
   let index = 0;

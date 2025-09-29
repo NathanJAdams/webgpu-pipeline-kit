@@ -1,4 +1,4 @@
-import { logFactory } from '../logging';
+import { getLogger } from '../logging';
 import { logFuncs } from '../utils';
 import { Quaternion } from './Quaternion';
 import { Vector3 } from './Vector3';
@@ -10,7 +10,7 @@ export type TransformationValues = [
   number, number, number, number,
 ];
 
-const LOGGER = logFactory.getLogger('data');
+const LOGGER = getLogger('data');
 
 export class Transformation {
   private _position = Vector3.ZERO;

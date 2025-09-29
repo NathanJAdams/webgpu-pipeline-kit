@@ -4,7 +4,7 @@ import { bufferResourcesFactory } from './buffer-resources';
 import { cacheFactory } from './cache';
 import { datumBridgeFactory } from './datum-bridge';
 import { datumExtractEmbedFactory } from './datum-extract-embed';
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { meshFuncs } from './mesh-factories';
 import { pipelineResourceFactory } from './pipeline-resources';
 import { resourceFactory } from './resources';
@@ -14,8 +14,8 @@ import { shaderFuncs } from './shader-utils';
 import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKDebugBufferContentMap, WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKDebugFunc, WPKDebugOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKHasBufferFormatType, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKComputeShader, WPKRenderShader, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferFormatUniform, WPKBufferFormatEntityMarshalled, WPKBufferFormatEntityLayout } from './types';
 import { logFuncs, recordFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('pipeline');
-const DEBUG_LOGGER = logFactory.getLogger('debug');
+const LOGGER = getLogger('pipeline');
+const BUFFER_LOGGER = getLogger('buffer');
 
 export const pipelineFactory = {
   ofCompute: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean>(
@@ -455,7 +455,7 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
   if (onBufferContents === undefined) {
     return;
   }
-  logFuncs.lazyInfo(DEBUG_LOGGER, () => 'Creating debug function resource');
+  logFuncs.lazyInfo(BUFFER_LOGGER, () => 'Creating debug function resource');
   const sourceTargetBuffers = {} as Record<string, { format: WPKBufferFormat<any, any>; source: WPKResource<WPKTrackedBuffer>; target: WPKBufferResizeable & WPKResource<WPKTrackedBuffer>; }>;
   const addSourceTargetBuffers = (name: string, format: WPKBufferFormat<any, any>, source: WPKResource<WPKTrackedBuffer>): void => {
     const target = bufferFactory.ofResizeable(false, `${name}-debug`, GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ, false);
@@ -474,14 +474,14 @@ const toDebugFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
   }
   return {
     get(device, queue, encoder) {
-      logFuncs.lazyDebug(DEBUG_LOGGER, () => 'Creating debug function');
+      logFuncs.lazyDebug(BUFFER_LOGGER, () => 'Creating debug function');
       const debugBuffers = {} as Record<string, { format: WPKBufferFormat<any, any>; buffer: GPUBuffer }>;
       for (const [bufferName, { format, source, target }] of Object.entries(sourceTargetBuffers)) {
         const sourceBuffer = source.get(device, queue, encoder);
         const copyBytesLength = sourceBuffer.bytesLength;
         target.resize(copyBytesLength);
         const targetBuffer = target.get(device, queue, encoder);
-        logFuncs.lazyDebug(DEBUG_LOGGER, () => `Copying data ${copyBytesLength} bytes from ${sourceBuffer.buffer.label} to debug buffer ${targetBuffer.buffer.label}`);
+        logFuncs.lazyDebug(BUFFER_LOGGER, () => `Copying data ${copyBytesLength} bytes from ${sourceBuffer.buffer.label} to debug buffer ${targetBuffer.buffer.label}`);
         encoder.copyBufferToBuffer(sourceBuffer.buffer, 0, targetBuffer.buffer, 0, copyBytesLength);
         debugBuffers[bufferName] = {
           format,
@@ -523,7 +523,7 @@ const addContents = async (
   entityCount: number,
   contentMap: WPKDebugBufferContentMap<any, any, any>
 ): Promise<void> => {
-  logFuncs.lazyDebug(DEBUG_LOGGER, () => `Synching ${bufferName} debug buffer for read`);
+  logFuncs.lazyDebug(BUFFER_LOGGER, () => `Synching ${bufferName} debug buffer for read`);
   await buffer.mapAsync(GPUMapMode.READ);
   const mappedRange = buffer.getMappedRange().slice(0);
   buffer.unmap();
@@ -531,19 +531,19 @@ const addContents = async (
   logFuncs.lazyTrace(LOGGER, () => `${bufferName} contents: ${new Float32Array(mappedRange)}`);
   const { bufferType } = bufferFormat;
   if (bufferType === 'uniform') {
-    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling uniform from ${bufferName}`);
+    logFuncs.lazyDebug(BUFFER_LOGGER, () => `Unmarshalling uniform from ${bufferName}`);
     const uniform = unmarshallUniform(dataView, bufferFormat);
-    logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled uniform from format ${bufferName}`);
+    logFuncs.lazyTrace(BUFFER_LOGGER, () => `Unmarshalled uniform from format ${bufferName}`);
     contentMap[bufferName] = uniform;
   } else if (bufferType === 'marshalled') {
-    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from format ${bufferName}`);
+    logFuncs.lazyDebug(BUFFER_LOGGER, () => `Unmarshalling entities from format ${bufferName}`);
     const entities = unmarshallEntityMarshalledArray(dataView, bufferFormat, entityCache, entityCount);
-    logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
+    logFuncs.lazyTrace(BUFFER_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
     contentMap[bufferName] = entities;
   } else if (bufferType === 'editable') {
-    logFuncs.lazyDebug(DEBUG_LOGGER, () => `Unmarshalling entities from layout ${bufferName}`);
+    logFuncs.lazyDebug(BUFFER_LOGGER, () => `Unmarshalling entities from layout ${bufferName}`);
     const entities = unmarshallEntityLayoutArray(dataView, bufferFormat, entityCount);
-    logFuncs.lazyTrace(DEBUG_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
+    logFuncs.lazyTrace(BUFFER_LOGGER, () => `Unmarshalled ${entities.length} entities from format ${bufferName}`);
     contentMap[bufferName] = entities;
   }
 };

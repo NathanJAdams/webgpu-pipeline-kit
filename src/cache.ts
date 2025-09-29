@@ -1,9 +1,9 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { packedCacheFactory } from './packed-cache';
 import { PackedCache, WPKCacheResizeable, WPKDatumExtractor, WPKEntityCache, WPKUniformCache } from './types';
 import { logFuncs, sliceFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('cache');
+const LOGGER = getLogger('cache');
 
 export const cacheFactory = {
   ofUniform: <TUniform, TMutable extends boolean>(

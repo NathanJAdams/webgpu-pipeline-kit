@@ -1,10 +1,10 @@
-import { logFactory } from '../logging';
+import { getLogger } from '../logging';
 import { getShaderCodeStageResult } from './diagnostics';
 import { toCodeShaderCompute, toCodeShaderRender } from '../shader-code';
 import { WPKBufferFormatMap, WPKComputeShader, WPKRenderShader } from '../types';
 import { WPKShaderCodeStageResult } from './types';
 
-const LOGGER = logFactory.getLogger('shader');
+const LOGGER = getLogger('shader');
 
 export const checkComputeShaderCode = async (shader: WPKComputeShader<any, any, any>, bufferFormats: WPKBufferFormatMap<any, any>): Promise<void> => {
   const computeShaderModuleDetail = toCodeShaderCompute(shader, bufferFormats);

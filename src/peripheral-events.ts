@@ -1,8 +1,8 @@
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { WPKEventListenerRemover, WPKKeyEventInfo, WPKMouseButton, WPKMouseButtonEventInfo, WPKMouseDragEventInfo, WPKMouseMoveEventInfo, WPKPeripheralEventHandler, WPKPeripheralEventHandlers, WPKPeripheralEventInfoTypeMap, WPKPeripheralEventType, WPKScreenEventInfo, WPKScreenXY } from './types';
 import { changeDetectorFactory, logFuncs, WPKChangeDetector } from './utils';
 
-const LOGGER = logFactory.getLogger('events');
+const LOGGER = getLogger('events');
 
 type WPKCoords = [number, number];
 

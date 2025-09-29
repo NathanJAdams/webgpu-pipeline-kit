@@ -1,5 +1,5 @@
 import { bufferFactory } from './buffer-factory';
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { marshallerFactory } from './marshall';
 import { meshFuncs } from './mesh-factories';
 import { resourceFactory } from './resources';
@@ -7,7 +7,7 @@ import { shaderFuncs } from './shader-utils';
 import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform, WPKBufferResources, WPKDispatchParams, WPKEntityCache, WPKMarshaller, WPKMesh, WPKMeshBufferResource, WPKMutator, WPKResource, WPKTrackedBuffer, WPKUniformCache } from './types';
 import { CopySlice, logFuncs, ValueSlices } from './utils';
 
-const LOGGER = logFactory.getLogger('buffer');
+const LOGGER = getLogger('buffer');
 
 export const bufferResourcesFactory = {
   ofDispatch: <TEntryPoints extends string[]>(

@@ -1,11 +1,11 @@
 import { bufferFormatFuncs } from './buffer-formats';
 import { datumExtractEmbedFactory } from './datum-extract-embed';
-import { logFactory } from './logging';
+import { getLogger } from './logging';
 import { shaderFuncs } from './shader-utils';
 import { WPKBufferFormatElement, WPKCacheResizeable, WPKDatumBridge, WPKDatumExtractEmbedder, WPKDatumGetSetter, WPKEntityCache, WPKShaderScalar, WPKShaderStructEntry } from './types';
 import { callCreatorOf, logFuncs } from './utils';
 
-const LOGGER = logFactory.getLogger('data');
+const LOGGER = getLogger('data');
 
 const createDatumGetSetters = (): Map<WPKShaderScalar, WPKDatumGetSetter> => {
   const dataViewCallCreator = callCreatorOf<DataView>();
