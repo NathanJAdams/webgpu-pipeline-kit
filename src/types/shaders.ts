@@ -14,7 +14,7 @@ export type WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap
   ;
 export type WPKBufferBindingReferencesEntityIndexable<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBuffer extends keyof TBufferFormatMap> =
   & {
-    atIndex: (index: number | string | WPKDatumTypeReference<WPKShaderScalarSignedInt | WPKShaderScalarUnsignedInt>) => WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap, TBuffer>;
+    atIndex: (index: number | string | WPKScalarReference<WPKShaderScalarSignedInt | WPKShaderScalarUnsignedInt>) => WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap, TBuffer>;
   }
   & WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap, TBuffer>
   ;
