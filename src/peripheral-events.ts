@@ -25,6 +25,7 @@ export const addPeripheralEventHandlers = (
   setupScreenHandlers(canvas, handlers, eventsWindow, removers, screenPosition, screenSize);
   return {
     remove() {
+      logFuncs.lazyInfo(LOGGER, () => `Removing ${removers.length} event handlers`);
       removers.forEach((remover) => {
         try {
           remover.remove();
@@ -42,6 +43,7 @@ const setupKeyHandlers = (
   eventsWindow: Window,
   eventListenerRemovers: WPKEventListenerRemover[]
 ): void => {
+  logFuncs.lazyInfo(LOGGER, () => 'Adding key event handlers');
   const handlerKeyDown = handlers[WPKPeripheralEventType.KEY_DOWN];
   const handlerKeyPress = handlers[WPKPeripheralEventType.KEY_PRESS];
   const handlerKeyUp = handlers[WPKPeripheralEventType.KEY_UP];
@@ -63,6 +65,7 @@ const setupMouseHandlers = (
   screenPosition: WPKCoords,
   screenSize: WPKCoords,
 ): void => {
+  logFuncs.lazyInfo(LOGGER, () => 'Adding mouse event handlers');
   const handlerMouseDown = handlers[WPKPeripheralEventType.MOUSE_DOWN];
   const handlerMouseDrag = handlers[WPKPeripheralEventType.MOUSE_DRAG];
   const handlerMouseUp = handlers[WPKPeripheralEventType.MOUSE_UP];
@@ -75,6 +78,7 @@ const setupMouseHandlers = (
   const mouseDown: WPKCoords = [0, 0];
   const mouseDownButton = changeDetectorFactory.ofTripleEquals<WPKMouseButton>(WPKMouseButton.LEFT);
   if (isMouseMoveRequired) {
+    logFuncs.lazyInfo(LOGGER, () => 'Adding mouse move listener');
     eventListenerRemovers.push(addMouseMoveListener(eventsWindow, handlerMouseDrag, handlerMouseMove, screenPosition, screenSize, mousePosition, mouseDrag, mouseDown, mouseDownButton));
   }
   if (isMouseDownRequired) {
@@ -93,6 +97,7 @@ const setupScreenHandlers = (
   screenPosition: WPKCoords,
   screenSize: WPKCoords,
 ): void => {
+  logFuncs.lazyInfo(LOGGER, () => 'Adding screen event handlers');
   const handlerScreenResize = handlers[WPKPeripheralEventType.SCREEN_RESIZE];
   const isScreenResizeRequired = (handlerScreenResize !== undefined)
     || (handlers[WPKPeripheralEventType.MOUSE_DOWN] !== undefined)
@@ -121,14 +126,15 @@ const addKeyEventListener = <TEventType extends WPKPeripheralEventType.KEY_DOWN 
   eventType: TEventType,
   eventName: 'keydown' | 'keypress' | 'keyup'
 ): WPKEventListenerRemover => {
-  logFuncs.lazyInfo(LOGGER, () => `Adding ${eventName} listener`);
   const listener = (event: KeyboardEvent) => {
-    logFuncs.lazyInfo(LOGGER, () => `Handling ${eventName} event`);
+    logFuncs.lazyTrace(LOGGER, () => `Handling ${eventName} event`);
     invokeHandler(handler, eventType, toKeyEventInfo(event));
   };
+  logFuncs.lazyInfo(LOGGER, () => `Adding ${eventName} listener`);
   eventsWindow.addEventListener(eventName, listener, { passive: true });
   return {
     remove() {
+      logFuncs.lazyInfo(LOGGER, () => `Removing ${eventName} listener`);
       eventsWindow.removeEventListener(eventName, listener);
     },
   };
@@ -164,9 +170,11 @@ const addMouseMoveListener = (
       }
     }
   };
+  logFuncs.lazyInfo(LOGGER, () => 'Adding mousemove listener');
   eventsWindow.addEventListener('mousemove', listener, { passive: true });
   return {
     remove() {
+      logFuncs.lazyInfo(LOGGER, () => 'Removing mousemove listener');
       eventsWindow.removeEventListener('mousemove', listener);
     },
   };
@@ -192,7 +200,7 @@ const addMouseButtonListener = <TEventType extends WPKPeripheralEventType.MOUSE_
   mouseDownButton: WPKChangeDetector<WPKMouseButton>
 ): WPKEventListenerRemover => {
   const listener = createRAFThrottledHandler((event: MouseEvent) => {
-    logFuncs.lazyInfo(LOGGER, () => `Handling ${event.type} event`);
+    logFuncs.lazyTrace(LOGGER, () => `Handling ${event.type} event`);
     const { button } = event;
     if (eventName === 'mousedown') {
       const mouseButton = buttonMap[button];
@@ -200,7 +208,7 @@ const addMouseButtonListener = <TEventType extends WPKPeripheralEventType.MOUSE_
         mouseDownButton.compareAndUpdate(mouseButton);
       }
     } else {
-      logFuncs.lazyDebug(LOGGER, () => `Mouse button ${button} will not trigger events`);
+      logFuncs.lazyWarn(LOGGER, () => `Mouse button ${button} will not trigger events`);
     }
     updateMousePositions(event, screenPosition, mousePosition);
     if (eventName === 'mousedown') {
@@ -212,9 +220,11 @@ const addMouseButtonListener = <TEventType extends WPKPeripheralEventType.MOUSE_
       invokeHandler(handler, eventType, eventInfo);
     }
   });
+  logFuncs.lazyInfo(LOGGER, () => `Adding ${eventName} event listener`);
   eventsWindow.addEventListener(eventName, listener, { passive: true });
   return {
     remove() {
+      logFuncs.lazyInfo(LOGGER, () => `Removing ${eventName} event listener`);
       eventsWindow.removeEventListener(eventName, listener);
     },
   };
@@ -240,9 +250,11 @@ const addScreenResizeListener = (
       invokeHandler(handler, WPKPeripheralEventType.SCREEN_RESIZE, eventInfo);
     }
   });
+  logFuncs.lazyInfo(LOGGER, () => 'Adding resize event listener');
   eventsWindow.addEventListener('resize', listener, { passive: true });
   return {
     remove() {
+      logFuncs.lazyInfo(LOGGER, () => 'Removing resize event listener');
       eventsWindow.removeEventListener('resize', listener);
     },
   };

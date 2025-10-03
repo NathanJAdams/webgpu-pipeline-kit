@@ -4,13 +4,13 @@ import { meshTemplates } from './mesh-templates';
 import { computeShader, renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel } from '../..';
 import { getLogger } from '../../logging';
-import { WPKDebugOptions, WPKPeripheralEventHandlers } from '../../types';
-import { Color, logFuncs } from '../../utils';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers } from '../../types';
+import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
 
 export const run = async (): Promise<void> => {
-  setLogLevel('TRACE');
+  setLogLevel('INFO');
   const canvas = document.getElementById('game-canvas') as (HTMLCanvasElement | null);
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
@@ -27,12 +27,12 @@ export const run = async (): Promise<void> => {
     .initialUniformObject().gameTime(0).camera(camera).buildInitialUniform()
     .initialEntities([])
     .buildObject();
-  const debugOptions: WPKDebugOptions<OrbiterUniform, Orbiter, OrbiterBufferFormats> = {
-    async onBufferContents(contents) {
-      logFuncs.lazyInfo(LOGGER, () => `Buffer contents: ${JSON.stringify(contents)}`);
+  const readBackOptions: WPKReadBackOptions<OrbiterUniform, Orbiter, OrbiterBufferFormats> = {
+    async onReadBack(contents) {
+      LOGGER.info(`positions: ${JSON.stringify(contents.position)}`);
     },
   };
-  const orbiterPipeline = factories.pipeline.ofComputeRender('orbiter', bufferFormats, meshTemplates, computeShader, renderShader, orbiterPipelineOptions, debugOptions);
+  const orbiterPipeline = factories.pipeline.ofComputeRender('orbiter', bufferFormats, meshTemplates, computeShader, renderShader, orbiterPipelineOptions, readBackOptions);
   pipelineRunner.add(orbiterPipeline);
   let gameTime = 0;
   while (true) {

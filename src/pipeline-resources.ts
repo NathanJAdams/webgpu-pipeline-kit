@@ -2,7 +2,7 @@ import { getLogger } from './logging';
 import { meshFuncs } from './mesh-factories';
 import { pipelineFuncs } from './pipeline-utils';
 import { resourceFactory } from './resources';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePass, WPKComputePipelineDetail, WPKDispatchParams, WPKDispatchSize, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferAttributeData, WPKVertexBufferDetail } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKBindingIndex, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResources, WPKComputePass, WPKComputePipelineDetail, WPKDispatchParamsDetail, WPKDispatchCount, WPKDrawCounts, WPKGroupIndex, WPKMesh, WPKMeshBufferResource, WPKRenderPipelineDetail, WPKResource, WPKShaderModuleDetail, WPKTrackedBuffer, WPKVertexBufferAttributeData, WPKVertexBufferDetail } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = getLogger('resources');
@@ -170,17 +170,17 @@ export const pipelineResourceFactory = {
   ofComputeDetail: (
     bindGroupsResource: WPKResource<WPKBindGroupsDetail>,
     computePipelineResource: WPKResource<GPUComputePipeline>,
-    dispatchSizeResource: WPKResource<WPKDispatchSize>,
+    dispatchCountResource: WPKResource<WPKDispatchCount>,
   ): WPKResource<WPKComputePipelineDetail> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating compute detail resource');
     return resourceFactory.ofCachedFromDependencies(
-      [bindGroupsResource, computePipelineResource, dispatchSizeResource] as const,
+      [bindGroupsResource, computePipelineResource, dispatchCountResource] as const,
       (device, queue, encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => 'Creating compute detail');
         const detail = {
           bindGroups: values[0],
           pipeline: values[1],
-          dispatchSize: values[2],
+          dispatchCount: values[2],
         };
         logFuncs.lazyTrace(LOGGER, () => `Created compute detail ${JSON.stringify(detail)}`);
         return detail;
@@ -190,7 +190,7 @@ export const pipelineResourceFactory = {
   ofDispatchParams: (
     instanceCountResource: WPKResource<number>,
     passes: WPKComputePass<any, any, any>[],
-  ): WPKResource<WPKDispatchParams<any>> => {
+  ): WPKResource<WPKDispatchParamsDetail<any>> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch params resource');
     return resourceFactory.ofCachedFromDependencies(
       [instanceCountResource] as const,
@@ -202,18 +202,18 @@ export const pipelineResourceFactory = {
       }
     );
   },
-  ofDispatchSize: (
-    dispatchParamsResource: WPKResource<WPKDispatchParams<any>>,
+  ofDispatchCount: (
+    dispatchParamsResource: WPKResource<WPKDispatchParamsDetail<any>>,
     entryPoint: string,
-  ): WPKResource<WPKDispatchSize> => {
+  ): WPKResource<WPKDispatchCount> => {
     logFuncs.lazyDebug(LOGGER, () => 'Creating dispatch size resource');
     return resourceFactory.ofCachedFromDependencies(
       [dispatchParamsResource] as const,
       (_device, _queue, _encoder, values) => {
         logFuncs.lazyTrace(LOGGER, () => `Creating dispatch size for ${entryPoint}`);
-        const size = values[0].dispatchSizes[entryPoint];
-        logFuncs.lazyTrace(LOGGER, () => `Created dispatch size ${JSON.stringify(size)}`);
-        return size;
+        const count = values[0].dispatchCounts[entryPoint];
+        logFuncs.lazyTrace(LOGGER, () => `Created dispatch size ${JSON.stringify(count)}`);
+        return count;
       }
     );
   },
@@ -237,17 +237,11 @@ export const pipelineResourceFactory = {
   },
   ofVertexBufferDetailBufferLocationFieldTypes: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
     vertexBufferLocationFieldTypes: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>,
-    bufferFormats: TBufferFormatMap,
     bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>
   ): WPKResource<WPKVertexBufferDetail> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating vertex buffer detail resource from buffer location field types ${JSON.stringify(vertexBufferLocationFieldTypes)}`);
     const { buffer, locationAttributes, stride } = vertexBufferLocationFieldTypes;
-    const bufferFormat = bufferFormats[buffer];
     const bufferResource = bufferResources.buffers[buffer as WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>];
-    const { bufferType } = bufferFormat;
-    if (bufferType === 'uniform') {
-      throw Error(`Cannot create buffer location for uniform buffer ${buffer}`);
-    }
     const attributes = locationAttributes.map(attribute => attribute.attribute);
     const detail = pipelineResourceFactory.ofVertexBufferDetail(stride, attributes, 'instance', bufferResource);
     logFuncs.lazyTrace(LOGGER, () => `Created vertex buffer detail resource ${JSON.stringify(detail)}`);

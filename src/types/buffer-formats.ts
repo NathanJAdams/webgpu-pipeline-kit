@@ -1,24 +1,23 @@
 import { WPKPathMat2x2, WPKPathMat2x3, WPKPathMat2x4, WPKPathMat3x2, WPKPathMat3x3, WPKPathMat3x4, WPKPathMat4x2, WPKPathMat4x3, WPKPathMat4x4, WPKPathNumber, WPKPathString, WPKPathVec2, WPKPathVec3, WPKPathVec4 } from './data-paths';
-import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKShaderStructEntry, WPKShaderVectorUntyped } from './structs';
-import { NonEmptyArray } from '../utils';
+import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKHasDatumType, WPKShaderVectorUntyped } from './structs';
 
 export type WPKBufferFormatElementScalar<TScalar extends WPKShaderScalar, TPath> =
-  & WPKShaderStructEntry<TScalar>
+  & WPKHasDatumType<TScalar>
   & {
     scalar: TPath;
   };
 export type WPKBufferFormatElementVector<TVector extends WPKShaderVectorUntyped, TComponentType extends WPKShaderScalar, TPath> =
-  & WPKShaderStructEntry<`${TVector}<${TComponentType}>`>
+  & WPKHasDatumType<`${TVector}<${TComponentType}>`>
   & {
     vector: TPath;
   };
 export type WPKBufferFormatElementMatrix<TMatrix extends WPKShaderMatrixUntyped, TPath> =
-  & WPKShaderStructEntry<`${TMatrix}<${WPKShaderScalarFloat}>`>
+  & WPKHasDatumType<`${TMatrix}<${WPKShaderScalarFloat}>`>
   & {
     matrix: TPath;
   };
 export type WPKBufferFormatElementEntityIndex<T> =
-  & WPKShaderStructEntry<WPKShaderScalarSignedInt>
+  & WPKHasDatumType<WPKShaderScalarSignedInt>
   & {
     entityIdKey: WPKPathString<T>;
   };
@@ -69,9 +68,8 @@ export type WPKBufferFormatType = 'uniform' | 'editable' | 'marshalled';
 export type WPKHasBufferFormatType<TBufferType extends WPKBufferFormatType> = {
   bufferType: TBufferType;
 };
-export type WPKBufferFormatMarshalled<T, TBufferType extends WPKBufferFormatType, F extends WPKBufferFormatElement<T>> = {
-  bufferType: TBufferType;
-  marshall: NonEmptyArray<F>;
+export type WPKBufferFormatMarshalled<T, TBufferType extends WPKBufferFormatType, F extends WPKBufferFormatElement<T>> = WPKHasBufferFormatType<TBufferType> & {
+  marshall: Record<string, F>;
 };
 export type WPKBufferFormatUniform<T> = WPKBufferFormatMarshalled<T, 'uniform', WPKBufferFormatElementUniform<T>>;
 export type WPKBufferFormatEntityLayout = WPKHasBufferFormatType<'editable'> & {

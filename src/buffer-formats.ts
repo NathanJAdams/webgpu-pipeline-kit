@@ -17,7 +17,7 @@ export const bufferFormatFuncs = {
     const paths = new Set<string>();
     for (const bufferFormat of Object.values(bufferFormats)) {
       if (bufferFormat.bufferType === 'marshalled') {
-        for (const userFormat of bufferFormat.marshall) {
+        for (const userFormat of Object.values(bufferFormat.marshall)) {
           if (bufferFormatFuncs.isEntityIndex(userFormat)) {
             if (!paths.has(userFormat.entityIdKey)) {
               userFormatEntityIndexes.push(userFormat);

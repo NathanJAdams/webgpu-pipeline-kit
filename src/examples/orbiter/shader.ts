@@ -46,10 +46,8 @@ export const computeShader = builders.computeShader<OrbiterUniform, Orbiter, Orb
   .workGroupSize({ x: 64 })
   .entryPoint('orbiter_kepler')
   .code((wgsl, params) => wgsl`
-  if (${params.bindings.kepler.primaryIndex} == -1) {
-    return;
-  }
-
+  let orbitingIndex = ${params.bindings.kepler.primaryIndex};
+  let orbitingPosition = select(${params.bindings.position.atIndex('orbitingIndex').position}, vec3<f32>(0.0, 0.0, 0.0), orbitingIndex == -1);
   let semiMajorAxis = ${params.bindings.kepler.semiMajorAxis};
   let eccentricity = ${params.bindings.kepler.eccentricity};
   let meanAnomaly = ${params.bindings.kepler.meanAnomaly};
@@ -93,7 +91,7 @@ export const computeShader = builders.computeShader<OrbiterUniform, Orbiter, Orb
   let zRelative = zInclined;
 
   // Write out orbiter position
-  ${params.bindings.position.position} = ${params.bindings.position.atIndex(params.bindings.kepler.primaryIndex).position} + vec3<f32>(xRelative, yRelative, zRelative);
+  ${params.bindings.position.position} = orbitingPosition + vec3<f32>(xRelative, yRelative, zRelative);
   `)
   .build()
   .buildPasses()

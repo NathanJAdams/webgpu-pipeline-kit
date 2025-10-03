@@ -4,13 +4,14 @@ import { meshTemplates } from './mesh-templates';
 import { computeShader, renderShader } from './shader';
 import { builders, factories, setLogLevel } from '../..';
 import { getLogger } from '../../logging';
-import { WPKDebugOptions, WPKPeripheralEventHandlers } from '../../types';
-import { Color, logFuncs } from '../../utils';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers } from '../../types';
+import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
 
 export const run = async (): Promise<void> => {
-  setLogLevel('TRACE');
+  setLogLevel('DEBUG');
+  setLogLevel('TRACE', 'pipeline');
   const canvas = document.getElementById('game-canvas') as (HTMLCanvasElement | null);
   if (canvas === null) {
     throw Error('Failed to get game canvas from document');
@@ -24,12 +25,14 @@ export const run = async (): Promise<void> => {
     .initialUniformObject().gameTime(0).buildInitialUniform()
     .initialEntities([])
     .buildObject();
-  const debugOptions: WPKDebugOptions<TriangleUniform, Triangle, BufferFormats> = {
-    async onBufferContents(contents) {
-      logFuncs.lazyInfo(LOGGER, () => `Buffer contents: ${JSON.stringify(contents)}`);
+  const readBackOptions: WPKReadBackOptions<TriangleUniform, Triangle, BufferFormats> = {
+    async onReadBack(contents) {
+      LOGGER.info(`Buffer contents dispatch: ${JSON.stringify(contents.dispatch)}`);
+      LOGGER.info(`Buffer contents offsets: ${JSON.stringify(contents.offsets)}`);
+      LOGGER.info(`Buffer contents uniforms: ${JSON.stringify(contents.uniforms)}`);
     },
   };
-  const trianglePipeline = factories.pipeline.ofComputeRender('triangles', bufferFormats, meshTemplates, computeShader, renderShader, pipelineOptions, debugOptions);
+  const trianglePipeline = factories.pipeline.ofComputeRender('triangles', bufferFormats, meshTemplates, computeShader, renderShader, pipelineOptions, readBackOptions);
   pipelineRunner.add(trianglePipeline);
   await pipelineRunner.step();
   let gameTime = 0;
@@ -40,7 +43,7 @@ export const run = async (): Promise<void> => {
     LOGGER.debug('adding triangle');
     trianglePipeline.add(triangle);
     await pipelineRunner.step();
-    await sleep(1_000);
+    await sleep(5_000);
   }
 };
 

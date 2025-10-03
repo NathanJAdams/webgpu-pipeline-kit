@@ -1,5 +1,3 @@
-import { NonEmptyArray } from '../utils';
-
 //#region data
 export type WPKShaderDimensionMap = {
   '2': 2;
@@ -21,9 +19,8 @@ export type WPKShaderDatumType = WPKShaderScalar | WPKShaderVector | WPKShaderMa
 //#endregion
 
 //#region structs
-export type WPKShaderStructEntry<TDatumType extends WPKShaderDatumType = WPKShaderDatumType> = {
-  name: string;
+export type WPKHasDatumType<TDatumType extends WPKShaderDatumType = WPKShaderDatumType> = {
   datumType: TDatumType;
 };
-export type WPKShaderStruct = NonEmptyArray<WPKShaderStructEntry>;
+export type WPKShaderStruct = Record<string, WPKHasDatumType>;
 //#endregion

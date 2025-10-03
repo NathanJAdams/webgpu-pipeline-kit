@@ -1,18 +1,13 @@
-import { WPKBufferFormat, WPKBufferFormatKey, WPKBufferFormatMap } from './buffer-formats';
+import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKHasBufferFormatType } from './buffer-formats';
+import { WPKShaderDatumType } from './structs';
 
 //#region bridge
 export type WPKRefPath = Array<(string | number)>;
 export type WPKDatumExtractor<T, TValue> = (instance: T) => TValue;
 export type WPKDatumExtractEmbedder<T, TValue> = {
   extract: (instance: T) => TValue;
-  embed: (instance: T, value: TValue) => void;
+  embed: (instance: Record<string, any>, value: TValue) => void;
 };
-export type WPKDatumBridge<T> = {
-  stride: number;
-  instanceToDataView: WPKDatumBridgeFunc<T>;
-  dataViewToInstance: WPKDatumBridgeFunc<T>;
-};
-export type WPKDatumBridgeFunc<T> = (offset: number, instance: T, dataView: DataView) => void;
 export type WPKDatumGetterFunc = (target: DataView, offset: number, littleEndian: boolean) => number;
 export type WPKDatumSetterFunc = (target: DataView, offset: number, value: number, littleEndian: boolean) => void;
 export type WPKDatumGetSetter = {
@@ -20,6 +15,50 @@ export type WPKDatumGetSetter = {
   get: WPKDatumGetterFunc;
   set: WPKDatumSetterFunc;
 };
+export type WPKDatumBridgeFunc<T> = (offset: number, instance: T, dataView: DataView) => void;
+export type WPKDatumBridgeEditable = {
+  stride: number;
+  dataViewToInstance: WPKDatumBridgeFunc<Record<string, any>>;
+};
+export type WPKDatumBridgeMarshalled<T> = WPKDatumBridgeEditable & {
+  instanceToDataView: WPKDatumBridgeFunc<T>;
+};
+export type WPKDatumBridge<T> =
+  | WPKDatumBridgeEditable
+  | WPKDatumBridgeMarshalled<T>
+  ;
+//#endregion
+
+//#region layout
+export type WPKDatumSizes = {
+  alignment: number;
+  reserved: number;
+};
+export type WPKNamedDatumTypeAlignment = {
+  name: string;
+  datumType: WPKShaderDatumType;
+  datumAlignment: WPKDatumSizes;
+};
+export type WPKBufferLayoutEntry<TBridge extends WPKDatumBridge<any>> = {
+  datumType: WPKShaderDatumType;
+  bridge: TBridge;
+  offset: number;
+  reserved: number;
+};
+export type WPKBufferLayoutBase<TBridge extends WPKDatumBridge<any>, TBufferType extends WPKBufferFormatType> = WPKHasBufferFormatType<TBufferType> & {
+  stride: number;
+  usage: GPUBufferUsageFlags;
+  entries: Record<string, WPKBufferLayoutEntry<TBridge>>;
+};
+export type WPKBufferLayoutUniform<TUniform> = WPKBufferLayoutBase<WPKDatumBridgeMarshalled<TUniform>, 'uniform'>;
+export type WPKBufferLayoutMarshalled<TEntity> = WPKBufferLayoutBase<WPKDatumBridgeMarshalled<TEntity>, 'marshalled'>;
+export type WPKBufferLayoutEditable = WPKBufferLayoutBase<WPKDatumBridgeEditable, 'editable'>;
+export type WPKBufferLayout<TUniform, TEntity> =
+  | WPKBufferLayoutUniform<TUniform>
+  | WPKBufferLayoutEditable
+  | WPKBufferLayoutMarshalled<TEntity>
+  ;
+export type WPKBufferLayouts<TUniform, TEntity> = Record<string, WPKBufferLayout<TUniform, TEntity>>;
 //#endregion
 
 //#region mutate
@@ -65,17 +104,19 @@ export type WPKBufferResources<TUniform, TEntity, TBufferFormatMap extends WPKBu
 
 //#region dispatch
 export const DISPATCH_PARAMS_BUFFER_NAME = 'dispatch';
-export type WPKDispatchSize = [number, number, number];
-export type WPKDispatchSizes<TEntryPoints extends string[]> = {
-  [K in TEntryPoints[number]]: WPKDispatchSize;
+export type WPKDispatchCount = [number, number, number];
+export type WPKDispatchCounts<TEntryPoints extends string[]> = {
+  [K in TEntryPoints[number]]: WPKDispatchCount;
 };
-export type WPKDispatchParams<TEntryPoints extends string[]> = {
+export type WPKDispatchParams = {
   instanceCount: number;
-  dispatchSizes: WPKDispatchSizes<TEntryPoints>;
+};
+export type WPKDispatchParamsDetail<TEntryPoints extends string[]> = WPKDispatchParams & {
+  dispatchCounts: WPKDispatchCounts<TEntryPoints>;
 };
 export type WPKDispatchResource<TEntryPoints extends string[]> = {
-  format: WPKBufferFormat<WPKDispatchParams<TEntryPoints>, any>;
+  layout: WPKBufferLayoutUniform<WPKDispatchParamsDetail<TEntryPoints>>;
   buffer: WPKResource<WPKTrackedBuffer>;
-  params: WPKResource<WPKDispatchParams<TEntryPoints>>;
+  params: WPKResource<WPKDispatchParamsDetail<TEntryPoints>>;
 };
 //#endregion

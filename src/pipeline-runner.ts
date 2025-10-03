@@ -122,9 +122,9 @@ const createPipelineRunner = async <TCompute extends boolean, TRender extends bo
       device.queue.submit([encoder.finish()]);
       logFuncs.lazyTrace(LOGGER, () => `Call debug function ${validPipelines.length} pipelines`);
       for (const pipelineDetail of validPipelines.values()) {
-        const { debugFunc } = pipelineDetail;
-        if (debugFunc !== undefined) {
-          await debugFunc();
+        const { readBackFunc } = pipelineDetail;
+        if (readBackFunc !== undefined) {
+          await readBackFunc();
         }
       }
       pipelines.forEach(pipeline => pipeline.clean());
@@ -143,14 +143,14 @@ const invokeComputePipeline = (compute: WPKComputePipelineDetail[], pipelineInde
   const computePass = encoder.beginComputePass();
   for (const [computeEntryIndex, computeEntry] of compute.entries()) {
     logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}]`);
-    const { bindGroups, pipeline, dispatchSize } = computeEntry;
+    const { bindGroups, pipeline, dispatchCount } = computeEntry;
     computePass.setPipeline(pipeline);
     for (const bindGroup of bindGroups) {
       logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] set bind group at index ${bindGroup.index} to ${bindGroup.group.label}`);
       computePass.setBindGroup(bindGroup.index, bindGroup.group);
     }
-    logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch size ${JSON.stringify(dispatchSize)}`);
-    computePass.dispatchWorkgroups(dispatchSize[0], dispatchSize[1], dispatchSize[2]);
+    logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch size ${JSON.stringify(dispatchCount)}`);
+    computePass.dispatchWorkgroups(dispatchCount[0], dispatchCount[1], dispatchCount[2]);
   }
   computePass.end();
 };

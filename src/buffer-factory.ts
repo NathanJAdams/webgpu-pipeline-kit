@@ -42,7 +42,7 @@ enum WPKManagedBufferState {
 }
 
 export const bufferFactory = {
-  ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
+  ofData: (data: ArrayBuffer, label: string, usage: GPUBufferUsageFlags, requiresReadBack: boolean): WPKResource<WPKTrackedBuffer> => {
     const labeller = createLabeller(label);
     logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${labeller.current()}' of usage ${usageToString(usage)} from data of byte length ${data.byteLength}`);
     const size = toValidSize(labeller.current(), data.byteLength);
@@ -53,7 +53,7 @@ export const bufferFactory = {
       data = alignedBuffer;
     }
     usage |= GPUBufferUsage.COPY_DST;
-    if (debuggable) {
+    if (requiresReadBack) {
       usage |= GPUBufferUsage.COPY_SRC;
     }
     let state = WPKManagedBufferState.Initialized;
@@ -98,10 +98,10 @@ export const bufferFactory = {
       },
     };
   },
-  ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKResource<WPKTrackedBuffer> => {
+  ofSize: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, requiresReadBack: boolean): WPKResource<WPKTrackedBuffer> => {
     const labeller = createLabeller(label);
     logFuncs.lazyDebug(LOGGER, () => `Creating buffer '${labeller.current()}' of usage ${usageToString(usage)} of byte length ${bytesLength}`);
-    if (debuggable) {
+    if (requiresReadBack) {
       usage |= GPUBufferUsage.COPY_SRC;
     }
     const size = toValidSize(labeller.current(), bytesLength);
@@ -144,7 +144,7 @@ export const bufferFactory = {
       },
     };
   },
-  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
+  ofResizeable: (copyDataOnResize: boolean, label: string, usage: GPUBufferUsageFlags, requiresReadBack: boolean): WPKBufferResizeable & WPKResource<WPKTrackedBuffer> => {
     const labeller = createLabeller(label);
     logFuncs.lazyDebug(LOGGER, () => `Creating resizeable buffer '${labeller.current()}' of usage ${usageToString(usage)}`);
     const oldBuffers: GPUBuffer[] = [];
@@ -157,7 +157,7 @@ export const bufferFactory = {
     if (copyDataOnResize) {
       usage |= GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
     }
-    if (debuggable) {
+    if (requiresReadBack) {
       usage |= GPUBufferUsage.COPY_SRC;
     }
     return {
@@ -218,12 +218,12 @@ export const bufferFactory = {
       },
     };
   },
-  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
+  ofMutable: (bytesLength: number, label: string, usage: GPUBufferUsageFlags, requiresReadBack: boolean): WPKBufferMutable<number> & WPKResource<WPKTrackedBuffer> => {
     const labeller = createLabeller(label);
     logFuncs.lazyDebug(LOGGER, () => `Creating mutable buffer '${labeller.current()}' of usage ${usageToString(usage)} from data of byte length ${bytesLength}`);
     const size = toValidSize(labeller.current(), bytesLength);
     usage |= GPUBufferUsage.COPY_DST;
-    if (debuggable) {
+    if (requiresReadBack) {
       usage |= GPUBufferUsage.COPY_SRC;
     }
     let state = WPKManagedBufferState.Initialized;
@@ -276,12 +276,12 @@ export const bufferFactory = {
       },
     };
   },
-  ofStaged: (label: string, usage: GPUBufferUsageFlags, debuggable: boolean): WPKBufferMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
+  ofStaged: (label: string, usage: GPUBufferUsageFlags, requiresReadBack: boolean): WPKBufferMutable<CopySlice[]> & WPKResource<WPKTrackedBuffer> => {
     logFuncs.lazyDebug(LOGGER, () => `Creating staged buffer '${label}' of usage ${usageToString(usage)}`);
     const stagingLabel = `${label}-staging`;
     const backingLabel = `${label}-backing`;
-    const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST, debuggable);
-    const backing = bufferFactory.ofResizeable(true, backingLabel, usage | GPUBufferUsage.COPY_DST, debuggable);
+    const staging = bufferFactory.ofResizeable(false, stagingLabel, GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST, requiresReadBack);
+    const backing = bufferFactory.ofResizeable(true, backingLabel, usage | GPUBufferUsage.COPY_DST, requiresReadBack);
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
       mutate(data, target) {

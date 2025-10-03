@@ -1,0 +1,148 @@
+[
+  {
+    "buffer": "editables",
+    "locationAttributes": [
+      {
+        "fieldName": "em",
+        "locationName": "editables_em_0",
+        "datumType": "vec2<f32>",
+        "attribute": {
+          "format": "float32x2",
+          "offset": 0,
+          "shaderLocation": 1
+        }
+      },
+      {
+        "fieldName": "em",
+        "locationName": "editables_em_1",
+        "datumType": "vec2<f32>",
+        "attribute": {
+          "format": "float32x2",
+          "offset": 8,
+          "shaderLocation": 2
+        }
+      },
+      {
+        "fieldName": "ev",
+        "locationName": "editables_ev",
+        "datumType": "vec2<f32>",
+        "attribute": {
+          "format": "float32x2",
+          "offset": 16,
+          "shaderLocation": 3
+        }
+      },
+      {
+        "fieldName": "es",
+        "locationName": "editables_es",
+        "datumType": "f32",
+        "attribute": {
+          "format": "float32",
+          "offset": 24,
+          "shaderLocation": 4
+        }
+      }
+    ],
+    "reconstitutedMatrices": [
+      {
+        "matrixName": "editables_em",
+        "matrixType": "mat2x2<f32>",
+        "vectorLocationNames": [
+          "editables_em_0",
+          "editables_em_1"
+        ]
+      }
+    ],
+    "references": [
+      {
+        "datumType": "mat2x2<f32>",
+        "name": "em",
+        "reference": "editables_em"
+      },
+      {
+        "datumType": "vec2<f32>",
+        "name": "ev",
+        "reference": "editables_ev"
+      },
+      {
+        "datumType": "f32",
+        "name": "es",
+        "reference": "editables_es"
+      }
+    ],
+    "stride": 32
+  },
+  {
+    "buffer": "marshalleds",
+    "locationAttributes": [
+      {
+        "fieldName": "mm",
+        "locationName": "marshalleds_mm_0",
+        "datumType": "vec2<f32>",
+        "attribute": {
+          "format": "float32x2",
+          "offset": 0,
+          "shaderLocation": 5
+        }
+      },
+      {
+        "fieldName": "mm",
+        "locationName": "marshalleds_mm_1",
+        "datumType": "vec2<f32>",
+        "attribute": {
+          "format": "float32x2",
+          "offset": 8,
+          "shaderLocation": 6
+        }
+      },
+      {
+        "fieldName": "mv",
+        "locationName": "marshalleds_mv",
+        "datumType": "vec2<f32>",
+        "attribute": {
+          "format": "float32x2",
+          "offset": 16,
+          "shaderLocation": 7
+        }
+      },
+      {
+        "fieldName": "ms",
+        "locationName": "marshalleds_ms",
+        "datumType": "f32",
+        "attribute": {
+          "format": "float32",
+          "offset": 24,
+          "shaderLocation": 8
+        }
+      }
+    ],
+    "reconstitutedMatrices": [
+      {
+        "matrixName": "marshalleds_mm",
+        "matrixType": "mat2x2<f32>",
+        "vectorLocationNames": [
+          "marshalleds_mm_0",
+          "marshalleds_mm_1"
+        ]
+      }
+    ],
+    "references": [
+      {
+        "datumType": "mat2x2<f32>",
+        "name": "mm",
+        "reference": "marshalleds_mm"
+      },
+      {
+        "datumType": "vec2<f32>",
+        "name": "mv",
+        "reference": "marshalleds_mv"
+      },
+      {
+        "datumType": "f32",
+        "name": "ms",
+        "reference": "marshalleds_ms"
+      }
+    ],
+    "stride": 32
+  }
+]

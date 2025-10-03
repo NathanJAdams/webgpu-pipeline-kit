@@ -1,5 +1,6 @@
-import { DISPATCH_PARAMS_BUFFER_NAME, WPKDispatchParams, WPKDispatchSize } from './buffer-data';
+import { DISPATCH_PARAMS_BUFFER_NAME, WPKDispatchParamsDetail, WPKDispatchCount } from './buffer-data';
 import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
+import { WPKShaderMatrix, WPKShaderScalar, WPKShaderStruct, WPKShaderVector } from './structs';
 
 //#region options
 export type WPKPipelineOptions<TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean> = {
@@ -56,7 +57,7 @@ export type WPKBindGroupsDetail = Array<WPKBindGroupDetail>;
 export type WPKComputePipelineDetail = {
   bindGroups: WPKBindGroupsDetail;
   pipeline: GPUComputePipeline;
-  dispatchSize: WPKDispatchSize;
+  dispatchCount: WPKDispatchCount;
 };
 export type WPKVertexBufferDetail = {
   buffer: GPUBuffer;
@@ -76,12 +77,12 @@ export type WPKRenderPipelineDetail = {
   vertexBuffers: GPUBuffer[];
   drawCountsFunc: () => WPKDrawCounts;
 };
-export type WPKDebugFunc = () => Promise<void>;
+export type WPKReadBackFunc = () => Promise<void>;
 export type WPKPipelineDetail<TCompute extends boolean, TRender extends boolean> =
   & {
     name: string;
     instanceCount: number;
-    debugFunc?: WPKDebugFunc;
+    readBackFunc?: WPKReadBackFunc;
   }
   & (
     TCompute extends true
@@ -115,7 +116,7 @@ export type WPKPipelineRunner<TCompute extends boolean, TRender extends boolean>
   add: (pipeline: WPKPipeline<any, any, any, any, any, TCompute, TRender>, options?: WPKAddPipelineOptions) => void;
   remove: (name: string) => void;
   step: () => Promise<void>;
-  destroy:()=>void;
+  destroy: () => void;
 };
 //#endregion
 
@@ -127,24 +128,35 @@ export type WPKViews = {
 export type WPKViewsFunc = () => WPKViews;
 //#endregion
 
-//#region debug
-export type WPKDebugOptions<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Partial<{
-  onBufferContents: (contents: WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap>) => Promise<void>;
+//#region content
+type WPKReadBackContentTypeMap =
+  & {
+    [S in WPKShaderScalar]: number;
+  }
+  & {
+    [V in WPKShaderVector]: number[];
+  }
+  & {
+    [M in WPKShaderMatrix]: number[];
+  };
+export type WPKReadBackContent<TStruct extends WPKShaderStruct> = {
+  [K in keyof TStruct]: WPKReadBackContentTypeMap[TStruct[K]['datumType']];
+};
+export type WPKReadBackOptions<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Partial<{
+  onReadBack: (contents: WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap>) => Promise<void>;
 }>;
-export type WPKDebugBufferContentMap<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+export type WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   [K in WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>]:
   TBufferFormatMap[K] extends WPKBufferFormatUniform<TUniform>
-  ? Partial<TUniform>
+  ? WPKReadBackContent<TBufferFormatMap[K]['marshall']>
   : TBufferFormatMap[K] extends WPKBufferFormatEntityMarshalled<TEntity>
-  ? Array<Partial<TEntity>>
+  ? Array<WPKReadBackContent<TBufferFormatMap[K]['marshall']>>
   : TBufferFormatMap[K] extends WPKBufferFormatEntityLayout
-  ? Array<{
-    [F in TBufferFormatMap[K]['layout'][number]['name']]: number | number[] | string;
-  }>
+  ? Array<WPKReadBackContent<TBufferFormatMap[K]['layout']>>
   : never
   ;
 } & {
-  [DISPATCH_PARAMS_BUFFER_NAME]: WPKDispatchParams<any>;
+  [DISPATCH_PARAMS_BUFFER_NAME]: WPKDispatchParamsDetail<any>;
 };
 //#endregion
 

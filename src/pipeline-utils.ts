@@ -1,5 +1,5 @@
 import { getLogger } from './logging';
-import { WPKComputePass, WPKDispatchParams, WPKDispatchSize, WPKDispatchSizes, WPKWorkGroupSize } from './types';
+import { WPKComputePass, WPKDispatchParamsDetail, WPKDispatchCount, WPKDispatchCounts, WPKWorkGroupSize } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = getLogger('pipeline');
@@ -56,16 +56,16 @@ export const pipelineFuncs = {
   toByteLengthTotal: (formats: GPUVertexFormat[]): number => {
     return formats.reduce((currentByteLength, format) => currentByteLength + pipelineFuncs.toByteLength(format), 0);
   },
-  toDispatchParams: (passes: WPKComputePass<any, any, any>[], instanceCount: number): WPKDispatchParams<any> => {
+  toDispatchParams: (passes: WPKComputePass<any, any, any>[], instanceCount: number): WPKDispatchParamsDetail<any> => {
     return {
       instanceCount,
-      dispatchSizes: passes.reduce((acc, pass) => {
-        acc[pass.entryPoint] = pipelineFuncs.toDispatchSize(instanceCount, pass.workGroupSize);
+      dispatchCounts: passes.reduce((acc, pass) => {
+        acc[pass.entryPoint] = pipelineFuncs.toDispatchCount(instanceCount, pass.workGroupSize);
         return acc;
-      }, {} as WPKDispatchSizes<any>),
+      }, {} as WPKDispatchCounts<any>),
     };
   },
-  toDispatchSize: (instanceCount: number, workGroupSize: WPKWorkGroupSize): WPKDispatchSize => {
+  toDispatchCount: (instanceCount: number, workGroupSize: WPKWorkGroupSize): WPKDispatchCount => {
     const totalThreads = workGroupSize.x * (workGroupSize.y || 1) * (workGroupSize.z || 1);
     const x = Math.ceil(instanceCount / totalThreads);
     return [x, 1, 1]; // TODO test with y and z

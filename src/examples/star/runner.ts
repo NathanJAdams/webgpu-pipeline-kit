@@ -4,8 +4,8 @@ import { meshTemplates } from './mesh-templates';
 import { renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel, Transformation, Vector3 } from '../..';
 import { getLogger } from '../../logging';
-import { WPKDebugOptions, WPKPeripheralEventHandlers } from '../../types';
-import { Color, logFuncs } from '../../utils';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers } from '../../types';
+import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
 
@@ -16,13 +16,6 @@ export const run = async (): Promise<void> => {
     throw Error('Failed to get game canvas from document');
   }
   const camera = new Camera();
-  const eventHandlers: WPKPeripheralEventHandlers = {
-    'screen-resize': async (eventInfo) => {
-      camera.setAspectRatio(eventInfo.aspectRatio);
-      starPipeline.mutateUniform({ camera });
-    },
-  };
-  const runner = await factories.pipelineRunner.ofRender(canvas, Color.BLACK, eventHandlers);
   const starPipelineOptions = builders.pipelineOptions<StarUniform, Star, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)
@@ -30,14 +23,20 @@ export const run = async (): Promise<void> => {
     .initialUniformObject().camera(camera).buildInitialUniform()
     .initialEntities([])
     .buildObject();
-  const debugOptions: WPKDebugOptions<StarUniform, Star, StarBufferFormats> = {
-    async onBufferContents(contents) {
-      logFuncs.lazyInfo(LOGGER, () => `Buffer contents: ${JSON.stringify(contents)}`);
+  const debugOptions: WPKReadBackOptions<StarUniform, Star, StarBufferFormats> = {
+    async onReadBack(contents) {
+      LOGGER.info(`Buffer contents: ${JSON.stringify(contents)}`);
     },
   };
   const starPipeline = factories.pipeline.ofRender('star', bufferFormats, meshTemplates, renderShader, starPipelineOptions, debugOptions);
+  const eventHandlers: WPKPeripheralEventHandlers = {
+    'screen-resize': async (eventInfo) => {
+      camera.setAspectRatio(eventInfo.aspectRatio);
+      starPipeline.mutateUniform({ camera });
+    },
+  };
+  const runner = await factories.pipelineRunner.ofRender(canvas, Color.BLACK, eventHandlers);
   runner.add(starPipeline);
-  camera.setPosition(new Vector3(0, 0, 0));
   while (true) {
     LOGGER.debug('adding star');
     const star = newStar();

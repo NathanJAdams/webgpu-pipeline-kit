@@ -1,8 +1,8 @@
-import { HasError, RemoveNever } from '../utils';
-import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatMarshalled, WPKBufferFormatUniform } from './buffer-formats';
+import { RemoveNever } from '../utils';
+import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
 import { WPKMeshParameters, WPKMeshTemplateMap } from './mesh-template';
 import { WPKDatumTypeReference, WPKDatumTypeReferenceBase, WPKScalarReference, WPKShaderStructReferences, WPKVectorReference } from './shader-code';
-import { WPKShaderDatumType, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarSignedInt, WPKShaderScalarUnsignedInt, WPKShaderStructEntry, WPKShaderVector } from './structs';
+import { WPKShaderDatumType, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarSignedInt, WPKShaderScalarUnsignedInt, WPKShaderVector } from './structs';
 
 //#region references
 export type WPKBufferBindingReferencesEntity<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBuffer extends keyof TBufferFormatMap> =
@@ -34,39 +34,6 @@ export type WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap exten
       : never
     )
   }>;
-type WPKStructEntriesDatumType<TStructEntries extends readonly WPKShaderStructEntry[], TStructEntryName> =
-  TStructEntries extends [infer Head, ...infer Tail]
-  ? Head extends WPKShaderStructEntry<infer TDatumType>
-  ? TDatumType
-  : WPKStructEntriesDatumType<Tail extends readonly WPKShaderStructEntry[] ? Tail : never, TStructEntryName>
-  : never;
-type WPKStructEntries<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBufferName extends keyof TBufferFormatMap> =
-  TBufferFormatMap[TBufferName] extends WPKBufferFormatMarshalled<any, any, any>
-  ? TBufferFormatMap[TBufferName]['marshall']
-  : TBufferFormatMap[TBufferName] extends WPKBufferFormatEntityLayout
-  ? TBufferFormatMap[TBufferName]['layout']
-  : HasError<'No struct entries possible'>;
-export type WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  [TVertexBufferLocation in WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap> as TVertexBufferLocation['buffer']]: {
-    [
-    TField in TVertexBufferLocation['field']as string extends TField ? 'error' : TField]:
-    string extends TField
-    ? `To use 'params.vertex_buffers.${TVertexBufferLocation['buffer']}...' ensure TypeScript is version 4.9+ and create the buffer format using 'const ${TVertexBufferLocation['buffer']} = { ... } as const satisifes WPKBufferFormat<MyUniform, MyEntity>;'`
-    : WPKStructEntries<TUniform, TEntity, TBufferFormatMap, TVertexBufferLocation['buffer']> extends infer TStructEntries
-    ? TStructEntries extends HasError<any>
-    ? TStructEntries
-    : TStructEntries extends WPKShaderStructEntry[]
-    ? WPKStructEntriesDatumType<TStructEntries, TField> extends infer TDatumType
-    ? TDatumType extends never
-    ? HasError<'No datum type found'>
-    : TDatumType extends WPKShaderDatumType
-    ? WPKDatumTypeReference<TDatumType>
-    : HasError<'Invalid datum type'>
-    : HasError<'Internal error'>
-    : HasError<'Invalid struct entries'>
-    : HasError<'Internal error'>
-  };
-};
 //#endregion
 
 //#region wgsl tagged template
@@ -152,15 +119,33 @@ export type WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap extends 
   TBufferFormatMap[K] extends WPKBufferFormatEntityMarshalled<TEntity>
   ? {
     buffer: K;
-    field: string & TBufferFormatMap[K]['marshall'][number]['name'];
+    field: string & TBufferFormatMap[K]['marshall']['name'];
   }
   : TBufferFormatMap[K] extends WPKBufferFormatEntityLayout
   ? {
     buffer: K;
-    field: string & TBufferFormatMap[K]['layout'][number]['name'];
+    field: string & TBufferFormatMap[K]['layout']['name'];
   }
   : never
 }[string & keyof TBufferFormatMap];
+export type WPKVertexBufferFieldReferences<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TBufferName extends string & keyof TBufferFormatMap> =
+  TBufferFormatMap[TBufferName] extends infer TBufferFormat
+  ? TBufferFormat extends WPKBufferFormatEntityMarshalled<TEntity>
+  ? {
+    [TFieldName in string & keyof TBufferFormat['marshall']]:
+    WPKDatumTypeReference<TBufferFormat['marshall'][TFieldName]['datumType']>
+  }
+  : TBufferFormat extends WPKBufferFormatEntityLayout
+  ? {
+    [TFieldName in string & keyof TBufferFormat['layout']]:
+    WPKDatumTypeReference<TBufferFormat['layout'][TFieldName]['datumType']>
+  }
+  : never
+  : never
+  ;
+export type WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = RemoveNever<{
+  [TBufferName in string & keyof TBufferFormatMap]: WPKVertexBufferFieldReferences<TUniform, TEntity, TBufferFormatMap, TBufferName>
+}>;
 export type WPKVertexBufferDataTypes = WPKShaderScalar | WPKShaderVector | WPKShaderVector[];
 export type WPKVertexBufferLocationType = WPKShaderScalar | WPKShaderVector;
 

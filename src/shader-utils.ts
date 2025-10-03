@@ -1,4 +1,4 @@
-import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderStructEntry, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferAttributeData, WPKVertexBufferLocationType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase, WPKVertexBufferReference } from './types';
+import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferAttributeData, WPKVertexBufferLocationType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase, WPKVertexBufferReference, WPKBufferLayouts } from './types';
 
 export const shaderFuncs = {
   isScalar: (datumType: WPKShaderDatumType): datumType is WPKShaderScalar => {
@@ -65,7 +65,6 @@ export const shaderFuncs = {
       case 'f32': return 'float32';
     }
   },
-  toStrideArray: <T extends WPKShaderStructEntry>(datumTyped: T[]): number => datumTyped.reduce((acc, datumTyped) => acc + shaderFuncs.toByteLength(datumTyped.datumType), 0),
   toByteLength: (datumType: WPKShaderDatumType): number => shaderFuncs.toDatumLength(datumType) * 4,
   toDatumLength: (datumType: WPKShaderDatumType): number => DATUM_TYPE_LENGTHS[datumType],
   toMatrixDimensions: (matrixType: WPKShaderMatrix): [WPKShaderDimension, WPKShaderDimension] => {
@@ -89,7 +88,7 @@ export const shaderFuncs = {
   },
   toVertexBufferAttributeData: <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
     vertexBufferLocations: WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>[],
-    bufferFormats: TBufferFormatMap,
+    bufferLayouts: WPKBufferLayouts<TUniform, TEntity>,
   ): Array<WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>> => {
     const bufferFieldsTmp: Record<string, Set<string>> = {};
     for (const location of vertexBufferLocations) {
@@ -109,24 +108,21 @@ export const shaderFuncs = {
     let shaderLocation = 1; // 0 is reserved for mesh location
     const attributeDataArray: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>[] = [];
     for (const { buffer, fields } of bufferFields) {
-      const bufferFormat = bufferFormats[buffer];
-      const structEntries = (bufferFormat.bufferType === 'editable')
-        ? bufferFormat.layout
-        : bufferFormat.marshall;
+      const bufferLayout = bufferLayouts[buffer];
+      const { entries, stride } = bufferLayout;
       const locationAttributes: WPKVertexBufferLocationAttribute[] = [];
       const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];
       const references: WPKVertexBufferReference[] = [];
-      const stride = shaderFuncs.toStrideArray(structEntries);
       let offset = 0;
-      for (const structEntry of structEntries) {
-        const { name, datumType } = structEntry;
-        if (fields.has(name)) {
-          const locationName = `${buffer}_${name}`;
+      for (const [entryName, entry] of Object.entries(entries)) {
+        const { datumType } = entry;
+        if (fields.has(entryName)) {
+          const locationName = `${buffer}_${entryName}`;
           const vertexBufferLocationDatumType = shaderFuncs.toVertexBufferLocationType(datumType);
           const format = shaderFuncs.toGPUVertexFormat(vertexBufferLocationDatumType);
           references.push({
             datumType,
-            name,
+            name: entryName,
             reference: locationName,
           });
           if (shaderFuncs.isMatrix(datumType)) {
@@ -137,7 +133,7 @@ export const shaderFuncs = {
               const vectorLocationName = `${locationName}_${i}`;
               vectorLocationNames.push(vectorLocationName);
               const data: WPKVertexBufferLocationAttribute = {
-                fieldName: name,
+                fieldName: entryName,
                 locationName: vectorLocationName,
                 datumType: vertexBufferLocationDatumType,
                 attribute: {
@@ -157,7 +153,7 @@ export const shaderFuncs = {
             reconstitutedMatrices.push(reconstitutedMatrix);
           } else {
             const data: WPKVertexBufferLocationAttribute = {
-              fieldName: name,
+              fieldName: entryName,
               locationName,
               datumType: vertexBufferLocationDatumType,
               attribute: {

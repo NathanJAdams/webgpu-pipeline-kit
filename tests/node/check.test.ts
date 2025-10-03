@@ -10,15 +10,19 @@ import { bufferFormats as starBufferFormats } from '../../src/examples/star/buff
 setLogLevel('INFO');
 
 describe('check shader code', () => {
-  test('valid shader code orbiter', async () => {
+  test('valid shader code orbiter compute', async () => {
     await checkComputeShaderCode(orbiterComputeShader, orbiterBufferFormats);
+  });
+  test('valid shader code orbiter render', async () => {
     await checkRenderShaderCode(orbiterRenderShader, orbiterBufferFormats);
   });
   test('valid shader code star', async () => {
     await checkRenderShaderCode(starRenderShader, starBufferFormats);
   });
-  test('valid shader code triangles', async () => {
+  test('valid shader code triangles compute', async () => {
     await checkComputeShaderCode(triangleComputeShader, triangleBufferFormats);
+  });
+  test('valid shader code triangles render', async () => {
     await checkRenderShaderCode(triangleRenderShader, triangleBufferFormats);
   });
 });

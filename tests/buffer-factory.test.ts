@@ -33,8 +33,8 @@ describe('buffer-factory', () => {
       new Float32Array(expectedData)[0] = 456;
       const label = 'test-buffer';
       const usage = GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM;
-      const debuggable = false;
-      const bufferResource = bufferFactory.ofData(sentData, label, usage, debuggable);
+      const requiresReadBack = false;
+      const bufferResource = bufferFactory.ofData(sentData, label, usage, requiresReadBack);
 
       const buffer1 = bufferResource.get(device, queue, encoder);
       console.log(JSON.stringify(typeof buffer1.destroy));
@@ -71,8 +71,8 @@ describe('buffer-factory', () => {
       const expectedSize = 32;
       const label = 'test-buffer';
       const usage = 1 | 9;
-      const debuggable = false;
-      const bufferResource = bufferFactory.ofSize(sentSize, label, usage, debuggable);
+      const requiresReadBack = false;
+      const bufferResource = bufferFactory.ofSize(sentSize, label, usage, requiresReadBack);
 
       const buffer1 = bufferResource.get(device, queue, encoder);
       console.log(JSON.stringify(typeof buffer1.destroy));

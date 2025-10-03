@@ -104,6 +104,6 @@ export type WPKDatumTypeReference<TDatumType extends WPKShaderDatumType> =
   : HasError<`Invalid datum type ${TDatumType}`>
   ;
 export type WPKShaderStructReferences<TShaderStruct extends WPKShaderStruct> = {
-  [TShaderStructEntry in TShaderStruct[number]as string & TShaderStructEntry['name']]: WPKDatumTypeReference<TShaderStructEntry['datumType']>
+  [TShaderStructEntryName in keyof TShaderStruct]: WPKDatumTypeReference<TShaderStruct[TShaderStructEntryName]['datumType']>
 };
 //#endregion

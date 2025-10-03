@@ -1,6 +1,7 @@
 import { WPKBufferFormatUniform, WPKRefPath } from '../src/types';
-import { unmarshallUniform } from '../src/pipeline';
+import { unmarshallToInstances } from '../src/pipeline';
 import { getValueAtPath, setValueAtPath } from '../src/datum-extract-embed';
+import { bufferLayoutsFuncs } from '../src/buffer-layout';
 
 type Uniform = {
   a: [
@@ -14,12 +15,14 @@ type Uniform = {
 
 const bufferFormat: WPKBufferFormatUniform<Uniform> = {
   bufferType: 'uniform',
-  marshall: [{
-    name: 'aaa',
-    datumType: 'mat4x4<f32>',
-    matrix: 'a.0.b.viewProj',
-  }]
+  marshall: {
+    aaa: {
+      datumType: 'mat4x4<f32>',
+      matrix: 'a.0.b.viewProj',
+    }
+  }
 };
+const bufferLayout = bufferLayoutsFuncs.toBufferLayoutUniform(bufferFormat.marshall, GPUBufferUsage.UNIFORM);
 
 describe('unmarshall', () => {
   test('uniforms', () => {
@@ -28,8 +31,8 @@ describe('unmarshall', () => {
       new Float32Array(arrayBuffer)[i] = i;
     }
     const dataView = new DataView(arrayBuffer);
-    const uniform = unmarshallUniform(dataView, bufferFormat);
-    expect(uniform.a[0].b.viewProj).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    const uniform = unmarshallToInstances(dataView, bufferLayout, 1);
+    expect(uniform[0].a[0].b.viewProj).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
   });
   test('get value without existing path', () => {
     const instance = {};

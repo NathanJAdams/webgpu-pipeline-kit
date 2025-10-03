@@ -2,7 +2,7 @@ import { bufferFormatFuncs } from './buffer-formats';
 import { datumExtractEmbedFactory } from './datum-extract-embed';
 import { getLogger } from './logging';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormatElement, WPKCacheResizeable, WPKDatumBridge, WPKDatumExtractEmbedder, WPKDatumGetSetter, WPKEntityCache, WPKShaderScalar, WPKShaderStructEntry } from './types';
+import { WPKBufferFormatElement, WPKCacheResizeable, WPKDatumBridgeMarshalled, WPKDatumExtractEmbedder, WPKDatumGetSetter, WPKEntityCache, WPKShaderDatumType, WPKShaderScalar } from './types';
 import { callCreatorOf, logFuncs } from './utils';
 
 const LOGGER = getLogger('data');
@@ -27,7 +27,28 @@ const datumGetSetters = createDatumGetSetters();
 const littleEndian = true;
 
 export const datumBridgeFactory = {
-  ofFormatElement: <T>(formatElement: WPKBufferFormatElement<T>, datumOffset: number, entityCache?: WPKEntityCache<T, any, any>): WPKDatumBridge<T> => {
+  ofDatumType: <T>(datumPath: string, datumType: WPKShaderDatumType, datumOffset: number): WPKDatumBridgeMarshalled<T> => {
+    const componentType = shaderFuncs.toComponentType(datumType);
+    const datumGetSetter = datumGetSetters.get(componentType);
+    if (datumGetSetter === undefined) {
+      throw Error(`Cannot create datum bridge for type ${datumType}`);
+    }
+    const stride = shaderFuncs.toByteLength(datumType);
+    if (shaderFuncs.isScalar(datumType)) {
+      const extractEmbedder = datumExtractEmbedFactory.ofScalar(datumPath);
+      return datumBridgeFactory.ofNumber(stride, extractEmbedder, datumGetSetter, datumOffset);
+    } else if (shaderFuncs.isVector(datumType)) {
+      const extractEmbedder = datumExtractEmbedFactory.ofVector(datumPath);
+      return datumBridgeFactory.ofNumberArray(stride, extractEmbedder, datumGetSetter, datumOffset, shaderFuncs.toDatumLength(datumType));
+    } else if (shaderFuncs.isMatrix(datumType)) {
+      const extractEmbedder = datumExtractEmbedFactory.ofMatrix(datumPath);
+      return datumBridgeFactory.ofNumberArray(stride, extractEmbedder, datumGetSetter, datumOffset, shaderFuncs.toDatumLength(datumType));
+    } else {
+      logFuncs.lazyInfo(LOGGER, () => `datum offset ${datumOffset}`);
+      throw Error(`Cannot create datum bridge from user format ${JSON.stringify(datumType)}`);
+    }
+  },
+  ofFormatElement: <T>(formatElement: WPKBufferFormatElement<T>, datumOffset: number, entityCache?: WPKEntityCache<T, any, any>): WPKDatumBridgeMarshalled<T> => {
     const { datumType } = formatElement;
     const componentType = shaderFuncs.toComponentType(datumType);
     const datumGetSetter = datumGetSetters.get(componentType);
@@ -52,46 +73,24 @@ export const datumBridgeFactory = {
       throw Error(`Cannot create datum bridge from user format ${JSON.stringify(formatElement)}`);
     }
   },
-  ofStructEntry: <T>(structEntry: WPKShaderStructEntry, datumOffset: number): WPKDatumBridge<T> => {
-    const { name, datumType } = structEntry;
-    const componentType = shaderFuncs.toComponentType(datumType);
-    const datumGetSetter = datumGetSetters.get(componentType);
-    if (datumGetSetter === undefined) {
-      throw Error(`Cannot create datum bridge for type ${datumType}`);
-    }
-    const stride = shaderFuncs.toByteLength(datumType);
-    if (shaderFuncs.isScalar(datumType)) {
-      const extractEmbedder = datumExtractEmbedFactory.ofScalar(name);
-      return datumBridgeFactory.ofNumber(stride, extractEmbedder, datumGetSetter, datumOffset);
-    } else if (shaderFuncs.isVector(datumType)) {
-      const extractEmbedder = datumExtractEmbedFactory.ofVector(name);
-      return datumBridgeFactory.ofNumberArray(stride, extractEmbedder, datumGetSetter, datumOffset, shaderFuncs.toDatumLength(datumType));
-    } else if (shaderFuncs.isMatrix(datumType)) {
-      const extractEmbedder = datumExtractEmbedFactory.ofMatrix(name);
-      return datumBridgeFactory.ofNumberArray(stride, extractEmbedder, datumGetSetter, datumOffset, shaderFuncs.toDatumLength(datumType));
-    } else {
-      logFuncs.lazyInfo(LOGGER, () => `datum offset ${datumOffset}`);
-      throw Error(`Cannot create datum bridge from user format ${JSON.stringify(structEntry)}`);
-    }
-  },
-  ofNumber: <T>(stride: number, extractEmbedder: WPKDatumExtractEmbedder<T, number>, datumGetSetter: WPKDatumGetSetter, datumOffset: number): WPKDatumBridge<T> => {
+  ofNumber: <T>(stride: number, extractEmbedder: WPKDatumExtractEmbedder<T, number>, datumGetSetter: WPKDatumGetSetter, datumOffset: number): WPKDatumBridgeMarshalled<T> => {
     return {
       stride,
       dataViewToInstance: (offset, instance, dataView) => {
         const dataViewOffset = offset + datumOffset;
         const value = datumGetSetter.get(dataView, dataViewOffset, littleEndian);
-        logFuncs.lazyTrace(LOGGER, () => `Setting ${value} from offset ${dataViewOffset} on instance`);
+        logFuncs.lazyTrace(LOGGER, () => `Read back ${value} from offset ${dataViewOffset}`);
         extractEmbedder.embed(instance, value);
       },
       instanceToDataView: (offset, instance, dataView) => {
         const value = extractEmbedder.extract(instance);
         const dataViewOffset = offset + datumOffset;
-        logFuncs.lazyTrace(LOGGER, () => `Setting ${value} at offset ${dataViewOffset}`);
+        logFuncs.lazyTrace(LOGGER, () => `Write ${value} at offset ${dataViewOffset}`);
         datumGetSetter.set(dataView, dataViewOffset, value, littleEndian);
       },
     };
   },
-  ofNumberArray: <T>(stride: number, extractEmbedder: WPKDatumExtractEmbedder<T, number[]>, datumGetSetter: WPKDatumGetSetter, datumOffset: number, datumCount: number): WPKDatumBridge<T> => {
+  ofNumberArray: <T>(stride: number, extractEmbedder: WPKDatumExtractEmbedder<T, number[]>, datumGetSetter: WPKDatumGetSetter, datumOffset: number, datumCount: number): WPKDatumBridgeMarshalled<T> => {
     return {
       stride,
       dataViewToInstance: (offset, instance, dataView) => {
@@ -100,7 +99,7 @@ export const datumBridgeFactory = {
         for (let i = 0; i < datumCount; i++) {
           const elementOffset = dataViewOffset + i * datumGetSetter.stride;
           const value = datumGetSetter.get(dataView, elementOffset, littleEndian);
-          logFuncs.lazyTrace(LOGGER, () => `Got value ${value} at offset ${elementOffset}`);
+          logFuncs.lazyTrace(LOGGER, () => `Read back ${value} from offset ${elementOffset}`);
           values[i] = value;
         }
         extractEmbedder.embed(instance, values);
@@ -109,14 +108,14 @@ export const datumBridgeFactory = {
         const values = extractEmbedder.extract(instance);
         let dataViewOffset = offset + datumOffset;
         for (const value of values) {
-          logFuncs.lazyTrace(LOGGER, () => `Setting ${value} at offset ${dataViewOffset}`);
+          logFuncs.lazyTrace(LOGGER, () => `Write ${value} at offset ${dataViewOffset}`);
           datumGetSetter.set(dataView, dataViewOffset, value, littleEndian);
           dataViewOffset += datumGetSetter.stride;
         }
       },
     };
   },
-  ofEntityIndex: <T>(extractEmbedder: WPKDatumExtractEmbedder<T, string>, datumGetSetter: WPKDatumGetSetter, datumOffset: number, entityCache: WPKCacheResizeable<T>): WPKDatumBridge<T> => {
+  ofEntityIndex: <T>(extractEmbedder: WPKDatumExtractEmbedder<T, string>, datumGetSetter: WPKDatumGetSetter, datumOffset: number, entityCache: WPKCacheResizeable<T>): WPKDatumBridgeMarshalled<T> => {
     return {
       stride: datumGetSetter.stride,
       dataViewToInstance: (offset, instance, dataView) => {
@@ -126,7 +125,7 @@ export const datumBridgeFactory = {
         if (id === undefined) {
           logFuncs.lazyWarn(LOGGER, () => `Undefined entity id for index ${entityIndex}`);
         } else {
-          logFuncs.lazyTrace(LOGGER, () => `Setting entity id ${id} for index ${entityIndex} from offset ${datumOffset} on instance`);
+          logFuncs.lazyTrace(LOGGER, () => `Read back entity id ${id} for index ${entityIndex} from offset ${datumOffset}`);
           extractEmbedder.embed(instance, id);
         }
       },
@@ -134,7 +133,7 @@ export const datumBridgeFactory = {
         const id = extractEmbedder.extract(instance);
         const index = entityCache.indexOf(id);
         const dataViewOffset = offset + datumOffset;
-        logFuncs.lazyTrace(LOGGER, () => `Setting ${index} at offset ${dataViewOffset}`);
+        logFuncs.lazyTrace(LOGGER, () => `Write ${index} for entity id ${id} at offset ${dataViewOffset}`);
         datumGetSetter.set(dataView, dataViewOffset, index, littleEndian);
       },
     };
