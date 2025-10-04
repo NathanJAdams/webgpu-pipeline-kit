@@ -88,7 +88,8 @@ export type WPKTrackedBuffer = {
   destroy: () => void;
 };
 export type WPKResource<T> = {
-  get: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => T;
+  update: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => T;
+  get: () => T;
   clean: () => void;
 };
 export type WPKMeshBufferResource = {

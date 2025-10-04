@@ -1,4 +1,5 @@
 import { getLogger } from './logging';
+import { resourceFactory } from './resources';
 import { WPKBufferMutable, WPKBufferResizeable, WPKMutatedData, WPKResource, WPKTrackedBuffer } from './types';
 import { Capacity, CopySlice, logFuncs, mathFuncs, ValueSlices } from './utils';
 
@@ -59,7 +60,7 @@ export const bufferFactory = {
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
     return {
-      get(device, queue, _encoder) {
+      update(device, queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
           labeller.next();
@@ -94,6 +95,9 @@ export const bufferFactory = {
         }
         return trackedBuffer;
       },
+      get() {
+        return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
+      },
       clean() {
       },
     };
@@ -108,7 +112,7 @@ export const bufferFactory = {
     let state = WPKManagedBufferState.Initialized;
     let trackedBuffer: WPKTrackedBuffer | undefined;
     return {
-      get(device, _queue, _encoder) {
+      update(device, _queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
           labeller.next();
@@ -140,6 +144,9 @@ export const bufferFactory = {
         }
         return trackedBuffer;
       },
+      get() {
+        return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
+      },
       clean() {
       },
     };
@@ -165,7 +172,7 @@ export const bufferFactory = {
         logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${labeller.current()} to desired size ${bytesLength}`);
         desiredBytesLength = bytesLength;
       },
-      get(device, queue, encoder) {
+      update(device, queue, encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined || desiredBytesLength > capacity.capacity) {
           previousBytesLength = capacity.capacity;
@@ -209,6 +216,9 @@ export const bufferFactory = {
         }
         return trackedBuffer;
       },
+      get() {
+        return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
+      },
       clean() {
         oldBuffers.forEach((buffer) => {
           logFuncs.lazyDebug(LOGGER, () => `Destroying old buffer ${buffer.label}`);
@@ -234,7 +244,7 @@ export const bufferFactory = {
         logFuncs.lazyInfo(LOGGER, () => `Mutating data for mutable buffer ${labeller.current()}`);
         mutatedDataArray.push({ data, index });
       },
-      get(device, queue, _encoder) {
+      update(device, queue, _encoder) {
         checkNotDestroyed(state);
         if (trackedBuffer === undefined) {
           labeller.next();
@@ -272,6 +282,9 @@ export const bufferFactory = {
         mutatedDataArray.length = 0;
         return trackedBuffer;
       },
+      get() {
+        return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
+      },
       clean() {
       },
     };
@@ -291,8 +304,8 @@ export const bufferFactory = {
           copySlices: target,
         };
       },
-      get(device, queue, encoder) {
-        let backingTrackedBuffer = backing.get(device, queue, encoder);
+      update(device, queue, encoder) {
+        let backingTrackedBuffer = backing.update(device, queue, encoder);
         if (mutatedSlices !== undefined) {
           logFuncs.lazyTrace(LOGGER, () => `Staging data to buffer ${stagingLabel}`);
           const { values, copySlices } = mutatedSlices;
@@ -301,8 +314,8 @@ export const bufferFactory = {
           logFuncs.lazyTrace(LOGGER, () => `Resizing buffer ${backingLabel} to ${backingSizeRequired}`);
           staging.resize(values.byteLength);
           backing.resize(backingSizeRequired);
-          backingTrackedBuffer = backing.get(device, queue, encoder);
-          const stagingBuffer = staging.get(device, queue, encoder).buffer;
+          backingTrackedBuffer = backing.update(device, queue, encoder);
+          const stagingBuffer = staging.update(device, queue, encoder).buffer;
           const backingBuffer = backingTrackedBuffer.buffer;
           logFuncs.lazyTrace(LOGGER, () => `Writing staging data of length ${values.byteLength} to buffer ${stagingLabel} using queue`);
           queue.writeBuffer(stagingBuffer, 0, values);
@@ -314,6 +327,9 @@ export const bufferFactory = {
           mutatedSlices = undefined;
         }
         return backingTrackedBuffer;
+      },
+      get() {
+        return backing.get();
       },
       clean() {
         staging.clean();

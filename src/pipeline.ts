@@ -39,7 +39,7 @@ export const pipelineFactory = {
       name,
       pipelineDetail(device, queue, encoder) {
         bufferResources.update();
-        return pipelineDetailResource.get(device, queue, encoder);
+        return pipelineDetailResource.update(device, queue, encoder);
       },
       clean() {
         pipelineDetailResource.clean();
@@ -72,7 +72,7 @@ export const pipelineFactory = {
       name,
       pipelineDetail(device, queue, encoder) {
         bufferResources.update();
-        return pipelineDetailResource.get(device, queue, encoder);
+        return pipelineDetailResource.update(device, queue, encoder);
       },
       clean() {
         pipelineDetailResource.clean();
@@ -102,7 +102,7 @@ export const pipelineFactory = {
       name,
       pipelineDetail(device, queue, encoder) {
         bufferResources.update();
-        return pipelineDetailResource.get(device, queue, encoder);
+        return pipelineDetailResource.update(device, queue, encoder);
       },
       clean() {
         pipelineDetailResource.clean();
@@ -149,26 +149,30 @@ const toPipelineDetailResource = <TCompute extends boolean, TRender extends bool
   renderPipelineDetailResource: TRender extends true ? WPKResource<WPKRenderPipelineDetail[]> : undefined,
   readBackFuncResource: WPKResource<WPKReadBackFunc> | undefined,
 ): WPKResource<WPKPipelineDetail<TCompute, TRender>> => {
+  let pipelineDetail: WPKPipelineDetail<TCompute, TRender> | undefined;
   const resource: WPKResource<WPKPipelineDetail<any, any>> = {
-    get(device, queue, encoder) {
+    update(device, queue, encoder) {
       logFuncs.lazyTrace(LOGGER, () => `Creating pipeline details ${name}`);
       const instanceCount = bufferResources.instanceCount();
-      const pipelineDetail: WPKPipelineDetail<boolean, boolean> = {
+      pipelineDetail = {
         name,
         instanceCount,
-      };
+      } as WPKPipelineDetail<TCompute, TRender>;
       if (instanceCount > 0) {
         if (computePipelineDetailsResource !== undefined) {
-          (pipelineDetail as WPKPipelineDetail<true, boolean>).compute = computePipelineDetailsResource.get(device, queue, encoder);
+          (pipelineDetail as WPKPipelineDetail<true, boolean>).compute = computePipelineDetailsResource.update(device, queue, encoder);
         }
         if (renderPipelineDetailResource !== undefined) {
-          (pipelineDetail as WPKPipelineDetail<boolean, true>).render = renderPipelineDetailResource.get(device, queue, encoder);
+          (pipelineDetail as WPKPipelineDetail<boolean, true>).render = renderPipelineDetailResource.update(device, queue, encoder);
         }
         if (readBackFuncResource !== undefined) {
-          pipelineDetail.readBackFunc = readBackFuncResource.get(device, queue, encoder);
+          pipelineDetail.readBackFunc = readBackFuncResource.update(device, queue, encoder);
         }
       }
       return pipelineDetail;
+    },
+    get() {
+      return resourceFactory.getOrThrow(pipelineDetail, `pipeline detail ${name}`);
     },
     clean() {
       computePipelineDetailsResource?.clean();
@@ -277,8 +281,11 @@ const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ext
     });
     const meshBufferResource = bufferResourcesFactory.ofMesh(name, mesh, requiresReadBack);
     const indicesBufferResource: WPKResource<GPUBuffer> = {
-      get(device, queue, encoder) {
-        return meshBufferResource.indices.get(device, queue, encoder).buffer;
+      update(device, queue, encoder) {
+        return meshBufferResource.indices.update(device, queue, encoder).buffer;
+      },
+      get() {
+        return meshBufferResource.indices.get().buffer;
       },
       clean() {
         meshBufferResource.indices.clean();
@@ -436,15 +443,16 @@ const toReadBackFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKB
   if (dispatchResource !== undefined) {
     addSourceTargetBuffers(shaderReserved.DISPATCH_PARAMS_BUFFER_NAME, dispatchResource.layout, dispatchResource.buffer);
   }
+  let readBackFunc: WPKReadBackFunc | undefined;
   return {
-    get(device, queue, encoder) {
+    update(device, queue, encoder) {
       logFuncs.lazyDebug(BUFFER_LOGGER, () => 'Creating debug function');
       const debugBuffers = {} as Record<string, { layout: WPKBufferLayout<any, any>; buffer: GPUBuffer }>;
       for (const [bufferName, { layout, source, target }] of Object.entries(sourceTargetBuffers)) {
-        const sourceBuffer = source.get(device, queue, encoder);
+        const sourceBuffer = source.update(device, queue, encoder);
         const copyBytesLength = sourceBuffer.bytesLength;
         target.resize(copyBytesLength);
-        const targetBuffer = target.get(device, queue, encoder);
+        const targetBuffer = target.update(device, queue, encoder);
         logFuncs.lazyDebug(BUFFER_LOGGER, () => `Copying data ${copyBytesLength} bytes from ${sourceBuffer.buffer.label} to debug buffer ${targetBuffer.buffer.label}`);
         encoder.copyBufferToBuffer(sourceBuffer.buffer, 0, targetBuffer.buffer, 0, copyBytesLength);
         debugBuffers[bufferName] = {
@@ -453,7 +461,7 @@ const toReadBackFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKB
         };
       }
       const entityCount = entityCache.count();
-      const readBackFunc: WPKReadBackFunc = async (): Promise<void> => {
+      readBackFunc = async (): Promise<void> => {
         const contentMap = {} as WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap>;
         const promises = Object.entries(debugBuffers)
           .map(([bufferName, { buffer, layout }]) => {
@@ -472,6 +480,9 @@ const toReadBackFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKB
         await onReadBack(contentMap);
       };
       return readBackFunc;
+    },
+    get() {
+      return resourceFactory.getOrThrow(readBackFunc, 'read back func');
     },
     clean() {
       Object.values(sourceTargetBuffers).forEach(sourceTargetBuffer => {

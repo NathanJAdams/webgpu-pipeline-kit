@@ -25,7 +25,7 @@ export const bufferResourcesFactory = {
       (device, queue, encoder, values) => {
         const marshalledData = marshaller.encode([values[0]]);
         dispatchBuffer.mutate(marshalledData, 0);
-        return dispatchBuffer.get(device, queue, encoder);
+        return dispatchBuffer.update(device, queue, encoder);
       }
     );
   },

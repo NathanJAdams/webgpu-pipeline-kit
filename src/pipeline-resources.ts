@@ -15,15 +15,19 @@ export const pipelineResourceFactory = {
   ): WPKResource<GPUBindGroupLayout> => {
     const label = `${name}-bind-group-layout`;
     logFuncs.lazyDebug(LOGGER, () => `Creating bind group layout resource ${label}`);
+    let layout: GPUBindGroupLayout | undefined;
     return resourceFactory.ofCached({
-      get(device, _queue, _encoder) {
+      update(device, _queue, _encoder) {
         logFuncs.lazyTrace(LOGGER, () => `Creating bind group layout ${label}`);
-        const layout = device.createBindGroupLayout({
+        layout = device.createBindGroupLayout({
           label,
           entries,
         });
         logFuncs.lazyTrace(LOGGER, () => `Created bind group layout ${JSON.stringify(layout)}`);
         return layout;
+      },
+      get() {
+        return resourceFactory.getOrThrow(layout, `bind group layout ${label}`);
       },
       clean() {
       },
@@ -35,16 +39,20 @@ export const pipelineResourceFactory = {
   ): WPKResource<GPUPipelineLayout> => {
     const label = `${name}-pipeline-layout`;
     logFuncs.lazyDebug(LOGGER, () => `Creating pipeline layout resource ${label}`);
+    let layout: GPUPipelineLayout | undefined;
     return resourceFactory.ofCached({
-      get(device, queue, encoder) {
-        const bindGroupLayouts = bindGroupLayoutsResource.get(device, queue, encoder);
+      update(device, queue, encoder) {
+        const bindGroupLayouts = bindGroupLayoutsResource.update(device, queue, encoder);
         logFuncs.lazyTrace(LOGGER, () => `Creating pipeline layout ${label} from ${bindGroupLayouts.length} bind group layouts [${bindGroupLayouts.map(l => l.label).join(', ')}]`);
-        const layout = device.createPipelineLayout({
+        layout = device.createPipelineLayout({
           label,
           bindGroupLayouts,
         });
         logFuncs.lazyTrace(LOGGER, () => `Created pipeline layout ${JSON.stringify(layout)}`);
         return layout;
+      },
+      get() {
+        return resourceFactory.getOrThrow(layout, `pipeline layout ${label}`);
       },
       clean() {
         bindGroupLayoutsResource.clean();

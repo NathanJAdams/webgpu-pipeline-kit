@@ -36,7 +36,7 @@ describe('buffer-factory', () => {
       const requiresReadBack = false;
       const bufferResource = bufferFactory.ofData(sentData, label, usage, requiresReadBack);
 
-      const buffer1 = bufferResource.get(device, queue, encoder);
+      const buffer1 = bufferResource.update(device, queue, encoder);
       console.log(JSON.stringify(typeof buffer1.destroy));
       expect(buffer1.bytesLength).toBe(expectedSize);
       const expectedBuffer1 = {
@@ -47,7 +47,7 @@ describe('buffer-factory', () => {
       expect(buffer1.isNew).toBe(true);
       expect(queue.writeBuffer).toHaveBeenCalledWith(expectedBuffer1, 0, expectedData);
 
-      const buffer2 = bufferResource.get(device, queue, encoder);
+      const buffer2 = bufferResource.update(device, queue, encoder);
       console.log(JSON.stringify(typeof buffer2.destroy));
       const expectedBuffer2 = {
         ...buffer2.buffer,
@@ -59,7 +59,7 @@ describe('buffer-factory', () => {
       expect(queue.writeBuffer).toHaveBeenCalledWith(expectedBuffer2, 0, expectedData);
 
       buffer2.destroy();
-      expect(() => bufferResource.get(device, queue, encoder)).toThrow();
+      expect(() => bufferResource.update(device, queue, encoder)).toThrow();
     });
   });
   describe('size', () => {
@@ -74,7 +74,7 @@ describe('buffer-factory', () => {
       const requiresReadBack = false;
       const bufferResource = bufferFactory.ofSize(sentSize, label, usage, requiresReadBack);
 
-      const buffer1 = bufferResource.get(device, queue, encoder);
+      const buffer1 = bufferResource.update(device, queue, encoder);
       console.log(JSON.stringify(typeof buffer1.destroy));
       expect(buffer1.bytesLength).toBe(expectedSize);
       const expectedBuffer1 = {
@@ -84,7 +84,7 @@ describe('buffer-factory', () => {
       expect(buffer1.buffer).toStrictEqual(expectedBuffer1);
       expect(buffer1.isNew).toBe(true);
 
-      const buffer2 = bufferResource.get(device, queue, encoder);
+      const buffer2 = bufferResource.update(device, queue, encoder);
       console.log(JSON.stringify(typeof buffer2.destroy));
       const expectedBuffer2 = {
         ...buffer2.buffer,
@@ -95,7 +95,7 @@ describe('buffer-factory', () => {
       expect(buffer2.isNew).toBe(false);
 
       buffer2.destroy();
-      expect(() => bufferResource.get(device, queue, encoder)).toThrow();
+      expect(() => bufferResource.update(device, queue, encoder)).toThrow();
     });
   });
   describe('resizeable', () => {
