@@ -156,13 +156,13 @@ const toPipelineDetailResource = <TCompute extends boolean, TRender extends bool
   const resource: WPKResource<WPKPipelineDetail<any, any>> = {
     update(device, queue, encoder) {
       logFuncs.lazyTrace(PIPELINE_LOGGER, () => `Creating pipeline details ${name}`);
+      bufferResources.update(device, queue, encoder);
       const instanceCount = bufferResources.instanceCount();
       pipelineDetail = {
         name,
         instanceCount,
       } as WPKPipelineDetail<TCompute, TRender>;
       if (instanceCount > 0) {
-        bufferResources.update(device, queue, encoder);
         if (computePipelineDetailsResource !== undefined) {
           logFuncs.lazyDebug(PIPELINE_LOGGER, () => 'Update compute pipeline');
           computePipelineDetailsResource.update(device, queue, encoder);
