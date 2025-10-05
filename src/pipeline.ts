@@ -505,7 +505,7 @@ const toReadBackFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKB
             });
           await Promise.all(promises);
           logFuncs.lazyTrace(BUFFER_LOGGER, () => 'Invoke onReadBack(contentMap)');
-          await onReadBack(contentMap);
+          onReadBack(contentMap);
         },
       };
     },

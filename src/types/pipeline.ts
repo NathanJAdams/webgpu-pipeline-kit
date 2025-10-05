@@ -146,7 +146,7 @@ export type WPKReadBackContent<TStruct extends WPKShaderStruct> = {
   [K in keyof TStruct]: WPKReadBackContentTypeMap[TStruct[K]['datumType']];
 };
 export type WPKReadBackOptions<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = Partial<{
-  onReadBack: (contents: WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap>) => Promise<void>;
+  onReadBack: (contents: WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap>) => void;
 }>;
 export type WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
   [K in WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap, any, any>]:

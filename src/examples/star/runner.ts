@@ -23,12 +23,12 @@ export const run = async (): Promise<void> => {
     .initialUniformObject().camera(camera).buildInitialUniform()
     .initialEntities([])
     .buildObject();
-  const debugOptions: WPKReadBackOptions<StarUniform, Star, StarBufferFormats> = {
-    async onReadBack(contents) {
+  const readBackOptions: WPKReadBackOptions<StarUniform, Star, StarBufferFormats> = {
+    onReadBack(contents) {
       LOGGER.info(`Buffer contents: ${JSON.stringify(contents)}`);
     },
   };
-  const starPipeline = factories.pipeline.ofRender('star', bufferFormats, meshTemplates, renderShader, starPipelineOptions, debugOptions);
+  const starPipeline = factories.pipeline.ofRender('star', bufferFormats, meshTemplates, renderShader, starPipelineOptions, readBackOptions);
   const eventHandlers: WPKPeripheralEventHandlers = {
     'screen-resize': async (eventInfo) => {
       camera.setAspectRatio(eventInfo.aspectRatio);

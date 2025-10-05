@@ -26,7 +26,7 @@ export const run = async (): Promise<void> => {
     .initialEntities([])
     .buildObject();
   const readBackOptions: WPKReadBackOptions<TriangleUniform, Triangle, BufferFormats> = {
-    async onReadBack(contents) {
+    onReadBack(contents) {
       LOGGER.info(`Buffer contents dispatch: ${JSON.stringify(contents.dispatch)}`);
       LOGGER.info(`Buffer contents offsets: ${JSON.stringify(contents.offsets)}`);
       LOGGER.info(`Buffer contents uniforms: ${JSON.stringify(contents.uniforms)}`);

@@ -28,7 +28,7 @@ export const run = async (): Promise<void> => {
     .initialEntities([])
     .buildObject();
   const readBackOptions: WPKReadBackOptions<OrbiterUniform, Orbiter, OrbiterBufferFormats> = {
-    async onReadBack(contents) {
+    onReadBack(contents) {
       LOGGER.info(`positions: ${JSON.stringify(contents.position)}`);
     },
   };
