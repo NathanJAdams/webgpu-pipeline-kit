@@ -24,7 +24,6 @@ export const pipelineResourceFactory = {
           entries,
         });
         logFuncs.lazyTrace(LOGGER, () => `Created bind group layout ${JSON.stringify(layout)}`);
-        return layout;
       },
       get() {
         return resourceFactory.getOrThrow(layout, `bind group layout ${label}`);
@@ -42,14 +41,14 @@ export const pipelineResourceFactory = {
     let layout: GPUPipelineLayout | undefined;
     return resourceFactory.ofCached({
       update(device, queue, encoder) {
-        const bindGroupLayouts = bindGroupLayoutsResource.update(device, queue, encoder);
+        bindGroupLayoutsResource.update(device, queue, encoder);
+        const bindGroupLayouts = bindGroupLayoutsResource.get();
         logFuncs.lazyTrace(LOGGER, () => `Creating pipeline layout ${label} from ${bindGroupLayouts.length} bind group layouts [${bindGroupLayouts.map(l => l.label).join(', ')}]`);
         layout = device.createPipelineLayout({
           label,
           bindGroupLayouts,
         });
         logFuncs.lazyTrace(LOGGER, () => `Created pipeline layout ${JSON.stringify(layout)}`);
-        return layout;
       },
       get() {
         return resourceFactory.getOrThrow(layout, `pipeline layout ${label}`);

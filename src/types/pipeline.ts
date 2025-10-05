@@ -77,12 +77,15 @@ export type WPKRenderPipelineDetail = {
   vertexBuffers: GPUBuffer[];
   drawCountsFunc: () => WPKDrawCounts;
 };
-export type WPKReadBackFunc = () => Promise<void>;
+export type WPKReadBackFuncs = {
+  copyData: (encoder: GPUCommandEncoder) => void;
+  readBack: () => Promise<void>;
+};
 export type WPKPipelineDetail<TCompute extends boolean, TRender extends boolean> =
   & {
     name: string;
     instanceCount: number;
-    readBackFunc?: WPKReadBackFunc;
+    readBackFuncs?: WPKReadBackFuncs;
   }
   & (
     TCompute extends true

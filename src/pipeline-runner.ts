@@ -118,15 +118,18 @@ const createPipelineRunner = async <TCompute extends boolean, TRender extends bo
       for (const [pipelineIndex, pipelineDetail] of validPipelines.entries()) {
         pipelineInvoker(encoder, pipelineIndex, pipelineDetail);
       }
-      logFuncs.lazyTrace(LOGGER, () => `Submit encoder for ${validPipelines.length} pipelines`);
-      device.queue.submit([encoder.finish()]);
-      logFuncs.lazyTrace(LOGGER, () => `Call debug function ${validPipelines.length} pipelines`);
-      for (const pipelineDetail of validPipelines.values()) {
-        const { readBackFunc } = pipelineDetail;
-        if (readBackFunc !== undefined) {
-          await readBackFunc();
-        }
+      logFuncs.lazyTrace(LOGGER, () => `Call read back function ${validPipelines.length} pipelines`);
+      const pipelineReadBackFuncs = validPipelines
+        .map(pipeline => pipeline.readBackFuncs)
+        .filter(readBackFuncs => readBackFuncs !== undefined);
+      for (const readBackFuncs of pipelineReadBackFuncs) {
+        readBackFuncs.copyData(encoder);
       }
+      logFuncs.lazyTrace(LOGGER, () => 'Submit encoder commands');
+      device.queue.submit([encoder.finish()]);
+      const readBackPromises = pipelineReadBackFuncs.map(readBackFuncs => readBackFuncs.readBack());
+      await Promise.all(readBackPromises);
+      logFuncs.lazyTrace(LOGGER, () => `Clean ${pipelines.length} pipelines`);
       pipelines.forEach(pipeline => pipeline.clean());
     },
     destroy() {
@@ -152,6 +155,7 @@ const invokeComputePipeline = (compute: WPKComputePipelineDetail[], pipelineInde
     logFuncs.lazyTrace(LOGGER, () => `Compute pipeline[${pipelineIndex}] entry[${computeEntryIndex}] dispatch size ${JSON.stringify(dispatchCount)}`);
     computePass.dispatchWorkgroups(dispatchCount[0], dispatchCount[1], dispatchCount[2]);
   }
+  logFuncs.lazyTrace(LOGGER, () => `End compute pass of pipeline[${pipelineIndex}]`);
   computePass.end();
 };
 
@@ -185,6 +189,7 @@ const invokeRenderPipeline = (render: WPKRenderPipelineDetail[], pipelineIndex: 
     logFuncs.lazyTrace(LOGGER, () => `Render pipeline[${pipelineIndex}] entry[${renderEntryIndex}] draw indexed ${JSON.stringify(drawCounts)}`);
     renderPass.drawIndexed(drawCounts.indexCount, drawCounts.instanceCount);
   }
+  logFuncs.lazyTrace(LOGGER, () => `End render pass of pipeline[${pipelineIndex}]`);
   renderPass.end();
 };
 

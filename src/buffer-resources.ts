@@ -25,7 +25,8 @@ export const bufferResourcesFactory = {
       (device, queue, encoder, values) => {
         const marshalledData = marshaller.encode([values[0]]);
         dispatchBuffer.mutate(marshalledData, 0);
-        return dispatchBuffer.update(device, queue, encoder);
+        dispatchBuffer.update(device, queue, encoder);
+        return dispatchBuffer.get();
       }
     );
   },
@@ -83,7 +84,7 @@ export const bufferResourcesFactory = {
     return {
       buffers,
       instanceCount: () => entityCache.count(),
-      update() {
+      update(device, queue, encoder) {
         if (uniformCache.isDirty()) {
           logFuncs.lazyTrace(LOGGER, () => 'Uniform cache is dirty, mutating uniform');
           const uniform = uniformCache.get();
@@ -94,6 +95,7 @@ export const bufferResourcesFactory = {
           const changes = entityCache.calculateChanges();
           entityMutators.forEach((entityMutator) => entityMutator.mutate(changes));
         }
+        Object.values(buffers).forEach(buffer => buffer.update(device, queue, encoder));
       },
     };
   },

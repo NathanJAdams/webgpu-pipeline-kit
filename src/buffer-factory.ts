@@ -93,7 +93,6 @@ export const bufferFactory = {
             };
           }
         }
-        return trackedBuffer;
       },
       get() {
         return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
@@ -142,7 +141,6 @@ export const bufferFactory = {
             };
           }
         }
-        return trackedBuffer;
       },
       get() {
         return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
@@ -214,7 +212,6 @@ export const bufferFactory = {
             isNew: false,
           };
         }
-        return trackedBuffer;
       },
       get() {
         return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
@@ -280,7 +277,6 @@ export const bufferFactory = {
           queue.writeBuffer(buffer, index, data);
         }
         mutatedDataArray.length = 0;
-        return trackedBuffer;
       },
       get() {
         return resourceFactory.getOrThrow(trackedBuffer, `tracked buffer ${label}`);
@@ -305,7 +301,6 @@ export const bufferFactory = {
         };
       },
       update(device, queue, encoder) {
-        let backingTrackedBuffer = backing.update(device, queue, encoder);
         if (mutatedSlices !== undefined) {
           logFuncs.lazyTrace(LOGGER, () => `Staging data to buffer ${stagingLabel}`);
           const { values, copySlices } = mutatedSlices;
@@ -314,9 +309,10 @@ export const bufferFactory = {
           logFuncs.lazyTrace(LOGGER, () => `Resizing buffer ${backingLabel} to ${backingSizeRequired}`);
           staging.resize(values.byteLength);
           backing.resize(backingSizeRequired);
-          backingTrackedBuffer = backing.update(device, queue, encoder);
-          const stagingBuffer = staging.update(device, queue, encoder).buffer;
-          const backingBuffer = backingTrackedBuffer.buffer;
+          backing.update(device, queue, encoder);
+          staging.update(device, queue, encoder);
+          const backingBuffer = backing.get().buffer;
+          const stagingBuffer = staging.get().buffer;
           logFuncs.lazyTrace(LOGGER, () => `Writing staging data of length ${values.byteLength} to buffer ${stagingLabel} using queue`);
           queue.writeBuffer(stagingBuffer, 0, values);
           for (const copySlice of copySlices) {
@@ -326,7 +322,6 @@ export const bufferFactory = {
           }
           mutatedSlices = undefined;
         }
-        return backingTrackedBuffer;
       },
       get() {
         return backing.get();

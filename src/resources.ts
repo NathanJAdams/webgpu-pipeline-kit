@@ -7,9 +7,9 @@ export const resourceFactory = {
     return {
       update(device, queue, encoder) {
         if (object === undefined) {
-          object = resource.update(device, queue, encoder);
+          resource.update(device, queue, encoder);
+          object = resource.get();
         }
-        return object;
       },
       get() {
         return resource.get();
@@ -27,7 +27,6 @@ export const resourceFactory = {
         if (object === undefined || isDirty()) {
           object = func();
         }
-        return object;
       },
       get() {
         return resourceFactory.getOrThrow(object, 'resource func');
@@ -40,7 +39,7 @@ export const resourceFactory = {
   ofArray: <T>(resources: WPKResource<T>[]): WPKResource<T[]> => {
     return {
       update(device, queue, encoder) {
-        return resources.map((resource) => resource.update(device, queue, encoder));
+        resources.forEach((resource) => resource.update(device, queue, encoder));
       },
       get() {
         return resources.map(resource => resource.get());
@@ -63,12 +62,12 @@ export const resourceFactory = {
     let lastDependencies: any[] = [];
     return {
       update(device, queue, encoder) {
-        const currentDependencies = dependencyResources.map((dependencyResource) => dependencyResource.update(device, queue, encoder));
+        dependencyResources.forEach((dependencyResource) => dependencyResource.update(device, queue, encoder));
+        const currentDependencies = dependencyResources.map((dependencyResource) => dependencyResource.get());
         if (!arrayFuncs.equals(lastDependencies, currentDependencies) || cachedValue === undefined) {
           cachedValue = createWithValues(device, queue, encoder, currentDependencies as any);
           lastDependencies = currentDependencies;
         }
-        return cachedValue;
       },
       get() {
         return resourceFactory.getOrThrow(cachedValue, 'cached resource value');

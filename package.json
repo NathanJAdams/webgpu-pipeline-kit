@@ -1,7 +1,7 @@
 {
   "name": "webgpu-pipeline-kit",
   "description": "A type-safe declarative way of creating WebGPU pipelines",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "author": {
     "name": "Nathan Adams",
     "url": "https://github.com/NathanJAdams"
@@ -41,7 +41,7 @@
   "sideEffects": false,
   "scripts": {
     "build:bundle": "tsup --config tsup.config.bundle.ts",
-    "build:dev": "tsup --config tsup.config.dev.ts && copyfiles -u 3 ./src/examples/triangles/index.html ./dist/dev/triangles/",
+    "build:dev": "tsup --config tsup.config.dev.ts",
     "build:prod": "tsup --config tsup.config.prod.ts",
     "clean": "rimraf ./dist/",
     "lint": "eslint ./src --fix && madge --circular src/**/*",
