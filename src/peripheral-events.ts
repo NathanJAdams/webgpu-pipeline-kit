@@ -75,7 +75,7 @@ const setupMouseHandlers = (
   const isMouseUpRequired = (handlerMouseUp !== undefined);
   const mousePosition: WPKCoords = [0, 0];
   const mouseDrag: WPKCoords = [0, 0];
-  const mouseDown: WPKCoords = [0, 0];
+  const mouseDown: WPKCoords = [-1, -1];
   const mouseDownButton = changeDetectorFactory.ofTripleEquals<WPKMouseButton>(WPKMouseButton.LEFT);
   if (isMouseMoveRequired) {
     logFuncs.lazyInfo(LOGGER, () => 'Adding mouse move listener');
@@ -157,10 +157,14 @@ const addMouseMoveListener = (
     if (event.buttons > 0) {
       //mouse drag
       if (mouseDragHandler !== undefined) {
-        mouseDrag[0] = mousePosition[0] - mouseDown[0];
-        mouseDrag[1] = mousePosition[1] - mouseDown[1];
-        const eventInfo = toMouseDragEventInfo(event, screenSize, mousePosition, mouseDrag, mouseDownButton);
-        invokeHandler(mouseDragHandler, WPKPeripheralEventType.MOUSE_DRAG, eventInfo);
+        if (mouseDown[0] === -1 || mouseDown[1] === -1) {
+          logFuncs.lazyTrace(LOGGER, () => 'Waiting for mouse down event before sending drag events');
+        } else {
+          mouseDrag[0] = mousePosition[0] - mouseDown[0];
+          mouseDrag[1] = mousePosition[1] - mouseDown[1];
+          const eventInfo = toMouseDragEventInfo(event, screenSize, mousePosition, mouseDrag, mouseDownButton);
+          invokeHandler(mouseDragHandler, WPKPeripheralEventType.MOUSE_DRAG, eventInfo);
+        }
       }
     } else {
       // mouse move
@@ -214,6 +218,9 @@ const addMouseButtonListener = <TEventType extends WPKPeripheralEventType.MOUSE_
     if (eventName === 'mousedown') {
       mouseDown[0] = mousePosition[0];
       mouseDown[1] = mousePosition[1];
+    } else {
+      mouseDown[0] = -1;
+      mouseDown[1] = -1;
     }
     if (handler !== undefined) {
       const eventInfo = toMouseButtonEventInfo(event, screenSize, mousePosition, mouseDownButton);
