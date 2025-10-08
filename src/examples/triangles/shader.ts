@@ -15,8 +15,7 @@ export const computeShader = builders.computeShader<TriangleUniform, Triangle, B
   .workGroupSize({ x: 64 })
   .entryPoint('compute_pass_1')
   .code((wgsl, params) => wgsl`  let angle = f32(${params.instance_index}) * 6.28318 / 60.0;
-  ${params.bindings.offsets.offset} = vec2<f32>(cos(angle), sin(angle)) * 0.95;`
-  )
+  ${params.bindings.offsets.offset} = vec2<f32>(cos(angle), sin(angle)) * 0.95;`)
   .build()
   .buildPasses()
   .buildObject();
@@ -30,11 +29,11 @@ const meshTemplate = builders.meshTemplate<MeshTemplates>()
 
 const vertexShader = builders.vertexShader<TriangleUniform, Triangle, BufferFormats>()
   .entryPoint('vertex_main')
-  .returnType('builtin_position')
   .vertexBuffersArray()
   .pushObject().buffer('offsets').field('offset').buildElement()
   .buildVertexBuffers()
-  .code((wgsl, params) => wgsl`  return vec4<f32>((0.025 * ${params.vertex_position.xy}) + ${params.vertex_buffers.offsets.offset}, 0.0, 1.0);`)
+  .code((wgsl, params) => 
+    wgsl`  return vec4<f32>((0.025 * ${params.vertex_position.xy}) + ${params.vertex_buffers.offsets.offset}, 0.0, 1.0);`)
   .buildObject();
 
 const fragmentShader = builders.fragmentShader<TriangleUniform, Triangle, BufferFormats>()

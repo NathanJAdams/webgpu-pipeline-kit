@@ -1,8 +1,8 @@
-import { WPKBufferFormat } from '../..';
 import { Triangle, TriangleUniform } from './instance-formats';
+import { WPKBufferFormat } from '../..';
 
 export const uniforms = {
-  bufferType: 'uniform',
+  structType: 'uniform',
   marshall: {
     'gameTime': {
       datumType: 'f32',
@@ -12,7 +12,7 @@ export const uniforms = {
 } as const satisfies WPKBufferFormat<TriangleUniform, Triangle>;
 
 const offsets = {
-  bufferType: 'editable',
+  structType: 'editable',
   layout: {
     'offset': {
       datumType: 'vec2<f32>',

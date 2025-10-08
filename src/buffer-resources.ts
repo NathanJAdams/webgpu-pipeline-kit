@@ -53,8 +53,8 @@ export const bufferResourcesFactory = {
     logFuncs.lazyDebug(LOGGER, () => `Create buffer resources for ${name}`);
     logFuncs.lazyDebug(LOGGER, () => `Create uniform buffer resources for ${name}`);
     for (const [bufferName, bufferLayout] of Object.entries(bufferLayouts)) {
-      const { bufferType } = bufferLayout;
-      if (bufferType === 'uniform') {
+      const { structType } = bufferLayout;
+      if (structType === 'uniform') {
         const uniformBufferResource = bufferResourcesFactory.ofUniform(name, bufferName, bufferLayout, uniformCache, requiresReadBack);
         if (Array.isArray(uniformBufferResource)) {
           const [buffer, mutator] = uniformBufferResource;
@@ -64,20 +64,22 @@ export const bufferResourcesFactory = {
           buffers[bufferName] = uniformBufferResource;
         }
       } else {
-        const bufferResource = (bufferType === 'editable')
-          ? bufferResourcesFactory.ofEditable(name, bufferName, bufferLayout, entityCache, requiresReadBack)
-          : (bufferType === 'marshalled')
-            ? bufferResourcesFactory.ofMarshalled(name, bufferName, bufferLayout, entityCache, initialEntities, requiresReadBack)
-            : undefined;
-        if (bufferResource === undefined) {
-          throw Error(`Unrecognized buffer type ${bufferType}`);
-        }
-        if (Array.isArray(bufferResource)) {
-          const [buffer, mutator] = bufferResource;
-          buffers[bufferName] = buffer;
-          entityMutators.push(mutator);
-        } else {
-          buffers[bufferName] = bufferResource;
+        if (structType !== 'varyings') {
+          const bufferResource = (structType === 'editable')
+            ? bufferResourcesFactory.ofEditable(name, bufferName, bufferLayout, entityCache, requiresReadBack)
+            : (structType === 'marshalled')
+              ? bufferResourcesFactory.ofMarshalled(name, bufferName, bufferLayout, entityCache, initialEntities, requiresReadBack)
+              : undefined;
+          if (bufferResource === undefined) {
+            throw Error(`Unrecognized buffer type ${structType}`);
+          }
+          if (Array.isArray(bufferResource)) {
+            const [buffer, mutator] = bufferResource;
+            buffers[bufferName] = buffer;
+            entityMutators.push(mutator);
+          } else {
+            buffers[bufferName] = bufferResource;
+          }
         }
       }
     }

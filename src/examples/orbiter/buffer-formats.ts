@@ -1,8 +1,8 @@
-import { WPKBufferFormat } from '../..';
 import { Orbiter, OrbiterUniform } from './instance-formats';
+import { WPKBufferFormat } from '../..';
 
 export const uniforms = {
-  bufferType: 'uniform',
+  structType: 'uniform',
   marshall: {
     'gameTime': {
       datumType: 'f32',
@@ -16,7 +16,7 @@ export const uniforms = {
 } as const satisfies WPKBufferFormat<OrbiterUniform, Orbiter>;
 
 export const kepler = {
-  bufferType: 'marshalled',
+  structType: 'marshalled',
   marshall: {
     'primaryIndex': {
       datumType: 'i32',
@@ -58,7 +58,7 @@ export const kepler = {
 } as const satisfies WPKBufferFormat<OrbiterUniform, Orbiter>;
 
 export const position = {
-  bufferType: 'editable',
+  structType: 'editable',
   layout: {
     'position': {
       datumType: 'vec3<f32>',
@@ -67,7 +67,7 @@ export const position = {
 } as const satisfies WPKBufferFormat<OrbiterUniform, Orbiter>;
 
 export const visual = {
-  bufferType: 'marshalled',
+  structType: 'marshalled',
   marshall: {
     'color': {
       datumType: 'vec3<f32>',
@@ -80,11 +80,19 @@ export const visual = {
   }
 } as const satisfies WPKBufferFormat<OrbiterUniform, Orbiter>;
 
+const varyings = {
+  structType: 'varyings',
+  varyings: {
+    color: 'vec3<f32>',
+  },
+} as const satisfies WPKBufferFormat<OrbiterUniform, Orbiter>;
+
 export const bufferFormats = {
   uniforms,
   kepler,
   position,
   visual,
+  varyings,
 } as const;
 
 export type OrbiterBufferFormats = typeof bufferFormats;

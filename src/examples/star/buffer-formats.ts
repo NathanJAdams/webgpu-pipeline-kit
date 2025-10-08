@@ -1,8 +1,8 @@
-import { WPKBufferFormat } from '../..';
 import { Star, StarUniform } from './instance-formats';
+import { WPKBufferFormat } from '../..';
 
 export const uniforms = {
-  bufferType: 'uniform',
+  structType: 'uniform',
   marshall: {
     'viewProjection': {
       datumType: 'mat4x4<f32>',
@@ -12,7 +12,7 @@ export const uniforms = {
 } as const satisfies WPKBufferFormat<StarUniform, Star>;
 
 export const position = {
-  bufferType: 'marshalled',
+  structType: 'marshalled',
   marshall: {
     'transformation': {
       datumType: 'mat4x4<f32>',
@@ -22,7 +22,7 @@ export const position = {
 } as const satisfies WPKBufferFormat<StarUniform, Star>;
 
 export const visual = {
-  bufferType: 'marshalled',
+  structType: 'marshalled',
   marshall: {
     'color': {
       datumType: 'vec3<f32>',
@@ -31,10 +31,18 @@ export const visual = {
   }
 } as const satisfies WPKBufferFormat<StarUniform, Star>;
 
+const varyings = {
+  structType: 'varyings',
+  varyings: {
+    color: 'vec3<f32>',
+  },
+} as const satisfies WPKBufferFormat<StarUniform, Star>;
+
 export const bufferFormats = {
   uniforms,
   position,
   visual,
+  varyings,
 } as const;
 
 export type StarBufferFormats = typeof bufferFormats;

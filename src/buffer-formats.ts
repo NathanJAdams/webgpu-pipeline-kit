@@ -16,7 +16,7 @@ export const bufferFormatFuncs = {
     const userFormatEntityIndexes: WPKBufferFormatElementEntityIndex<TEntity>[] = [];
     const paths = new Set<string>();
     for (const bufferFormat of Object.values(bufferFormats)) {
-      if (bufferFormat.bufferType === 'marshalled') {
+      if (bufferFormat.structType === 'marshalled') {
         for (const userFormat of Object.values(bufferFormat.marshall)) {
           if (bufferFormatFuncs.isEntityIndex(userFormat)) {
             if (!paths.has(userFormat.entityIdKey)) {

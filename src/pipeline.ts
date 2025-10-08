@@ -11,7 +11,7 @@ import { resourceFactory } from './resources';
 import { toCodeShaderCompute, toCodeShaderRender } from './shader-code';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKReadBackContentMap, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKReadBackFuncs, WPKReadBackOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKComputeShader, WPKRenderShader, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferLayouts, WPKBufferLayout, WPKBufferFormatType } from './types';
+import { WPKBindGroupDetail, WPKBindGroupsDetail, WPKReadBackContentMap, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferResizeable, WPKBufferResources, WPKComputePipelineDetail, WPKReadBackFuncs, WPKReadBackOptions, WPKDrawCounts, WPKEntityCache, WPKGroupBinding, WPKGroupIndex, WPKMeshTemplateMap, WPKPipeline, WPKPipelineDetail, WPKPipelineOptions, WPKRenderPipelineDetail, WPKResource, WPKComputeShader, WPKRenderShader, WPKTrackedBuffer, WPKUniformCache, WPKVertexBufferDetail, WPKDispatchResource, WPKBufferLayouts, WPKBufferLayout, WPKStructType } from './types';
 import { logFuncs } from './utils';
 
 const PIPELINE_LOGGER = getLogger('pipeline');
@@ -54,7 +54,7 @@ export const pipelineFactory = {
     bufferFormats: TBufferFormatMap,
     meshTemplates: TMeshTemplateMap,
     computeShader: WPKComputeShader<TUniform, TEntity, TBufferFormatMap>,
-    renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+    renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap, any>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
     readBackOptions: WPKReadBackOptions<TUniform, TEntity, TBufferFormatMap> = {},
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, true, true> => {
@@ -87,7 +87,7 @@ export const pipelineFactory = {
     name: string,
     bufferFormats: TBufferFormatMap,
     meshTemplates: TMeshTemplateMap,
-    shader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+    shader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap, any>,
     options: WPKPipelineOptions<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities>,
     readBackOptions: WPKReadBackOptions<TUniform, TEntity, TBufferFormatMap> = {},
   ): WPKPipeline<TUniform, TEntity, TMutableUniform, TMutableEntities, TResizeableEntities, false, true> => {
@@ -141,7 +141,7 @@ const isBufferBound = (...groupBindings: Array<WPKGroupBinding<any, any, any, an
   (bufferName: string): boolean =>
     groupBindings.some(gbs => gbs.some(gb => gb.buffer === bufferName));
 
-const isVertexBuffer = (renderShader: WPKRenderShader<any, any, any, any>) =>
+const isVertexBuffer = (renderShader: WPKRenderShader<any, any, any, any, any>) =>
   (bufferName: string): boolean =>
     renderShader.passes.some(pass => pass.vertex.vertexBuffers.some(vertexBuffer => vertexBuffer.buffer === bufferName));
 
@@ -264,7 +264,7 @@ const toComputePipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap ex
 const toRenderPipelineDetailsResource = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
   name: string,
   meshTemplateMap: TMeshTemplateMap,
-  renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+  renderShader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap, any>,
   instanceCountFunc: () => number,
   bufferLayouts: WPKBufferLayouts<TUniform, TEntity>,
   bufferResources: WPKBufferResources<TUniform, TEntity, TBufferFormatMap>,
@@ -329,10 +329,10 @@ const toBindGroupLayoutEntries = <TUniform, TEntity, TBufferFormatMap extends WP
     .map((groupBinding) => {
       const { binding, buffer } = groupBinding;
       PIPELINE_LOGGER.info(`group binding ${JSON.stringify(groupBinding)}`);
-      const bufferType = (buffer === shaderReserved.DISPATCH_PARAMS_BUFFER_NAME)
+      const structType = (buffer === shaderReserved.DISPATCH_PARAMS_BUFFER_NAME)
         ? 'uniform'
-        : bufferLayouts[buffer].bufferType;
-      const type = toBufferBindingType(bufferType, visibility);
+        : bufferLayouts[buffer].structType;
+      const type = toBufferBindingType(structType, visibility);
       logFuncs.lazyDebug(PIPELINE_LOGGER, () => `Creating bind group layout entry for group ${group} binding ${binding}`);
       return {
         binding,
@@ -346,13 +346,13 @@ const toBindGroupLayoutEntries = <TUniform, TEntity, TBufferFormatMap extends WP
 };
 
 const toBufferBindingType = (
-  bufferType: WPKBufferFormatType,
+  structType: WPKStructType,
   visibility: GPUShaderStageFlags
 ): GPUBufferBindingType => {
-  logFuncs.lazyDebug(PIPELINE_LOGGER, () => `Calculating buffer binding type for buffer type ${JSON.stringify(bufferType)}`);
-  return bufferType === 'uniform'
+  logFuncs.lazyDebug(PIPELINE_LOGGER, () => `Calculating buffer binding type for buffer type ${JSON.stringify(structType)}`);
+  return structType === 'uniform'
     ? 'uniform'
-    : (visibility === GPUShaderStage.COMPUTE) && (bufferType === 'editable')
+    : (visibility === GPUShaderStage.COMPUTE) && (structType === 'editable')
       ? 'storage'
       : 'read-only-storage';
 };
@@ -492,10 +492,10 @@ const toReadBackFuncResource = <TUniform, TEntity, TBufferFormatMap extends WPKB
           logFuncs.lazyTrace(BUFFER_LOGGER, () => 'Convert read back funcs to promises');
           const promises = Object.entries(readBackBuffers)
             .map(([bufferName, { buffer, layout }]) => {
-              const instanceCount = (layout.bufferType === 'uniform')
+              const instanceCount = (layout.structType === 'uniform')
                 ? 1
                 : entityCount;
-              logFuncs.lazyTrace(BUFFER_LOGGER, () => `Instance count from buffer type ${layout.bufferType} ${instanceCount}`);
+              logFuncs.lazyTrace(BUFFER_LOGGER, () => `Instance count from buffer type ${layout.structType} ${instanceCount}`);
               return addInstanceContents(
                 bufferName,
                 buffer,
@@ -538,7 +538,7 @@ const addInstanceContents = async <T>(
   logFuncs.lazyTrace(BUFFER_LOGGER, () => `Contents for buffer '${buffer.buffer.label}' floats: [${new Float32Array(mappedRange)}]`);
   logFuncs.lazyDebug(BUFFER_LOGGER, () => `Unmarshalling from ${buffer.buffer.label}`);
   const instances = unmarshallToInstances(dataView, bufferLayout, instanceCount);
-  contentMap[bufferName] = (bufferLayout.bufferType === 'uniform')
+  contentMap[bufferName] = (bufferLayout.structType === 'uniform')
     ? instances[0]
     : instances;
 };

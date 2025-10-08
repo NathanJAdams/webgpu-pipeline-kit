@@ -1,4 +1,4 @@
-import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferAttributeData, WPKVertexBufferLocationType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase, WPKVertexBufferReference, WPKBufferLayouts } from './types';
+import { WPKBufferFormatMap, WPKShaderDatumType, WPKShaderDimension, WPKShaderMatrix, WPKShaderScalar, WPKShaderVector, WPKVertexBufferLocationAttribute, WPKVertexBufferLocation, WPKVertexBufferAttributeData, WPKVertexBufferLocationType, WPKVertexBufferReconstitutedMatrix, WPKDatumTypeReferenceBase, WPKVertexBufferReference, WPKBufferLayouts, WPKBufferLayout, WPKBufferLayoutVaryings } from './types';
 
 export const shaderFuncs = {
   isScalar: (datumType: WPKShaderDatumType): datumType is WPKShaderScalar => {
@@ -13,6 +13,7 @@ export const shaderFuncs = {
   isDatumTypeReferenceBase: (reference: number | string | WPKDatumTypeReferenceBase<WPKShaderDatumType>): reference is WPKDatumTypeReferenceBase<WPKShaderDatumType> => {
     return (typeof reference === 'object') && (reference as WPKDatumTypeReferenceBase<WPKShaderDatumType>).__reference !== undefined;
   },
+  isVaryingsLayout: (bufferLayout: WPKBufferLayout<any, any>): bufferLayout is WPKBufferLayoutVaryings => (bufferLayout.structType === 'varyings'),
   toMatrixVectorDatumType: (datumType: WPKShaderMatrix): WPKVertexBufferLocationType => {
     const componentType = shaderFuncs.toComponentType(datumType);
     const match = datumType.match(/^mat[234]x([234])<[fiu]32>$/);
@@ -109,6 +110,9 @@ export const shaderFuncs = {
     const attributeDataArray: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>[] = [];
     for (const { buffer, fields } of bufferFields) {
       const bufferLayout = bufferLayouts[buffer];
+      if (shaderFuncs.isVaryingsLayout(bufferLayout)) {
+        throw Error(`Cannot use varyings layout ${buffer} as vertex buffer attribute`);
+      }
       const { entries, stride } = bufferLayout;
       const locationAttributes: WPKVertexBufferLocationAttribute[] = [];
       const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];

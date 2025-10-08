@@ -49,7 +49,7 @@ export const run = async (): Promise<void> => {
 const newStar = (): Star => {
   const transformation = new Transformation();
   transformation.setPosition(new Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10));
-  const scale = Math.random() * 8 - 4;
+  const scale = (Math.random() * 8) - 4;
   transformation.setScale(new Vector3(scale, scale, scale));
   return {
     visual: {

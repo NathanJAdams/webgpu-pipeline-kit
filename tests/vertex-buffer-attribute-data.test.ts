@@ -23,7 +23,7 @@ type Entity = {
 };
 
 const uniforms = {
-  bufferType: 'uniform',
+  structType: 'uniform',
   marshall: {
     s: {
       datumType: 'f32',
@@ -41,7 +41,7 @@ const uniforms = {
 } as const satisfies WPKBufferFormat<Uniform, Entity>;
 
 const marshalleds = {
-  bufferType: 'marshalled',
+  structType: 'marshalled',
   marshall: {
     ms: {
       datumType: 'f32',
@@ -59,7 +59,7 @@ const marshalleds = {
 } as const satisfies WPKBufferFormat<Uniform, Entity>;
 
 const editables = {
-  bufferType: 'editable',
+  structType: 'editable',
   layout: {
     es: {
       datumType: 'f32',

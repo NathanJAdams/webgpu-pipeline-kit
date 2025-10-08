@@ -14,7 +14,7 @@ type Uniform = {
 };
 
 const bufferFormat: WPKBufferFormatUniform<Uniform> = {
-  bufferType: 'uniform',
+  structType: 'uniform',
   marshall: {
     aaa: {
       datumType: 'mat4x4<f32>',

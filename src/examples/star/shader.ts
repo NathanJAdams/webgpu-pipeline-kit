@@ -10,29 +10,32 @@ const meshTemplate = builders.meshTemplate<StarMeshTemplates>()
   .buildParameters()
   .buildObject();
 
-const vertexShader = builders.vertexShader<StarUniform, Star, StarBufferFormats>()
+const vertexShader = builders.vertexShader<StarUniform, Star, StarBufferFormats, 'varyings'>()
   .entryPoint('star_vertex')
-  .returnType('builtin_position')
   .vertexBuffersArray()
   .pushObject().buffer('position').field('transformation').buildElement()
   .pushObject().buffer('visual').field('color').buildElement()
   .buildVertexBuffers()
-  .code((wgsl, params) => wgsl`
-  let model_position = ${params.vertex_buffers.position.transformation} * vec4<f32>(${params.vertex_position}, 1.0);
-  return ${params.bindings.uniforms.viewProjection} * model_position;
-`)
+  .output('varyings')
+  .code((wgsl, params) =>
+    wgsl`  let model_position = ${params.vertex_buffers.position.transformation} * vec4<f32>(${params.vertex_position}, 1.0);
+  var output : ${params.output.type};
+  output.builtin_position = ${params.bindings.uniforms.viewProjection} * model_position;
+  output.color = ${params.vertex_buffers.visual.color};
+  return output;`)
   .buildObject();
 
-const fragmentShader = builders.fragmentShader<StarUniform, Star, StarBufferFormats>()
+const fragmentShader = builders.fragmentShader<StarUniform, Star, StarBufferFormats, 'varyings'>()
   .entryPoint('star_fragment')
-  .code((wgsl, _params) => wgsl`  return vec4<f32>(0.9, 0.7, 0.5, 1.0);`)
+  .input('varyings')
+  .code((wgsl, params) => wgsl`  return vec4<f32>(${params.input.color}, 1.0);`)
   .buildObject();
 
 const renderGroupBindings = builders.renderGroupBindings<StarUniform, Star, StarBufferFormats>()
   .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
   .buildArray();
 
-export const renderShader = builders.renderShader<StarUniform, Star, StarBufferFormats, StarMeshTemplates>()
+export const renderShader = builders.renderShader<StarUniform, Star, StarBufferFormats, StarMeshTemplates, 'varyings'>()
   .groupBindings(renderGroupBindings)
   .passesArray()
   .pushObject()

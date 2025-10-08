@@ -2,7 +2,7 @@ import { bufferLayoutsFuncs } from './buffer-layout';
 import { getLogger } from './logging';
 import { shaderReserved } from './shader-reserved';
 import { shaderFuncs } from './shader-utils';
-import { WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKComputeShader, WPKShaderModuleDetail, WPKRenderShader, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKDatumTypeReference, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderScalarSignedInt, WPKBufferLayout, WPKBufferLayouts, WPKBufferLayoutEntry, WPKVertexBufferFieldReferences } from './types';
+import { WPKBufferFormatMap, WPKComputeCodeParams, WPKComputePass, WPKGroupBinding, WPKMeshTemplateMap, WPKRenderFragmentCodeParams, WPKRenderPass, WPKRenderPassFragment, WPKRenderPassVertex, WPKRenderVertexCodeParams, WPKComputeShader, WPKShaderModuleDetail, WPKRenderShader, DISPATCH_PARAMS_BUFFER_NAME, WPKBufferBindingReferences, WPKVertexBufferReferences, WPKShaderDatumType, WPKScalarReference, WPKDatumTypeReferenceBase, WPKShaderScalarUnsignedInt, WPKShaderScalarSignedInt, WPKBufferLayout, WPKBufferLayouts, WPKBufferLayoutEntry, WPKVertexBufferFieldReferences, WPKVaryingsBufferFormat, WPKHasDatumType, WPKBufferLayoutVaryings, WPKDatumTypeReference, WPKVertexBufferAttributeData, WPKRenderVertexCodeParamsNoOutput, WPKRenderVertexCodeParamsOutput, WPKRenderFragmentCodeParamsInput, WPKRenderFragmentCodeParamsInputBuiltin, WPKRenderFragmentCodeParamsInputVaryings } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = getLogger('shader');
@@ -18,9 +18,9 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
   const { prologue, epilogue, groupBindings, passes } = shader;
   const entryPoints = passes.map(pass => pass.entryPoint);
   const dispatchLayout = bufferLayoutsFuncs.toBufferLayoutUniform(shaderReserved.DISPATCH_MARSHALLED_FORMAT, GPUBufferUsage.UNIFORM);
-  const structs = toCodeStructs(bufferLayouts, true);
+  const structs = toCodeStructs(bufferLayouts, false);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferLayouts);
-  const bindings = toBindings<TUniform, TEntity, TBufferFormatMap, true>(bufferLayouts, true);
+  const bindings = toParamsBindings<TUniform, TEntity, TBufferFormatMap, true>(bufferLayouts, true);
   const computePassesCode = passes.map(pass => toCodeComputePass(pass, bindings));
   const code =
     structs
@@ -44,14 +44,14 @@ export const toCodeShaderCompute = <TUniform, TEntity, TBufferFormatMap extends 
 };
 
 export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
-  shader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+  shader: WPKRenderShader<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap, any>,
   bufferLayouts: WPKBufferLayouts<TUniform, TEntity>,
 ): WPKShaderModuleDetail => {
   logFuncs.lazyDebug(LOGGER, () => 'Creating render shader module detail');
   const { prologue, epilogue, groupBindings, passes } = shader;
-  const structs = toCodeStructs(bufferLayouts, false);
+  const structs = toCodeStructs(bufferLayouts, true);
   const groupBindingsCode = toCodeGroupBindings(groupBindings, bufferLayouts);
-  const bindings = toBindings<TUniform, TEntity, TBufferFormatMap, false>(bufferLayouts, false);
+  const bindings = toParamsBindings<TUniform, TEntity, TBufferFormatMap, false>(bufferLayouts, false);
   const renderPassesCode = passes.map(pass => toCodeRenderPass(pass, bindings, bufferLayouts));
   const entryPointsVertex = passes.map(pass => pass.vertex.entryPoint);
   const entryPointsFragment = passes.map(pass => pass.fragment.entryPoint);
@@ -75,19 +75,46 @@ export const toCodeShaderRender = <TUniform, TEntity, TBufferFormatMap extends W
   };
 };
 
-const toCodeStructs = (bufferLayouts: WPKBufferLayouts<any, any>, includeDispatchBuffer: boolean): string => {
-  return Object.entries(bufferLayouts)
-    .filter(([name,]) => (includeDispatchBuffer || (name !== shaderReserved.DISPATCH_PARAMS_BUFFER_NAME)))
-    .map(([name, bufferLayout]) => toCodeStruct(name, bufferLayout))
-    .join(WHITESPACE);
+const toCodeStructs = (bufferLayouts: WPKBufferLayouts<any, any>, includeVaryings: boolean): string => {
+  const structs = Object.entries(bufferLayouts)
+    .filter(([, bufferLayout]) => includeVaryings || (bufferLayout.structType !== 'varyings'))
+    .map(([structName, bufferLayout]) => shaderFuncs.isVaryingsLayout(bufferLayout)
+      ? toCodeStructsVaryings(structName, bufferLayout)
+      : toCodeStruct(structName, bufferLayout));
+  return structs.join(WHITESPACE);
 };
 
 const toCodeStruct = (structName: string, bufferLayout: WPKBufferLayout<any, any>): string => {
-  const lines = Object.entries(bufferLayout.entries).map(([entryName, entry]) => `  ${entryName} : ${entry.datumType},`);
+  const lines = Object.entries(bufferLayout.entries).map(([entryName, entry]) => `  ${entryName} : ${toDatumType(entry)},`);
   return `struct ${capitalize(structName)} {
 ${lines.join('\n')}
 };`;
 };
+
+const VERTEX_OUTPUT_PREFIX = 'VertexOutput';
+const FRAGMENT_INPUT_PREFIX = 'FragmentInput';
+const toVertexOutputStructName = (varyingsName: string): string => toDtoStructName(VERTEX_OUTPUT_PREFIX, varyingsName);
+const toFragmentInputStructName = (varyingsName: string): string => toDtoStructName(FRAGMENT_INPUT_PREFIX, varyingsName);
+const toDtoStructName = (prefix: string, suffix: string): string => `${prefix}_${suffix}`;
+const toCodeStructsVaryings = (varyingsName: string, varyingsLayout: WPKBufferLayoutVaryings): string => {
+  const vertex = toCodeDtoStruct(toVertexOutputStructName(varyingsName), { position: 'vec4<f32>' }, varyingsLayout);
+  const fragment = toCodeDtoStruct(toFragmentInputStructName(varyingsName), { position: 'vec4<f32>' }, varyingsLayout);
+  return [vertex, fragment].join(WHITESPACE);
+};
+const toCodeDtoStruct = (structName: string, builtinEntries: Record<string, WPKShaderDatumType>, varyingsLayout: WPKBufferLayoutVaryings): string => {
+  const builtinLines = Object.entries(builtinEntries).map(([builtinName, builtinDatumType]) => `  @builtin(${builtinName}) builtin_${builtinName} : ${builtinDatumType},`);
+  const locationLines: string[] = [];
+  let location = 0;
+  for (const [entryName, datumType] of Object.entries(varyingsLayout.entries)) {
+    locationLines.push(`  @location(${location}) ${entryName} : ${datumType},`);
+    location++;
+  }
+  return `struct ${structName} {
+${builtinLines.join('\n')}${(locationLines.length === 0) ? '' : '\n' + locationLines.join('\n')}
+};`;
+};
+
+const toDatumType = (datumTypeable: WPKShaderDatumType | WPKHasDatumType): WPKShaderDatumType => (datumTypeable as WPKHasDatumType).datumType || datumTypeable;
 
 const toCodeGroupBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean>(
   groupBindings: Array<WPKGroupBinding<TUniform, TEntity, TBufferFormatMap, TIncludeUniform, TIncludeEntity>>,
@@ -106,37 +133,36 @@ const toCodeGroupBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBuff
 
 const toCodeGroupBinding = (groupBinding: WPKGroupBinding<any, any, any, any, any>, bufferLayout: WPKBufferLayout<any, any>): string => {
   const { group, binding, buffer } = groupBinding;
-  const { bufferType } = bufferLayout;
-  const addressSpaceName = (bufferType === 'uniform') ? 'uniform' : 'storage';
+  const { structType } = bufferLayout;
+  const addressSpaceName = (structType === 'uniform') ? 'uniform' : 'storage';
   const accessMode = (addressSpaceName === 'uniform')
     ? ''
-    : (bufferType === 'editable')
+    : (structType === 'editable')
       ? ', read_write'
       : ', read';
-  const dataType = (bufferType === 'uniform')
+  const dataType = (structType === 'uniform')
     ? capitalize(buffer)
     : `array<${capitalize(buffer)}>`;
   return `@group(${group})\n@binding(${binding})\nvar<${addressSpaceName}${accessMode}> ${buffer} : ${dataType};`;
 };
 
-const toBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeEntity extends boolean>(
+const toParamsBindings = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeEntity extends boolean>(
   bufferLayouts: WPKBufferLayouts<TUniform, TEntity>,
   includeEntity: TIncludeEntity,
 ): WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, TIncludeEntity> => {
-  return Object.keys(bufferLayouts)
-    .reduce((acc, bufferName) => {
-      const bufferLayout = bufferLayouts[bufferName];
-      const { bufferType, entries } = bufferLayout;
-      if (bufferType === 'uniform' || includeEntity) {
-        const allowIndexing = (bufferType !== 'uniform');
-        const bufferBindings = toBufferBindings(bufferName, entries, allowIndexing, allowIndexing);
+  return Object.entries(bufferLayouts)
+    .reduce((acc, [bufferName, bufferLayout]) => {
+      const { structType } = bufferLayout;
+      if (!shaderFuncs.isVaryingsLayout(bufferLayout) && (structType === 'uniform' || includeEntity)) {
+        const allowIndexing = (structType !== 'uniform');
+        const bufferBindings = toParamsBufferBindings(bufferName, bufferLayout.entries, allowIndexing, allowIndexing);
         acc[bufferName] = bufferBindings;
       }
       return acc;
     }, {} as Record<string, Record<string, WPKDatumTypeReference<any>>>) as WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, TIncludeEntity>;
 };
 
-const toBufferBindings = (
+const toParamsBufferBindings = (
   bufferName: string,
   entries: Record<string, WPKBufferLayoutEntry<any>>,
   allowIndexing: boolean,
@@ -160,7 +186,7 @@ const toBufferBindings = (
       const indexString = shaderFuncs.isDatumTypeReferenceBase(index)
         ? index.__reference
         : String(index);
-      return toBufferBindings(bufferName, entries, allowIndexing, false, indexString);
+      return toParamsBufferBindings(bufferName, entries, allowIndexing, false, indexString);
     };
   }
   return bufferBindings;
@@ -178,38 +204,79 @@ const toCodeComputePass = <TUniform, TEntity, TBufferFormatMap extends WPKBuffer
 @compute
 @workgroup_size(${pass.workGroupSize.x}, ${pass.workGroupSize.y || 1}, ${pass.workGroupSize.z || 1})
 fn ${pass.entryPoint}(
-  @builtin(global_invocation_id) global_invocation_id: vec3<u32>,
-  @builtin(num_workgroups) num_workgroups: vec3<u32>,
+  @builtin(global_invocation_id) builtin_global_invocation_id: vec3<u32>,
+  @builtin(num_workgroups) builtin_num_workgroups: vec3<u32>,
 ) {
   let instance_index: u32 =
-  global_invocation_id.x
-  + (global_invocation_id.y * num_workgroups.x)
-  + (global_invocation_id.z * num_workgroups.x * num_workgroups.y);
+  builtin_global_invocation_id.x
+  + (builtin_global_invocation_id.y * builtin_num_workgroups.x)
+  + (builtin_global_invocation_id.z * builtin_num_workgroups.x * builtin_num_workgroups.y);
   if (instance_index >= ${DISPATCH_PARAMS_BUFFER_NAME}.instance_count) {
     return;
   }
-  ${pass.code(wgslTaggedTemplate, params)}
+${pass.code(wgslTaggedTemplate, params)}
 }`;
 };
 
-const toCodeRenderPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap>(
-  pass: WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>,
+const toCodeRenderPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined>(
+  pass: WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap, TVaryings>,
   bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
   bufferLayouts: WPKBufferLayouts<TUniform, TEntity>
 ): string => {
   const vertexPass = toCodeVertexPass(pass.vertex, bindings, bufferLayouts);
-  const fragmentPass = toCodeFragmentPass(pass.fragment, bindings);
+  const fragmentPass = toCodeFragmentPass(pass.fragment, bindings, bufferLayouts);
   return vertexPass
     + WHITESPACE
     + fragmentPass;
 };
 
-const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
-  pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap>,
+const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined>(
+  pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap, TVaryings>,
   bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
   bufferLayouts: WPKBufferLayouts<TUniform, TEntity>
 ): string => {
   const vertexBufferAttributeData = shaderFuncs.toVertexBufferAttributeData(pass.vertexBuffers, bufferLayouts);
+  const locations = vertexBufferAttributeData.flatMap(attributeData =>
+    attributeData.locationAttributes.map(({ attribute: { shaderLocation }, locationName, datumType }) =>
+      `  @location(${shaderLocation}) ${locationName} : ${datumType},`));
+  const reconstitutedMatrices = vertexBufferAttributeData.flatMap(attributeData =>
+    attributeData.reconstitutedMatrices.map(({ matrixName, matrixType, vectorLocationNames }) =>
+      `  let ${matrixName} = ${matrixType}(${vectorLocationNames.join(', ')});`));
+  const outputType = (pass.output === undefined)
+    ? '@builtin(position) vec4<f32>'
+    : toVertexOutputStructName(pass.output);
+  const params = toVertexCodeParams(pass, bindings, vertexBufferAttributeData);
+  return `@vertex
+fn ${pass.entryPoint}(
+  @builtin(instance_index) builtin_instance_index: u32,
+  @builtin(vertex_index) builtin_vertex_index: u32,
+  @location(0) vertex_position: vec3<f32>,
+${locations.join('\n')}
+) -> ${outputType} {${(reconstitutedMatrices.length === 0) ? '' : '\n' + reconstitutedMatrices.join('\n')}
+${pass.code(wgslTaggedTemplate, params)}
+}`;
+};
+
+const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined>(
+  pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap, TVaryings>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
+  bufferLayouts: WPKBufferLayouts<TUniform, TEntity>
+): string => {
+  const funcParam = (pass.input === undefined)
+    ? '@builtin(position) builtin_position: vec4<f32>'
+    : `input: ${toFragmentInputStructName(pass.input)}`;
+  const params = toFragmentCodeParams(pass, bindings, bufferLayouts);
+  return `@fragment
+fn ${pass.entryPoint}(${funcParam}) -> @location(0) vec4<f32> {
+${pass.code(wgslTaggedTemplate, params)}
+}`;
+};
+
+const toVertexCodeParams = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined>(
+  pass: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap, TVaryings>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
+  vertexBufferAttributeData: Array<WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap>>
+): WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap, TVaryings> => {
   const vertex_buffers = Object.values(vertexBufferAttributeData)
     .reduce((vbAcc, attributeData) => {
       const { buffer, references } = attributeData;
@@ -220,45 +287,60 @@ const toCodeVertexPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferF
         }, {} as Record<string, WPKDatumTypeReference<any>>) as WPKVertexBufferFieldReferences<TUniform, TEntity, TBufferFormatMap, typeof buffer>;
       return vbAcc;
     }, {} as Record<string, any>) as WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>;
-  const locations = vertexBufferAttributeData.flatMap(attributeData =>
-    attributeData.locationAttributes.map(({ attribute: { shaderLocation }, locationName, datumType }) =>
-      `  @location(${shaderLocation}) ${locationName} : ${datumType},`));
-  const reconstitutedMatrices = vertexBufferAttributeData.flatMap(attributeData =>
-    attributeData.reconstitutedMatrices.map(({ matrixName, matrixType, vectorLocationNames }) =>
-      `  let ${matrixName} = ${matrixType}(${vectorLocationNames.join(', ')});`));
-  const params: WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap> = {
-    instance_index: toDatumTypeReference('instance_index', 'u32'),
-    vertex_index: toDatumTypeReference('vertex_index', 'u32'),
+  const paramsNoOutput: WPKRenderVertexCodeParamsNoOutput<TUniform, TEntity, TBufferFormatMap> = {
+    builtin_instance_index: toDatumTypeReference('builtin_instance_index', 'u32'),
+    builtin_vertex_index: toDatumTypeReference('builtin_vertex_index', 'u32'),
     vertex_position: toDatumTypeReference('vertex_position', 'vec3<f32>'),
     bindings,
     vertex_buffers,
   };
-  return `@vertex
-fn ${pass.entryPoint}(
-  @builtin(instance_index) instance_index: u32,
-  @builtin(vertex_index) vertex_index: u32,
-  @location(0) vertex_position: vec3<f32>,
-${locations.join('\n')}
-) -> @builtin(position) vec4<f32> {
-${reconstitutedMatrices.join('\n')}
-${pass.code(wgslTaggedTemplate, params)}
-}`;
+  const paramsOutput: WPKRenderVertexCodeParamsOutput | {} = (pass.output === undefined)
+    ? {}
+    : {
+      output: {
+        type: toVertexOutputStructName(pass.output),
+      }
+    };
+  return {
+    ...paramsNoOutput,
+    ...paramsOutput,
+  } as WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap, TVaryings>;
 };
 
-const toCodeFragmentPass = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>>(
-  pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap>,
-  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>
-): string => {
-  const params: WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap> = {
+const toFragmentCodeParams = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined>(
+  pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap, TVaryings>,
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>,
+  bufferLayouts: WPKBufferLayouts<TUniform, TEntity>,
+): WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap, TVaryings> => {
+  const input = toFragmentParamsInput(pass, bufferLayouts);
+  return {
     bindings,
-    fragment_coordinate: toDatumTypeReference('fragment_coordinate', 'vec2<f32>'),
+    input,
+  } as WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap, TVaryings>;
+};
+
+const toFragmentParamsInput = <TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined>(
+  pass: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap, TVaryings>,
+  bufferLayouts: WPKBufferLayouts<TUniform, TEntity>,
+): WPKRenderFragmentCodeParamsInput<TUniform, TEntity, TBufferFormatMap, TVaryings> => {
+  if (pass.input === undefined) {
+    return toDatumTypeReference('input', 'vec4<f32>') as unknown as WPKRenderFragmentCodeParamsInput<TUniform, TEntity, TBufferFormatMap, TVaryings>;
+  }
+  const inputBuiltin: WPKRenderFragmentCodeParamsInputBuiltin = {
+    builtin_position: toDatumTypeReference('input.builtin_position', 'vec4<f32>'),
   };
-  return `@fragment
-fn ${pass.entryPoint}(
-  @builtin(position) fragment_coordinate: vec4<f32>,
-) -> @location(0) vec4<f32> {
-${pass.code(wgslTaggedTemplate, params)}
-}`;
+  const varyingsLayout = bufferLayouts[pass.input];
+  if ((varyingsLayout === undefined) || !shaderFuncs.isVaryingsLayout(varyingsLayout)) {
+    throw Error(`Cannot use layout ${pass.input} ${JSON.stringify(varyingsLayout)} as a varyings layout`);
+  }
+  const inputVaryings: WPKRenderFragmentCodeParamsInputVaryings<any> = Object.entries(varyingsLayout.entries).reduce((acc, [entryName, datumType]) => {
+    acc[entryName] = toDatumTypeReference(`input.${entryName}`, datumType);
+    return acc;
+  }, {} as Record<string, WPKDatumTypeReference<any>>);
+  return {
+    ...inputBuiltin,
+    ...inputVaryings,
+  } as unknown as WPKRenderFragmentCodeParamsInput<TUniform, TEntity, TBufferFormatMap, TVaryings>;
 };
 
 const toDatumTypeReference = <TDatumType extends WPKShaderDatumType>(prefix: string, datumType: TDatumType): WPKDatumTypeReference<TDatumType> => {

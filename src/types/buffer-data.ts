@@ -1,4 +1,4 @@
-import { WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatType, WPKHasBufferFormatType } from './buffer-formats';
+import { WPKBufferFormatKey, WPKBufferFormatMap, WPKStructType, WPKHasStructType } from './buffer-formats';
 import { WPKShaderDatumType } from './structs';
 
 //#region bridge
@@ -45,18 +45,22 @@ export type WPKBufferLayoutEntry<TBridge extends WPKDatumBridge<any>> = {
   offset: number;
   reserved: number;
 };
-export type WPKBufferLayoutBase<TBridge extends WPKDatumBridge<any>, TBufferType extends WPKBufferFormatType> = WPKHasBufferFormatType<TBufferType> & {
+export type WPKStructLayout<TStructType extends WPKStructType, TEntry> = WPKHasStructType<TStructType> & {
+  entries: Record<string, TEntry>;
+};
+export type WPKBufferLayoutBase<TStructType extends WPKStructType, TBridge extends WPKDatumBridge<any>> = WPKStructLayout<TStructType, WPKBufferLayoutEntry<TBridge>> & {
   stride: number;
   usage: GPUBufferUsageFlags;
-  entries: Record<string, WPKBufferLayoutEntry<TBridge>>;
 };
-export type WPKBufferLayoutUniform<TUniform> = WPKBufferLayoutBase<WPKDatumBridgeMarshalled<TUniform>, 'uniform'>;
-export type WPKBufferLayoutMarshalled<TEntity> = WPKBufferLayoutBase<WPKDatumBridgeMarshalled<TEntity>, 'marshalled'>;
-export type WPKBufferLayoutEditable = WPKBufferLayoutBase<WPKDatumBridgeEditable, 'editable'>;
+export type WPKBufferLayoutUniform<TUniform> = WPKBufferLayoutBase<'uniform', WPKDatumBridgeMarshalled<TUniform>>;
+export type WPKBufferLayoutMarshalled<TEntity> = WPKBufferLayoutBase<'marshalled', WPKDatumBridgeMarshalled<TEntity>>;
+export type WPKBufferLayoutEditable = WPKBufferLayoutBase<'editable', WPKDatumBridgeEditable>;
+export type WPKBufferLayoutVaryings = WPKStructLayout<'varyings', WPKShaderDatumType>;
 export type WPKBufferLayout<TUniform, TEntity> =
   | WPKBufferLayoutUniform<TUniform>
   | WPKBufferLayoutEditable
   | WPKBufferLayoutMarshalled<TEntity>
+  | WPKBufferLayoutVaryings
   ;
 export type WPKBufferLayouts<TUniform, TEntity> = Record<string, WPKBufferLayout<TUniform, TEntity>>;
 //#endregion

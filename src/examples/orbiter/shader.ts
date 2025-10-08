@@ -1,7 +1,7 @@
-import { builders } from '../..';
 import { OrbiterBufferFormats } from './buffer-formats';
 import { Orbiter, OrbiterUniform } from './instance-formats';
 import { OrbiterMeshTemplates } from './mesh-templates';
+import { builders } from '../..';
 
 const computeGroupBindings = builders.computeGroupBindings<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
   .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
@@ -45,8 +45,8 @@ export const computeShader = builders.computeShader<OrbiterUniform, Orbiter, Orb
   .pushObject()
   .workGroupSize({ x: 64 })
   .entryPoint('orbiter_kepler')
-  .code((wgsl, params) => wgsl`
-  let orbitingIndex = ${params.bindings.kepler.primaryIndex};
+  .code((wgsl, params) =>
+    wgsl`  let orbitingIndex = ${params.bindings.kepler.primaryIndex};
   let orbitingPosition = select(${params.bindings.position.atIndex('orbitingIndex').position}, vec3<f32>(0.0, 0.0, 0.0), orbitingIndex == -1);
   let semiMajorAxis = ${params.bindings.kepler.semiMajorAxis};
   let eccentricity = ${params.bindings.kepler.eccentricity};
@@ -91,8 +91,7 @@ export const computeShader = builders.computeShader<OrbiterUniform, Orbiter, Orb
   let zRelative = zInclined;
 
   // Write out orbiter position
-  ${params.bindings.position.position} = orbitingPosition + vec3<f32>(xRelative, yRelative, zRelative);
-  `)
+  ${params.bindings.position.position} = orbitingPosition + vec3<f32>(xRelative, yRelative, zRelative);`)
   .build()
   .buildPasses()
   .buildObject();
@@ -104,30 +103,33 @@ const meshTemplate = builders.meshTemplate<OrbiterMeshTemplates>()
   .buildParameters()
   .buildObject();
 
-const vertexShader = builders.vertexShader<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
+const vertexShader = builders.vertexShader<OrbiterUniform, Orbiter, OrbiterBufferFormats, 'varyings'>()
   .entryPoint('orbiter_vertex')
-  .returnType('builtin_position')
   .vertexBuffersArray()
   .pushObject().buffer('position').field('position').buildElement()
   .pushObject().buffer('visual').field('color').buildElement()
   .pushObject().buffer('visual').field('radius').buildElement()
   .buildVertexBuffers()
-  .code((wgsl, params) => wgsl`
-  let model_position = ${params.vertex_buffers.position.position} + (${params.vertex_position} * visual_radius);
-  return ${params.bindings.uniforms.camera} * vec4<f32>(model_position, 1.0);
-`)
+  .output('varyings')
+  .code((wgsl, params) =>
+    wgsl`  let model_position = ${params.vertex_buffers.position.position} + (${params.vertex_position} * visual_radius);
+  var output: ${params.output.type};
+  output.builtin_position = ${params.bindings.uniforms.camera} * vec4<f32>(model_position, 1.0);
+  output.color = ${params.vertex_buffers.visual.color};
+  return output;`)
   .buildObject();
 
-const fragmentShader = builders.fragmentShader<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
+const fragmentShader = builders.fragmentShader<OrbiterUniform, Orbiter, OrbiterBufferFormats, 'varyings'>()
   .entryPoint('orbiter_fragment')
-  .code((wgsl, _params) => wgsl`  return vec4<f32>(0.9, 0.7, 0.5, 1.0);`)
+  .input('varyings')
+  .code((wgsl, params) => wgsl`  return vec4<f32>(${params.input.color}, 1.0);`)
   .buildObject();
 
 const renderGroupBindings = builders.renderGroupBindings<OrbiterUniform, Orbiter, OrbiterBufferFormats>()
   .pushObject().group(0).binding(0).buffer('uniforms').buildElement()
   .buildArray();
 
-export const renderShader = builders.renderShader<OrbiterUniform, Orbiter, OrbiterBufferFormats, OrbiterMeshTemplates>()
+export const renderShader = builders.renderShader<OrbiterUniform, Orbiter, OrbiterBufferFormats, OrbiterMeshTemplates, 'varyings'>()
   .groupBindings(renderGroupBindings)
   .passesArray()
   .pushObject()

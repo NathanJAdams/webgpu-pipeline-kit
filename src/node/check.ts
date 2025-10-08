@@ -15,7 +15,7 @@ export const checkComputeShaderCode = async (shader: WPKComputeShader<any, any, 
   checkShaderCodeStage('compute', result);
 };
 
-export const checkRenderShaderCode = async (shader: WPKRenderShader<any, any, any, any>, bufferFormats: WPKBufferFormatMap<any, any>): Promise<void> => {
+export const checkRenderShaderCode = async (shader: WPKRenderShader<any, any, any, any, any>, bufferFormats: WPKBufferFormatMap<any, any>): Promise<void> => {
   const bufferLayouts = bufferLayoutsFuncs.toBufferLayouts(bufferFormats, cacheFactory.ofEntitiesResizeable(true, []), () => false, () => false);
   const renderShaderModuleDetail = toCodeShaderRender(shader, bufferLayouts);
   const result = await getShaderCodeStageResult(renderShaderModuleDetail.code);

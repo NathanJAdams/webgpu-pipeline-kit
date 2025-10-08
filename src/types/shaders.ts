@@ -1,5 +1,5 @@
-import { RemoveNever } from '../utils';
-import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
+import { HasError, RemoveNever } from '../utils';
+import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform, WPKBufferFormatVaryings, WPKVaryingsBufferFormat } from './buffer-formats';
 import { WPKMeshParameters, WPKMeshTemplateMap } from './mesh-template';
 import { WPKDatumTypeReference, WPKDatumTypeReferenceBase, WPKScalarReference, WPKShaderStructReferences, WPKVectorReference } from './shader-code';
 import { WPKShaderDatumType, WPKShaderMatrix, WPKShaderScalar, WPKShaderScalarSignedInt, WPKShaderScalarUnsignedInt, WPKShaderVector } from './structs';
@@ -41,13 +41,36 @@ export type WPKWgslTaggedTemplate = (strings: TemplateStringsArray, ...values: (
 //#endregion
 
 //#region render
-export type WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>;
-  fragment_coordinate: WPKVectorReference<'vec2<f32>'>;
+export type WPKRenderFragmentCodeParamsInputBuiltin = {
+  builtin_position: WPKDatumTypeReference<'vec4<f32>'>;
 };
-export type WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+export type WPKRenderFragmentCodeParamsInputVaryings<TVaryingsStruct extends WPKBufferFormatVaryings> = {
+  [TVaryingsKey in keyof TVaryingsStruct['varyings']]: WPKDatumTypeReference<TVaryingsStruct['varyings'][TVaryingsKey]>
+};
+export type WPKRenderFragmentCodeParamsInput<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> =
+  TVaryings extends keyof TBufferFormatMap
+    ? TBufferFormatMap[TVaryings] extends infer TVaryingsStruct
+      ? TVaryingsStruct extends WPKBufferFormatVaryings
+        ? TVaryingsStruct extends undefined
+          ? HasError<'Struct is undefined'>
+          : (
+            & WPKRenderFragmentCodeParamsInputBuiltin
+            & WPKRenderFragmentCodeParamsInputVaryings<TVaryingsStruct>
+          )
+        : HasError<'Struct is not varyings'>
+      : never
+    : HasError<`Varyings ${TVaryings} layout is not contained in buffer format map`>
+    ;
+export type WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> = {
+  bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>;
+  input: TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap>
+  ? WPKRenderFragmentCodeParamsInput<TUniform, TEntity, TBufferFormatMap, TVaryings>
+  : WPKDatumTypeReference<'vec4<f32>'>
+};
+export type WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> = {
   entryPoint: string;
-  code: (wgsl: WPKWgslTaggedTemplate, params: WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap>) => string;
+  input: TVaryings;
+  code: (wgsl: WPKWgslTaggedTemplate, params: WPKRenderFragmentCodeParams<TUniform, TEntity, TBufferFormatMap, TVaryings>) => string;
 };
 export type WPKRenderPassMesh<TMeshTemplateMap extends WPKMeshTemplateMap> = {
   [K in keyof TMeshTemplateMap]: {
@@ -55,25 +78,36 @@ export type WPKRenderPassMesh<TMeshTemplateMap extends WPKMeshTemplateMap> = {
     parameters: WPKMeshParameters<TMeshTemplateMap[K]['parameters']>;
   }
 }[keyof TMeshTemplateMap];
-export type WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
-  instance_index: WPKScalarReference<'u32'>,
-  vertex_index: WPKScalarReference<'u32'>,
+export type WPKRenderVertexCodeParamsNoOutput<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+  builtin_instance_index: WPKScalarReference<'u32'>,
+  builtin_vertex_index: WPKScalarReference<'u32'>,
   vertex_position: WPKVectorReference<'vec3<f32>'>;
   bindings: WPKBufferBindingReferences<TUniform, TEntity, TBufferFormatMap, true, false>;
   vertex_buffers: WPKVertexBufferReferences<TUniform, TEntity, TBufferFormatMap>;
 };
-export type WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>> = {
+export type WPKRenderVertexCodeParamsOutput = {
+  output: {
+    type: string;
+  }
+};
+export type WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> =
+  & WPKRenderVertexCodeParamsNoOutput<TUniform, TEntity, TBufferFormatMap>
+  & (TVaryings extends undefined
+    ? object
+    : TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap>
+    ? WPKRenderVertexCodeParamsOutput
+    : object
+  );
+export type WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> = {
   entryPoint: string;
   vertexBuffers: Array<WPKVertexBufferLocation<TUniform, TEntity, TBufferFormatMap>>;
-  returnType:
-  | 'builtin_position'
-  | (string & keyof TBufferFormatMap);
-  code: (wgsl: WPKWgslTaggedTemplate, params: WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap>) => string;
+  output: TVaryings;
+  code: (wgsl: WPKWgslTaggedTemplate, params: WPKRenderVertexCodeParams<TUniform, TEntity, TBufferFormatMap, TVaryings>) => string;
 };
-export type WPKRenderPass<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> = {
+export type WPKRenderPass<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> = {
   mesh: WPKRenderPassMesh<TMeshTemplateMap>;
-  vertex: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap>;
-  fragment: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap>;
+  vertex: WPKRenderPassVertex<TUniform, TEntity, TBufferFormatMap, TVaryings>;
+  fragment: WPKRenderPassFragment<TUniform, TEntity, TBufferFormatMap, TVaryings>;
 };
 //#endregion
 
@@ -202,12 +236,12 @@ export type WPKComputeShader<TUniform, TEntity, TBufferFormatMap extends WPKBuff
     true,
     WPKComputePass<TUniform, TEntity, TBufferFormatMap>
   >;
-export type WPKRenderShader<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap> =
+export type WPKRenderShader<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TMeshTemplateMap extends WPKMeshTemplateMap, TVaryings extends WPKVaryingsBufferFormat<TBufferFormatMap> | undefined> =
   WPKShaderStage<
     TUniform,
     TEntity,
     TBufferFormatMap,
     false,
-    WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap>
+    WPKRenderPass<TUniform, TEntity, TBufferFormatMap, TMeshTemplateMap, TVaryings>
   >;
 //#endregion

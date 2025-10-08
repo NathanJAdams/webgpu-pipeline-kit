@@ -1,6 +1,6 @@
 import { datumBridgeFactory } from './datum-bridge';
 import { getLogger } from './logging';
-import { WPKShaderDatumType, WPKDatumSizes, WPKBufferLayoutEditable, WPKBufferLayoutEntry, WPKNamedDatumTypeAlignment, WPKBufferFormatMap, WPKBufferLayouts, WPKBufferFormatType, WPKEntityCache, WPKBufferLayoutUniform, WPKBufferLayoutMarshalled, WPKBufferFormatElementUniform, WPKBufferFormatElementStorage, WPKBufferLayoutBase, WPKHasDatumType, WPKDatumBridge } from './types';
+import { WPKShaderDatumType, WPKDatumSizes, WPKBufferLayoutEditable, WPKBufferLayoutEntry, WPKNamedDatumTypeAlignment, WPKBufferFormatMap, WPKBufferLayouts, WPKStructType, WPKEntityCache, WPKBufferLayoutUniform, WPKBufferLayoutMarshalled, WPKBufferFormatElementUniform, WPKBufferFormatElementStorage, WPKBufferLayoutBase, WPKHasDatumType, WPKDatumBridge, WPKBufferLayoutVaryings } from './types';
 import { logFuncs, recordFuncs } from './utils';
 
 const LOGGER = getLogger('pipeline');
@@ -14,16 +14,18 @@ export const bufferLayoutsFuncs = {
   ): WPKBufferLayouts<TUniform, TEntity> => {
     const layouts: WPKBufferLayouts<TUniform, TEntity> = {};
     for (const [bufferName, bufferFormat] of Object.entries(bufferFormatMap)) {
-      const { bufferType } = bufferFormat;
+      const { structType } = bufferFormat;
       const isBinding = isBufferBound(bufferName);
       const isVertex = isVertexBuffer(bufferName);
-      const usage = toBufferUsage(bufferType, bufferName, isBinding, isVertex);
-      if (bufferType === 'uniform') {
+      const usage = toBufferUsage(structType, bufferName, isBinding, isVertex);
+      if (structType === 'uniform') {
         layouts[bufferName] = bufferLayoutsFuncs.toBufferLayoutUniform(bufferFormat.marshall, usage);
-      } else if (bufferType === 'editable') {
+      } else if (structType === 'editable') {
         layouts[bufferName] = bufferLayoutsFuncs.toBufferLayoutEditable(bufferFormat.layout, usage);
-      } else if (bufferType === 'marshalled') {
+      } else if (structType === 'marshalled') {
         layouts[bufferName] = bufferLayoutsFuncs.toBufferLayoutMarshalled(bufferFormat.marshall, usage, entityCache);
+      } else if (structType === 'varyings') {
+        layouts[bufferName] = bufferLayoutsFuncs.toBufferLayoutVaryings(bufferFormat.varyings);
       }
     }
     return layouts;
@@ -47,11 +49,19 @@ export const bufferLayoutsFuncs = {
   ): WPKBufferLayoutMarshalled<TEntity> => {
     return toBufferLayout('marshalled', elements, usage, (namedDatumType, offset) => datumBridgeFactory.ofFormatElement(elements[namedDatumType.name], offset, entityCache));
   },
+  toBufferLayoutVaryings: (
+    elements: Record<string, WPKShaderDatumType>,
+  ): WPKBufferLayoutVaryings => {
+    return {
+      structType: 'varyings',
+      entries: elements,
+    };
+  },
 };
 
-const toBufferUsage = (bufferType: WPKBufferFormatType, bufferName: string, isBinding: boolean, isVertex: boolean): GPUBufferUsageFlags => {
+const toBufferUsage = (structType: WPKStructType, bufferName: string, isBinding: boolean, isVertex: boolean): GPUBufferUsageFlags => {
   let usage = 0;
-  if (bufferType === 'uniform') {
+  if (structType === 'uniform') {
     if (isBinding) {
       usage |= GPUBufferUsage.UNIFORM;
     }
@@ -107,12 +117,12 @@ const typeAlignments: Record<WPKShaderDatumType, WPKDatumSizes> = {
 
 type WPKToBridge<TBridge extends WPKDatumBridge<any>> = (namedDatumType: WPKNamedDatumTypeAlignment, offset: number) => TBridge;
 
-const toBufferLayout = <T, TBufferType extends WPKBufferFormatType, TBridge extends WPKDatumBridge<T>>(
-  bufferType: TBufferType,
+const toBufferLayout = <T, TStructType extends WPKStructType, TBridge extends WPKDatumBridge<T>>(
+  structType: TStructType,
   elements: Record<string, WPKHasDatumType>,
   usage: GPUBufferUsageFlags,
   toBridge: WPKToBridge<TBridge>,
-): WPKBufferLayoutBase<TBridge, TBufferType> => {
+): WPKBufferLayoutBase<TStructType, TBridge> => {
   const namedDatumTypeAlignments: WPKNamedDatumTypeAlignment[] = recordFuncs.toArray(elements, (entry, name): WPKNamedDatumTypeAlignment => ({
     name,
     datumType: entry.datumType,
@@ -136,7 +146,7 @@ const toBufferLayout = <T, TBufferType extends WPKBufferFormatType, TBridge exte
   const maxAlignment = namedDatumTypeAlignments[0].datumAlignment.alignment;
   const stride = Math.ceil(offset / maxAlignment) * maxAlignment;
   return {
-    bufferType,
+    structType,
     entries,
     stride,
     usage,

@@ -1,5 +1,5 @@
 import { WPKPathMat2x2, WPKPathMat2x3, WPKPathMat2x4, WPKPathMat3x2, WPKPathMat3x3, WPKPathMat3x4, WPKPathMat4x2, WPKPathMat4x3, WPKPathMat4x4, WPKPathNumber, WPKPathString, WPKPathVec2, WPKPathVec3, WPKPathVec4 } from './data-paths';
-import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKHasDatumType, WPKShaderVectorUntyped } from './structs';
+import { WPKShaderMatrixUntyped, WPKShaderScalar, WPKShaderScalarFloat, WPKShaderScalarSignedInt, WPKShaderStruct, WPKHasDatumType, WPKShaderVectorUntyped, WPKShaderVector } from './structs';
 
 export type WPKBufferFormatElementScalar<TScalar extends WPKShaderScalar, TPath> =
   & WPKHasDatumType<TScalar>
@@ -64,22 +64,26 @@ export type WPKBufferFormatElement<T> =
   | WPKBufferFormatElementUniform<T>
   | WPKBufferFormatElementStorage<T>
   ;
-export type WPKBufferFormatType = 'uniform' | 'editable' | 'marshalled';
-export type WPKHasBufferFormatType<TBufferType extends WPKBufferFormatType> = {
-  bufferType: TBufferType;
+export type WPKStructType = 'uniform' | 'editable' | 'marshalled' | 'varyings';
+export type WPKHasStructType<TStructType extends WPKStructType> = {
+  structType: TStructType;
 };
-export type WPKBufferFormatMarshalled<T, TBufferType extends WPKBufferFormatType, F extends WPKBufferFormatElement<T>> = WPKHasBufferFormatType<TBufferType> & {
+export type WPKBufferFormatMarshalled<T, TStructType extends WPKStructType, F extends WPKBufferFormatElement<T>> = WPKHasStructType<TStructType> & {
   marshall: Record<string, F>;
 };
 export type WPKBufferFormatUniform<T> = WPKBufferFormatMarshalled<T, 'uniform', WPKBufferFormatElementUniform<T>>;
-export type WPKBufferFormatEntityLayout = WPKHasBufferFormatType<'editable'> & {
+export type WPKBufferFormatEntityLayout = WPKHasStructType<'editable'> & {
   layout: WPKShaderStruct;
 };
 export type WPKBufferFormatEntityMarshalled<T> = WPKBufferFormatMarshalled<T, 'marshalled', WPKBufferFormatElementStorage<T>>;
 export type WPKBufferFormatEntity<T> = WPKBufferFormatEntityLayout | WPKBufferFormatEntityMarshalled<T>;
+export type WPKBufferFormatVaryings = WPKHasStructType<'varyings'> & {
+  varyings: Record<string, WPKShaderScalar | WPKShaderVector>;
+};
 export type WPKBufferFormat<TUniform, TEntity> =
   | WPKBufferFormatUniform<TUniform>
-  | WPKBufferFormatEntity<TEntity>;
+  | WPKBufferFormatEntity<TEntity>
+  | WPKBufferFormatVaryings;
 export type WPKBufferFormatMap<TUniform, TEntity> = Record<string, WPKBufferFormat<TUniform, TEntity>>;
 export type WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap extends WPKBufferFormatMap<TUniform, TEntity>, TIncludeUniform extends boolean, TIncludeEntity extends boolean> =
   string
@@ -99,4 +103,12 @@ export type WPKBufferFormatKey<TUniform, TEntity, TBufferFormatMap extends WPKBu
       : never
       : never
     )
+  }[keyof TBufferFormatMap];
+export type WPKVaryingsBufferFormat<TBufferFormatMap extends WPKBufferFormatMap<any, any>> =
+  string
+  & {
+    [K in keyof TBufferFormatMap]:
+    TBufferFormatMap[K] extends WPKBufferFormatVaryings
+    ? K
+    : never
   }[keyof TBufferFormatMap];
