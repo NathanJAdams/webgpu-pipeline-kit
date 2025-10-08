@@ -1,7 +1,4 @@
-import { setLogLevel } from '../src/logging';
 import { bufferFactory } from '../src/buffer-factory';
-
-setLogLevel('TRACE');
 
 const destroy = () => { };
 
@@ -38,7 +35,6 @@ describe('buffer-factory', () => {
 
       bufferResource.update(device, queue, encoder);
       const buffer1 = bufferResource.get();
-      console.log(JSON.stringify(typeof buffer1.destroy));
       expect(buffer1.bytesLength).toBe(expectedSize);
       const expectedBuffer1 = {
         ...buffer1.buffer,
@@ -50,7 +46,6 @@ describe('buffer-factory', () => {
 
       bufferResource.update(device, queue, encoder);
       const buffer2 = bufferResource.get();
-      console.log(JSON.stringify(typeof buffer2.destroy));
       const expectedBuffer2 = {
         ...buffer2.buffer,
         destroy,
@@ -78,7 +73,6 @@ describe('buffer-factory', () => {
 
       bufferResource.update(device, queue, encoder);
       const buffer1 = bufferResource.get();
-      console.log(JSON.stringify(typeof buffer1.destroy));
       expect(buffer1.bytesLength).toBe(expectedSize);
       const expectedBuffer1 = {
         ...buffer1.buffer,
@@ -89,7 +83,6 @@ describe('buffer-factory', () => {
 
       bufferResource.update(device, queue, encoder);
       const buffer2 = bufferResource.get();
-      console.log(JSON.stringify(typeof buffer2.destroy));
       const expectedBuffer2 = {
         ...buffer2.buffer,
         destroy,

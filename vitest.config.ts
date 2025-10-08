@@ -5,7 +5,18 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    setupFiles: ['tests/setup/mock-webgpu-constants.ts'],
+    reporters: [
+      [
+        'default',
+        {
+          'summary': false,
+        },
+      ],
+    ],
+    setupFiles: [
+      'tests/setup/mock-webgpu-constants.ts',
+      'tests/setup/set-log-level.ts',
+    ],
     typecheck: {
       include: ['src/**/*.ts', 'tests/**/*.ts'],
       enabled: true,

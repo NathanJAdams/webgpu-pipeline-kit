@@ -1,9 +1,6 @@
 import { toShaderCodeError } from '../../src/node/diagnostics';
-import { setLogLevel } from '../../src';
 
 const ERROR_1 = 'ParseError { message: "expected assignment or increment/decrement, found \"}\"", labels: [(Span { start: 905, end: 906 }, "expected assignment or increment/decrement")], notes: [] }';
-
-setLogLevel('INFO');
 
 describe('diagnostics', () => {
   test('can get shader code error', () => {
