@@ -18,7 +18,7 @@ export const bufferResourcesFactory = {
     logFuncs.lazyDebug(LOGGER, () => `Creating dispatch buffer ${name}`);
     const label = toBufferLabel(name, 'dispatch');
     const { entries, stride, usage } = bufferLayout;
-    const marshaller = marshallerFactory.ofLayoutEntries(entries);
+    const marshaller = marshallerFactory.ofLayoutEntries(entries, stride);
     const dispatchBuffer = bufferFactory.ofMutable(stride, label, usage, requiresReadBack);
     return resourceFactory.ofCachedFromDependencies(
       [params] as const,
@@ -105,7 +105,7 @@ export const bufferResourcesFactory = {
     const label = toBufferLabel(name, bufferName);
     logFuncs.lazyDebug(LOGGER, () => `Creating uniform buffer resource for ${label} layout ${JSON.stringify(bufferLayout)}`);
     const { entries, stride, usage } = bufferLayout;
-    const marshaller = marshallerFactory.ofLayoutEntries(entries);
+    const marshaller = marshallerFactory.ofLayoutEntries(entries, stride);
     if (uniformCache.isMutable) {
       logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${label} is mutable`);
       const buffer = bufferFactory.ofMutable(stride, label, usage, requiresReadBack);
@@ -153,15 +153,15 @@ export const bufferResourcesFactory = {
   },
   ofMarshalled: <TEntity>(name: string, bufferName: string, bufferLayout: WPKBufferLayoutMarshalled<TEntity>, entityCache: WPKEntityCache<TEntity, any, any>, initialEntities: TEntity[], requiresReadBack: boolean): WPKResource<WPKTrackedBuffer> | [WPKResource<WPKTrackedBuffer>, WPKMutator<ValueSlices<TEntity[]>>] => {
     const label = toBufferLabel(name, bufferName);
-    logFuncs.lazyDebug(LOGGER, () => `Create marshalled buffer resources for ${label} layout ${JSON.stringify(bufferLayout)}`);
+    logFuncs.lazyDebug(LOGGER, () => `Create marshalled buffer resource for ${label} layout ${JSON.stringify(bufferLayout)}`);
     const { entries, stride, usage } = bufferLayout;
-    if (entityCache.isResizeable) {
+    if (entityCache.isMutable || entityCache.isResizeable) {
       const buffer = bufferFactory.ofStaged(label, usage, requiresReadBack);
-      logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${label} is resizeable with stride ${stride}`);
-      const marshaller = marshallerFactory.ofLayoutEntries(entries);
+      logFuncs.lazyTrace(LOGGER, () => `Buffer resource ${label} has stride ${stride}`);
+      const marshaller = marshallerFactory.ofLayoutEntries(entries, stride);
       const entityMutator: WPKMutator<ValueSlices<TEntity[]>> = {
         mutate(input) {
-          logFuncs.lazyTrace(LOGGER, () => `Mutating buffer ${label} with input ${JSON.stringify(input)}`);
+          logFuncs.lazyTrace(LOGGER, () => `Mutating buffer ${label} ${input.values.length} entities with slices ${JSON.stringify(input.copySlices)}`);
           const { copySlices, values } = input;
           const data = marshaller.encode(values);
           const targetSlices = copySlices.map((copySlice): CopySlice => {
@@ -171,32 +171,17 @@ export const bufferResourcesFactory = {
               toIndex: copySlice.toIndex * stride,
             };
           });
-          logFuncs.lazyTrace(LOGGER, () => `Mutating resizeable buffer ${label} with data ${JSON.stringify(targetSlices)}`);
+          logFuncs.lazyTrace(LOGGER, () => `Mutating buffer ${label} with ${data.byteLength} bytes with target slices ${JSON.stringify(targetSlices)}`);
           buffer.mutate(data, targetSlices);
         },
       };
       return [buffer, entityMutator];
     } else {
-      if (entityCache.isMutable) {
-        logFuncs.lazyDebug(LOGGER, () => `Buffer resources ${label} is not resizeable is mutable`);
-        const buffer = bufferFactory.ofStaged(label, usage, requiresReadBack);
-        const marshaller = marshallerFactory.ofLayoutEntries(entries);
-        const entityMutator: WPKMutator<ValueSlices<TEntity[]>> = {
-          mutate(input) {
-            logFuncs.lazyTrace(LOGGER, () => `Mutating buffer ${label} with input ${JSON.stringify(input)}`);
-            const { copySlices, values } = input;
-            const data = marshaller.encode(values);
-            buffer.mutate(data, copySlices);
-          },
-        };
-        return [buffer, entityMutator];
-      } else {
-        logFuncs.lazyTrace(LOGGER, () => `Buffer resources ${label} is not resizeable is not mutable`);
-        const marshaller = marshallerFactory.ofLayoutEntries(entries);
-        const data = marshaller.encode(initialEntities);
-        logFuncs.lazyTrace(LOGGER, () => `Creating buffer ${label} with data ${JSON.stringify(data)}`);
-        return bufferFactory.ofData(data, label, usage, requiresReadBack);
-      }
+      logFuncs.lazyTrace(LOGGER, () => `Buffer resource ${label} is constant`);
+      const marshaller = marshallerFactory.ofLayoutEntries(entries, stride);
+      const data = marshaller.encode(initialEntities);
+      logFuncs.lazyTrace(LOGGER, () => `Create buffer resource ${label} with data ${JSON.stringify(data)}`);
+      return bufferFactory.ofData(data, label, usage, requiresReadBack);
     }
   },
 };

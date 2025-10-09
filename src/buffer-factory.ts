@@ -167,7 +167,7 @@ export const bufferFactory = {
     }
     return {
       resize(bytesLength) {
-        logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${labeller.current()} to desired size ${bytesLength}`);
+        logFuncs.lazyDebug(LOGGER, () => `Resizing buffer ${label} to desired size ${bytesLength}`);
         desiredBytesLength = bytesLength;
       },
       update(device, queue, encoder) {
@@ -294,7 +294,7 @@ export const bufferFactory = {
     let mutatedSlices: ValueSlices<ArrayBuffer> | undefined = undefined;
     return {
       mutate(data, target) {
-        logFuncs.lazyDebug(LOGGER, () => `Mutating data for staged buffer ${label}, target: ${JSON.stringify(target)}`);
+        logFuncs.lazyDebug(LOGGER, () => `Mutating data for staged buffer ${label}, values bytes: ${data.byteLength}, target: ${JSON.stringify(target)}`);
         mutatedSlices = {
           values: data,
           copySlices: target,
