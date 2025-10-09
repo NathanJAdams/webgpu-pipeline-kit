@@ -117,9 +117,8 @@ export const shaderFuncs = {
       const locationAttributes: WPKVertexBufferLocationAttribute[] = [];
       const reconstitutedMatrices: WPKVertexBufferReconstitutedMatrix[] = [];
       const references: WPKVertexBufferReference[] = [];
-      let offset = 0;
       for (const [entryName, entry] of Object.entries(entries)) {
-        const { datumType } = entry;
+        const { datumType, offset } = entry;
         if (fields.has(entryName)) {
           const locationName = `${buffer}_${entryName}`;
           const vertexBufferLocationDatumType = shaderFuncs.toVertexBufferLocationType(datumType);
@@ -170,7 +169,6 @@ export const shaderFuncs = {
             shaderLocation++;
           }
         }
-        offset += shaderFuncs.toByteLength(datumType);
       }
       const attributeData: WPKVertexBufferAttributeData<TUniform, TEntity, TBufferFormatMap> = {
         buffer,
