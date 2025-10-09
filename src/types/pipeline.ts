@@ -1,5 +1,7 @@
+import { Color } from '../utils';
 import { DISPATCH_PARAMS_BUFFER_NAME, WPKDispatchParamsDetail, WPKDispatchCount } from './buffer-data';
 import { WPKBufferFormatEntityLayout, WPKBufferFormatEntityMarshalled, WPKBufferFormatKey, WPKBufferFormatMap, WPKBufferFormatUniform } from './buffer-formats';
+import { WPKPeripheralEventHandlers } from './peripheral-events';
 import { WPKShaderMatrix, WPKShaderScalar, WPKShaderStruct, WPKShaderVector } from './structs';
 
 //#region options
@@ -13,10 +15,10 @@ export type WPKPipelineOptions<TUniform, TEntity, TMutableUniform extends boolea
 //#endregion
 
 //#region pipeline
-export type WPKPipeline<TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean, TCompute extends boolean, TRender extends boolean> =
+export type WPKPipeline<TUniform, TEntity, TMutableUniform extends boolean, TMutableEntities extends boolean, TResizeableEntities extends boolean> =
   & {
     name: string;
-    pipelineDetail: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => WPKPipelineDetail<TCompute, TRender>;
+    pipelineDetail: (device: GPUDevice, queue: GPUQueue, encoder: GPUCommandEncoder) => WPKPipelineDetail;
     clean: () => void;
   }
   & (TMutableUniform extends true
@@ -81,30 +83,21 @@ export type WPKReadBackFuncs = {
   copyData: (encoder: GPUCommandEncoder) => void;
   readBack: () => Promise<void>;
 };
-export type WPKPipelineDetail<TCompute extends boolean, TRender extends boolean> =
-  & {
-    name: string;
-    instanceCount: number;
-    readBackFuncs?: WPKReadBackFuncs;
-  }
-  & (
-    TCompute extends true
-    ? {
-      compute: WPKComputePipelineDetail[];
-    }
-    : object
-  )
-  & (
-    TRender extends true
-    ? {
-      render: WPKRenderPipelineDetail[];
-    }
-    : object
-  )
-  ;
+export type WPKPipelineDetail = {
+  name: string;
+  instanceCount: number;
+  readBackFuncs?: WPKReadBackFuncs;
+  compute?: WPKComputePipelineDetail[];
+  render?: WPKRenderPipelineDetail[];
+};
 //#endregion
 
 //#region runner
+export type WPKRenderPipelineOptions = {
+  canvas: HTMLCanvasElement;
+  clearColor: Color;
+  peripheralEventHandlers: WPKPeripheralEventHandlers;
+};
 export type WPKAddPipelineOptionsAddBefore = {
   before: string;
 };
@@ -115,8 +108,8 @@ export type WPKAddPipelineOptions =
   | WPKAddPipelineOptionsAddBefore
   | WPKAddPipelineOptionsAddAfter
   ;
-export type WPKPipelineRunner<TCompute extends boolean, TRender extends boolean> = {
-  add: (pipeline: WPKPipeline<any, any, any, any, any, TCompute, TRender>, options?: WPKAddPipelineOptions) => void;
+export type WPKPipelineRunner = {
+  add: (pipeline: WPKPipeline<any, any, any, any, any>, options?: WPKAddPipelineOptions) => void;
   remove: (name: string) => void;
   step: () => Promise<void>;
   destroy: () => void;
@@ -164,5 +157,5 @@ export type WPKReadBackContentMap<TUniform, TEntity, TBufferFormatMap extends WP
 //#endregion
 
 //#region invoke
-export type WPKPipelineInvoker<TCompute extends boolean, TRender extends boolean> = (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail<TCompute, TRender>) => void;
+export type WPKPipelineInvoker = (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail) => void;
 //#endregion

@@ -123,7 +123,7 @@ export const datumBridgeFactory = {
         const entityIndex = datumGetSetter.get(dataView, dataViewOffset, littleEndian);
         const id = entityCache.idOf(entityIndex);
         if (id === undefined) {
-          logFuncs.lazyWarn(LOGGER, () => `Undefined entity id for index ${entityIndex}`);
+          logFuncs.lazyTrace(LOGGER, () => `Undefined entity id for index ${entityIndex}`);
         } else {
           logFuncs.lazyTrace(LOGGER, () => `Read back entity id ${id} for index ${entityIndex} from offset ${datumOffset}`);
           extractEmbedder.embed(instance, id);

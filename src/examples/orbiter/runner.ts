@@ -4,7 +4,7 @@ import { meshTemplates } from './mesh-templates';
 import { computeShader, renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel } from '../..';
 import { getLogger } from '../../logging';
-import { WPKReadBackOptions, WPKPeripheralEventHandlers } from '../../types';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers, WPKRenderPipelineOptions } from '../../types';
 import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
@@ -19,7 +19,12 @@ export const run = async (): Promise<void> => {
   const eventHandlers: WPKPeripheralEventHandlers = {
     'screen-resize': async (eventInfo) => camera.setAspectRatio(eventInfo.aspectRatio),
   };
-  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, eventHandlers);
+  const renderOptions: WPKRenderPipelineOptions = {
+    canvas,
+    clearColor: Color.BLACK,
+    peripheralEventHandlers: eventHandlers,
+  };
+  const pipelineRunner = await factories.pipelineRunner.create(renderOptions);
   const orbiterPipelineOptions = builders.pipelineOptions<OrbiterUniform, Orbiter, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)

@@ -4,7 +4,7 @@ import { meshTemplates } from './mesh-templates';
 import { renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel, Transformation, Vector3 } from '../..';
 import { getLogger } from '../../logging';
-import { WPKReadBackOptions, WPKPeripheralEventHandlers } from '../../types';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers, WPKRenderPipelineOptions } from '../../types';
 import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
@@ -35,13 +35,18 @@ export const run = async (): Promise<void> => {
       starPipeline.mutateUniform({ camera });
     },
   };
-  const runner = await factories.pipelineRunner.ofRender(canvas, Color.BLACK, eventHandlers);
-  runner.add(starPipeline);
+  const renderOptions: WPKRenderPipelineOptions = {
+    canvas,
+    clearColor: Color.BLACK,
+    peripheralEventHandlers: eventHandlers,
+  };
+  const pipelineRunner = await factories.pipelineRunner.create(renderOptions);
+  pipelineRunner.add(starPipeline);
   while (true) {
     LOGGER.debug('adding star');
     const star = newStar();
     starPipeline.add(star);
-    await runner.step();
+    await pipelineRunner.step();
     await sleep(1_000);
   }
 };

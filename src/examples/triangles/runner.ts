@@ -4,7 +4,7 @@ import { meshTemplates } from './mesh-templates';
 import { computeShader, renderShader } from './shader';
 import { builders, factories, setLogLevel } from '../..';
 import { getLogger } from '../../logging';
-import { WPKReadBackOptions, WPKPeripheralEventHandlers } from '../../types';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers, WPKRenderPipelineOptions } from '../../types';
 import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
@@ -17,7 +17,12 @@ export const run = async (): Promise<void> => {
     throw Error('Failed to get game canvas from document');
   }
   const eventHandlers: WPKPeripheralEventHandlers = {};
-  const pipelineRunner = await factories.pipelineRunner.ofComputeRender(canvas, Color.BLACK, eventHandlers);
+  const renderOptions: WPKRenderPipelineOptions = {
+    canvas,
+    clearColor: Color.BLACK,
+    peripheralEventHandlers: eventHandlers,
+  };
+  const pipelineRunner = await factories.pipelineRunner.create(renderOptions);
   const pipelineOptions = builders.pipelineOptions<TriangleUniform, Triangle, true, true, true>()
     .mutableUniform(true)
     .mutableEntities(true)

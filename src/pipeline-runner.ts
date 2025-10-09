@@ -1,8 +1,8 @@
 import { getLogger } from './logging';
 import { addPeripheralEventHandlers } from './peripheral-events';
 import { pipelineFuncs } from './pipeline-utils';
-import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKEventListenerRemover, WPKPeripheralEventHandlers, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKViews, WPKViewsFunc } from './types';
-import { Color, logFuncs } from './utils';
+import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKEventListenerRemover, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKRenderPipelineOptions, WPKViews, WPKViewsFunc } from './types';
+import { logFuncs } from './utils';
 
 const LOGGER = getLogger('pipeline');
 
@@ -10,53 +10,37 @@ const isOptionsAddBefore = (options?: WPKAddPipelineOptions): options is WPKAddP
 const isOptionsAddAfter = (options?: WPKAddPipelineOptions): options is WPKAddPipelineOptionsAddAfter => (options !== undefined && (options as WPKAddPipelineOptionsAddAfter).after !== undefined);
 
 export const pipelineRunnerFactory = {
-  ofCompute: async (): Promise<WPKPipelineRunner<true, false>> => {
-    const gpu = pipelineFuncs.getGpu();
-    const device = await pipelineFuncs.getDevice(gpu);
-    const invoker: WPKPipelineInvoker<true, false> = (encoder, index, detail) => {
-      logFuncs.lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(detail)}`);
-      const { compute } = detail;
-      if (compute !== undefined) {
-        invokeComputePipeline(compute, index, encoder);
-      }
-    };
-    return createPipelineRunner(device, invoker);
-  },
-  ofComputeRender: async (canvas: HTMLCanvasElement, clearColor: Color, peripheralEventHandlers: WPKPeripheralEventHandlers): Promise<WPKPipelineRunner<true, true>> => {
+  create: async (renderOptions?: WPKRenderPipelineOptions): Promise<WPKPipelineRunner> => {
     logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
     const gpu = pipelineFuncs.getGpu();
     const device = await pipelineFuncs.getDevice(gpu);
-    const getViews = await createViewsGetter(canvas, device);
-    const clearValue = [clearColor.r, clearColor.g, clearColor.b, clearColor.a];
-    const invoker: WPKPipelineInvoker<true, true> = (encoder, index, detail) => {
+    let getViews: WPKViewsFunc;
+    let clearValue: number[];
+    let remover: WPKEventListenerRemover;
+    if (renderOptions === undefined) {
+      getViews = (() => ({})) as WPKViewsFunc;
+      clearValue = [];
+      remover = { remove() { }, };
+    } else {
+      getViews = await createViewsGetter(renderOptions.canvas, device);
+      clearValue = [renderOptions.clearColor.r, renderOptions.clearColor.g, renderOptions.clearColor.b, renderOptions.clearColor.a];
+      remover = addPeripheralEventHandlers(renderOptions.canvas, renderOptions.peripheralEventHandlers);
+    }
+    const invoker: WPKPipelineInvoker = (encoder, index, detail) => {
       logFuncs.lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(detail)}`);
       const { compute, render } = detail;
       if (compute !== undefined) {
         invokeComputePipeline(compute, index, encoder);
       }
       if (render !== undefined) {
-        const views = getViews();
-        invokeRenderPipeline(render, index, encoder, views, clearValue);
+        if (renderOptions === undefined) {
+          logFuncs.lazyWarn(LOGGER, () => `Cannot invoke render pipeline for ${detail.name}, set render options parameter when creating pipeline runner`);
+        } else {
+          const views = getViews();
+          invokeRenderPipeline(render, index, encoder, views, clearValue);
+        }
       }
     };
-    const remover = addPeripheralEventHandlers(canvas, peripheralEventHandlers);
-    return createPipelineRunner(device, invoker, remover);
-  },
-  ofRender: async (canvas: HTMLCanvasElement, clearColor: Color, peripheralEventHandlers: WPKPeripheralEventHandlers): Promise<WPKPipelineRunner<false, true>> => {
-    logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
-    const gpu = pipelineFuncs.getGpu();
-    const device = await pipelineFuncs.getDevice(gpu);
-    const getViews = await createViewsGetter(canvas, device);
-    const clearValue = [clearColor.r, clearColor.g, clearColor.b, clearColor.a];
-    const invoker: WPKPipelineInvoker<false, true> = (encoder, index, detail) => {
-      logFuncs.lazyTrace(LOGGER, () => `Invoking pipeline ${JSON.stringify(detail)}`);
-      const { render } = detail;
-      if (render !== undefined) {
-        const views = getViews();
-        invokeRenderPipeline(render, index, encoder, views, clearValue);
-      }
-    };
-    const remover = addPeripheralEventHandlers(canvas, peripheralEventHandlers);
     return createPipelineRunner(device, invoker, remover);
   },
 };
@@ -74,13 +58,13 @@ const createViewsGetter = async (canvas: HTMLCanvasElement, device: GPUDevice): 
   return createViewsFunc(canvas, context, device, format);
 };
 
-const createPipelineRunner = async <TCompute extends boolean, TRender extends boolean>(
+const createPipelineRunner = async (
   device: GPUDevice,
-  pipelineInvoker: (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail<TCompute, TRender>) => void,
+  pipelineInvoker: (encoder: GPUCommandEncoder, index: number, detail: WPKPipelineDetail) => void,
   remover?: WPKEventListenerRemover
-): Promise<WPKPipelineRunner<TCompute, TRender>> => {
+): Promise<WPKPipelineRunner> => {
   logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
-  const pipelines: WPKPipeline<any, any, any, any, any, TCompute, TRender>[] = [];
+  const pipelines: WPKPipeline<any, any, any, any, any>[] = [];
   return {
     add(pipeline, options) {
       const { name } = pipeline;
@@ -233,7 +217,7 @@ const getOrCreateTexture = (
   return device.createTexture(descriptor);
 };
 
-const toInsertIndex = (pipelines: WPKPipeline<any, any, any, any, any, any, any>[], options?: WPKAddPipelineOptions): number => {
+const toInsertIndex = (pipelines: WPKPipeline<any, any, any, any, any>[], options?: WPKAddPipelineOptions): number => {
   if (isOptionsAddBefore(options)) {
     return toInsertIndexFromName(pipelines, options.before, false);
   } else if (isOptionsAddAfter(options)) {
@@ -243,11 +227,11 @@ const toInsertIndex = (pipelines: WPKPipeline<any, any, any, any, any, any, any>
   }
 };
 
-const toInsertIndexFromName = (pipelines: WPKPipeline<any, any, any, any, any, any, any>[], name: string, incrementFoundIndex: boolean): number => {
+const toInsertIndexFromName = (pipelines: WPKPipeline<any, any, any, any, any>[], name: string, incrementFoundIndex: boolean): number => {
   const index = toIndexFromName(pipelines, name);
   return (index === -1)
     ? pipelines.length
     : index + (incrementFoundIndex ? 1 : 0);
 };
 
-const toIndexFromName = (pipelines: WPKPipeline<any, any, any, any, any, any, any>[], name: string): number => pipelines.findIndex((pipeline) => pipeline.name === name);
+const toIndexFromName = (pipelines: WPKPipeline<any, any, any, any, any>[], name: string): number => pipelines.findIndex((pipeline) => pipeline.name === name);
