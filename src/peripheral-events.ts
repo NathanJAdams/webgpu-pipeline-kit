@@ -208,7 +208,7 @@ const addMouseButtonListener = <TEventType extends WPKPeripheralEventType.MOUSE_
     const { button } = event;
     if (eventName === 'mousedown') {
       const mouseButton = buttonMap[button];
-      if (mouseButton === undefined) {
+      if (mouseButton !== undefined) {
         mouseDownButton.compareAndUpdate(mouseButton);
       } else {
         logFuncs.lazyWarn(LOGGER, () => `Mouse button ${button} will not trigger events`);
