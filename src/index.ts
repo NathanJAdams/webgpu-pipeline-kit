@@ -11,6 +11,7 @@ export type {
   WPKPeripheralEventHandlers,
   WPKPipeline,
   WPKPipelineOptions,
+  WPKPipelineRenderOptions,
   WPKComputeShader,
   WPKRenderShader,
   WPKVertices,

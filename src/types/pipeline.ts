@@ -93,7 +93,7 @@ export type WPKPipelineDetail = {
 //#endregion
 
 //#region runner
-export type WPKRenderPipelineOptions = {
+export type WPKPipelineRenderOptions = {
   canvas: HTMLCanvasElement;
   clearColor: Color;
   peripheralEventHandlers: WPKPeripheralEventHandlers;

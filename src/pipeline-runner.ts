@@ -1,7 +1,7 @@
 import { getLogger } from './logging';
 import { addPeripheralEventHandlers } from './peripheral-events';
 import { pipelineFuncs } from './pipeline-utils';
-import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKEventListenerRemover, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKRenderPipelineOptions, WPKViews, WPKViewsFunc } from './types';
+import { WPKAddPipelineOptions, WPKAddPipelineOptionsAddAfter, WPKAddPipelineOptionsAddBefore, WPKComputePipelineDetail, WPKEventListenerRemover, WPKPipeline, WPKPipelineDetail, WPKPipelineInvoker, WPKPipelineRunner, WPKRenderPipelineDetail, WPKPipelineRenderOptions, WPKViews, WPKViewsFunc } from './types';
 import { logFuncs } from './utils';
 
 const LOGGER = getLogger('pipeline');
@@ -10,7 +10,7 @@ const isOptionsAddBefore = (options?: WPKAddPipelineOptions): options is WPKAddP
 const isOptionsAddAfter = (options?: WPKAddPipelineOptions): options is WPKAddPipelineOptionsAddAfter => (options !== undefined && (options as WPKAddPipelineOptionsAddAfter).after !== undefined);
 
 export const pipelineRunnerFactory = {
-  create: async (renderOptions?: WPKRenderPipelineOptions): Promise<WPKPipelineRunner> => {
+  create: async (renderOptions?: WPKPipelineRenderOptions): Promise<WPKPipelineRunner> => {
     logFuncs.lazyInfo(LOGGER, () => 'Creating pipeline runner');
     const gpu = pipelineFuncs.getGpu();
     const device = await pipelineFuncs.getDevice(gpu);

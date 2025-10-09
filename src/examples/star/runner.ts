@@ -4,7 +4,7 @@ import { meshTemplates } from './mesh-templates';
 import { renderShader } from './shader';
 import { builders, Camera, factories, setLogLevel, Transformation, Vector3 } from '../..';
 import { getLogger } from '../../logging';
-import { WPKReadBackOptions, WPKPeripheralEventHandlers, WPKRenderPipelineOptions } from '../../types';
+import { WPKReadBackOptions, WPKPeripheralEventHandlers, WPKPipelineRenderOptions } from '../../types';
 import { Color } from '../../utils';
 
 const LOGGER = getLogger('pipeline');
@@ -35,7 +35,7 @@ export const run = async (): Promise<void> => {
       starPipeline.mutateUniform({ camera });
     },
   };
-  const renderOptions: WPKRenderPipelineOptions = {
+  const renderOptions: WPKPipelineRenderOptions = {
     canvas,
     clearColor: Color.BLACK,
     peripheralEventHandlers: eventHandlers,
